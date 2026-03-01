@@ -1,0 +1,168 @@
+{
+  "demos": {
+    "amm-demo": {
+      "title": "Matemáticas AMM y pérdida impermanente",
+      "description": "AMM interactivo de producto constante (x × y = k) con impacto en el precio, slippage y cálculos de pérdida impermanente.",
+      "keyTakeaways": {
+        "0": "La fórmula x × y = k permite market making automatizado sin libros de órdenes",
+        "1": "El impacto en el precio aumenta con el tamaño del trade relativo a las reservas del pool",
+        "2": "La pérdida impermanente ocurre cuando cambian las proporciones de precio; con un cambio de precio ×2, la IL es ~ -5,7%"
+      }
+    },
+    "parallel-executor": {
+      "title": "Ejecutor de transacciones en paralelo",
+      "description": "Compara estrategias de ejecución paralela conservadoras (Solana) vs optimistas (Aptos Block-STM).",
+      "keyTakeaways": {
+        "0": "La planificación conservadora evita trabajo desperdiciado analizando dependencias por adelantado",
+        "1": "La ejecución optimista maximiza el paralelismo pero puede re-ejecutar transacciones en conflicto",
+        "2": "Compromisos entre predictibilidad y throughput"
+      }
+    },
+    "dag-consensus": {
+      "title": "Consenso DAG (Tangle)",
+      "description": "Visualización interactiva de DAG que muestra cómo las transacciones referencian tips y logran consenso sin bloques tradicionales.",
+      "keyTakeaways": {
+        "0": "No se necesitan mineros: los usuarios confirman las transacciones de otros",
+        "1": "El procesamiento paralelo de transacciones permite alto throughput",
+        "2": "La acumulación de peso proporciona finalidad probabilística"
+      }
+    },
+    "rollup-simulation": {
+      "title": "Rollup de capa 2",
+      "description": "Mira cómo las transacciones L2 se agrupan y se publican en L1 para grandes ahorros de gas.",
+      "keyTakeaways": {
+        "0": "Agrupa cientos de transacciones en una sola transacción de L1",
+        "1": "Los usuarios obtienen confirmación instantánea en L2 con seguridad eventual de L1",
+        "2": "Reducción de coste de ×10 a ×100 frente a publicar directamente en L1"
+      }
+    },
+    "eigenlayer-demo": {
+      "title": "Restaking de EigenLayer",
+      "description": "Reutiliza el stake de ETH para asegurar múltiples protocolos (AVS) y obtener recompensas adicionales.",
+      "keyTakeaways": {
+        "0": "Eficiencia de capital: un solo stake asegura varios servicios",
+        "1": "Gana recompensas base de staking + rendimientos adicionales de AVS",
+        "2": "Mayores recompensas conllevan riesgos de slashing acumulados"
+      }
+    },
+    "peerdas-demo": {
+      "title": "Muestreo PeerDAS",
+      "description": "Peer Data Availability Sampling: los nodos muestrean columnas aleatorias en lugar de descargarlo todo.",
+      "keyTakeaways": {
+        "0": "Los nodos almacenan solo ~25% de los datos en lugar de 100%",
+        "1": "El muestreo aleatorio prueba la disponibilidad de datos con alta confianza",
+        "2": "Crítico para escalar la capa de datos de Ethereum para rollups"
+      }
+    },
+    "ethereum-blockchain": {
+      "title": "Blockchain mínima de Ethereum",
+      "description": "Construye una blockchain funcional desde cero con Proof of Work, cuentas y transiciones de estado.",
+      "keyTakeaways": {
+        "0": "Los bloques se enlazan mediante hashes criptográficos formando una cadena inmutable",
+        "1": "La minería ajusta la dificultad para encontrar hashes de bloque válidos",
+        "2": "El modelo basado en cuentas rastrea balances y nonces"
+      }
+    },
+    "erc-standards": {
+      "title": "Playground de estándares ERC",
+      "description": "Explora varios estándares ERC en una sola página con acciones interactivas, tooltips y contexto del mundo real.",
+      "keyTakeaways": {
+        "0": "Los estándares ERC definen interfaces interoperables para que wallets, dApps y exchanges soporten activos de forma consistente",
+        "1": "ERC-20 es fungible, ERC-721 es no fungible y ERC-1155 es multi-token (fungible + NFTs) en un solo contrato",
+        "2": "Las aprobaciones/allowances son una superficie clave de UX y seguridad en estos estándares"
+      }
+    },
+    "blockchain-interop": {
+      "title": "Protocolos cross-chain",
+      "description": "Compara IBC, CCIP y LayerZero: distintos modelos de confianza para mensajería entre cadenas.",
+      "keyTakeaways": {
+        "0": "IBC usa light clients para verificación trustless",
+        "1": "CCIP se basa en consenso descentralizado de oráculos",
+        "2": "LayerZero requiere el acuerdo de un Oracle y un Relayer independientes"
+      }
+    }
+  },
+  "glossary": {
+    "Constant Product": "Regla de precio usada por muchos AMM: mantener constante el producto de las reservas (x × y = k). El precio cambia a medida que cambian las reservas.",
+    "Price Impact": "Cambio de precio causado por tu operación (mayor cuando el trade es grande respecto a las reservas).",
+    "Slippage": "Diferencia entre el precio esperado y el precio ejecutado (a menudo por liquidez y volatilidad).",
+
+    "Parallel Execution": "Ejecutar en paralelo transacciones sin conflicto para aumentar el rendimiento. Los conflictos ocurren cuando las transacciones tocan estado superpuesto (conjuntos de lectura/escritura).",
+    "Transaction Ordering": "Regla/proceso que decide qué transacciones se ejecutan primero. El orden afecta la equidad, el MEV y el estado final.",
+    "Conflict Detection": "Determinar si dos transacciones tocan estado superpuesto (conjuntos de lectura/escritura). Los conflictos limitan cuánto se puede paralelizar.",
+
+    "Directed Acyclic Graph": "Un grafo dirigido sin ciclos. En libros contables DAG, las transacciones referencian a otras anteriores, formando un orden parcial en lugar de una sola cadena.",
+    "Tip Selection": "Estrategia para elegir qué transacciones DAG no confirmadas (\"tips\") debe referenciar una nueva transacción como padres.",
+    "Cumulative Weight": "Medida de cuánta confirmación acumula una transacción DAG, a menudo basada en cuántas transacciones posteriores la referencian directa o indirectamente.",
+
+    "Rollups": "Sistemas de capa 2 que ejecutan transacciones fuera de L1 y publican datos comprimidos + compromisos (state roots y/o pruebas) en L1 para heredar su seguridad.",
+    "Batching": "Combinar muchas transacciones L2 en un “lote” publicado en L1. Amortiza costos fijos y reduce el costo por transacción.",
+    "State Roots": "Hashes que comprometen el estado completo tras ejecutar un lote. Permiten verificar transiciones sin descargar todo el estado.",
+
+    "Restaking": "El restaking reutiliza un stake de ETH existente para asegurar servicios adicionales (AVS). Puede generar recompensas extra pero añade riesgo de slashing.",
+    "Shared Security": "Modelo donde múltiples protocolos/servicios reutilizan el mismo conjunto de validadores o stake económico para seguridad, en lugar de arrancar seguridad desde cero.",
+    "AVS": "Actively Validated Service: servicio externo asegurado por validadores restaked (p. ej., oráculos, disponibilidad de datos, bridges).",
+
+    "Data Availability": "Garantía de que los datos necesarios para verificar un bloque/lote son accesibles. Sin DA no puedes verificar la ejecución aunque exista un compromiso de estado.",
+    "Random Sampling": "Comprobar un subconjunto aleatorio de datos para inferir, con alta probabilidad, que el conjunto completo está disponible (muestreo de disponibilidad de datos).",
+    "Erasure Coding": "Técnica de redundancia que divide datos en partes para poder reconstruir el original a partir de un subconjunto. Permite garantías de DA basadas en muestreo.",
+
+    "Proof of Work": "Mecanismo de consenso donde los mineros hashean con un nonce para encontrar un valor por debajo de un objetivo (dificultad). Hace costoso falsificar la producción de bloques.",
+    "Account Model": "Modelo de estado donde los balances y nonces se almacenan por cuenta (como Ethereum). Las transacciones mutan el estado de las cuentas directamente (vs UTXO).",
+    "Mining": "Proceso de producir nuevos bloques (p. ej., resolviendo PoW) y cobrar recompensas/comisiones.",
+
+    "ERC Standards": "Los estándares ERC definen interfaces comunes (funciones + eventos) para que wallets, dApps y herramientas integren activos de forma consistente.",
+    "ERC-20": "Interfaz estándar para tokens fungibles. Define funciones como balanceOf, transfer, approve, allowance y transferFrom.",
+    "ERC-721": "Interfaz estándar para NFTs. Cada tokenId es único y tiene un solo propietario, con aprobaciones por token.",
+
+    "Light Clients": "Clientes que verifican la corrección de la cadena usando solo cabeceras y pruebas criptográficas, sin descargar bloques/estado completos.",
+    "Oracle Networks": "Redes descentralizadas que obtienen/verifican datos off-chain y los publican on-chain con supuestos de seguridad (quórum, staking, slashing, etc.).",
+    "Cross-Chain Messaging": "Enviar mensajes autenticados entre blockchains (no necesariamente tokens). La pregunta clave es cómo la cadena destino verifica el evento de origen.",
+
+    "Impermanent Loss": "Pérdida relativa para un proveedor de liquidez cuando cambia el precio, comparado con holdear los activos."
+  },
+  "app": {
+    "title": "Centro de aprendizaje de Blockchain",
+    "subtitle": "Demostraciones interactivas de conceptos, protocolos y mecanismos de blockchain de vanguardia",
+    "totalDemos": "Demos totales:",
+    "categories": "Categorías:",
+    "searchPlaceholder": "Buscar demos, conceptos o etiquetas..."
+  },
+  "nav": {
+    "backToHub": "Volver al hub",
+    "demoNotFound": "Demo no encontrada",
+    "unknownDemoId": "ID de demo desconocido: {{id}}",
+    "nowViewing": "Viendo"
+  },
+  "modal": {
+    "demoDetails": "Detalles de la demo",
+    "keyConcepts": "Conceptos clave",
+    "keyTakeaways": "Conclusiones clave",
+    "cancel": "Cancelar",
+    "startDemo": "Iniciar demo",
+    "close": "Cerrar"
+  },
+  "common": {
+    "definitionComingSoon": "Definición próximamente.",
+    "copiedLink": "Enlace copiado",
+    "copyLink": "Copiar enlace",
+    "copied": "¡Copiado!"
+  },
+  "lang": {
+    "label": "Idioma",
+    "en": "Inglés",
+    "fr": "Francés",
+    "es": "Español"
+  },
+  "hub": {
+    "showingCount": "Mostrando {{filtered}} de {{total}} demos",
+    "showingCountWithQuery": "Mostrando {{filtered}} de {{total}} demos para \"{{query}}\"", 
+    "keyConcepts": "Conceptos clave",
+    "keyTakeaways": "Puntos clave",
+    "viewDetails": "Ver detalles",
+    "noDemosFound": "No se encontraron demos",
+    "tryAdjustingSearch": "Prueba ajustando tu búsqueda o filtros",
+    "hideFilters": "Ocultar filtros",
+    "showFilters": "Mostrar filtros"
+  }
+}

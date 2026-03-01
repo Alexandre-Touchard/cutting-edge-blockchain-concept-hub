@@ -1,0 +1,46 @@
+{
+  "app": {
+    "title": "Blockchain Learning Hub",
+    "subtitle": "Interactive demonstrations of cutting-edge blockchain concepts, protocols, and mechanisms",
+    "totalDemos": "Total Demos:",
+    "categories": "Categories:",
+    "searchPlaceholder": "Search demos, concepts, or tags..."
+  },
+  "nav": {
+    "backToHub": "Back to Hub",
+    "demoNotFound": "Demo not found",
+    "unknownDemoId": "Unknown demo id: {{id}}",
+    "nowViewing": "Now viewing"
+  },
+  "modal": {
+    "demoDetails": "Demo details",
+    "keyConcepts": "Key concepts",
+    "keyTakeaways": "Key takeaways",
+    "cancel": "Cancel",
+    "startDemo": "Start demo",
+    "close": "Close"
+  },
+  "common": {
+    "definitionComingSoon": "Definition coming soon.",
+    "copiedLink": "Copied link",
+    "copyLink": "Copy link",
+    "copied": "Copied!"
+  },
+  "lang": {
+    "label": "Language",
+    "en": "English",
+    "fr": "French",
+    "es": "Spanish"
+  },
+  "hub": {
+    "showingCount": "Showing {{filtered}} of {{total}} demos",
+    "showingCountWithQuery": "Showing {{filtered}} of {{total}} demos for \"{{query}}\"", 
+    "keyConcepts": "Key Concepts",
+    "keyTakeaways": "Key Takeaways",
+    "viewDetails": "View Details",
+    "noDemosFound": "No demos found",
+    "tryAdjustingSearch": "Try adjusting your search or filters",
+    "hideFilters": "Hide filters",
+    "showFilters": "Show filters"
+  }
+}

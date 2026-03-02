@@ -125,6 +125,11 @@ export type GlossaryKey =
   | 'Samples/Node'
   | 'Coverage'
   | 'Availability'
+  // Fraud proofs / dispute games
+  | 'Fraud Proofs'
+  | 'Bisection'
+  | 'Challenge Period'
+  | 'Bond'
   ;
 
 export const EN_GLOSSARY: Record<GlossaryKey, string> = {
@@ -173,6 +178,14 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
     'Checking a random subset of data to infer, with high probability, that the full dataset is available (used in data-availability sampling).',
   'Erasure Coding':
     'A redundancy technique that splits data into pieces so the original can be reconstructed from a subset. Enables sampling-based DA guarantees.',
+  'Fraud Proofs':
+    'A mechanism used by optimistic rollups where anyone can challenge an invalid state transition within a challenge window. If fraud is proven, the invalid assertion is rejected and bonds are redistributed.',
+  Bisection:
+    'An interactive binary search over an execution trace used in dispute games. Proposer and challenger narrow their disagreement until only a single step remains to be checked on L1.',
+  'Challenge Period':
+    'A fixed time window during which a rollup assertion can be disputed. Withdrawals are typically delayed until the challenge period passes.',
+  Bond:
+    "Collateral posted by disputing parties (e.g., proposer and challenger). If you lose the dispute, you forfeit your bond; if you win, you receive the other party's bond (or a reward).",
   'Column Distribution':
     'How encoded data is organized (e.g., into columns) and distributed across peers so that no single node must store everything.',
   'Proof of Work':

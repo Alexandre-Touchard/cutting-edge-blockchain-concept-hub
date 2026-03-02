@@ -145,5 +145,22 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
       'LayerZero requires independent Oracle + Relayer agreement'
     ],
     tags: ['IBC', 'Chainlink', 'LayerZero', 'Bridges']
+  },
+
+  'fraud-proofs-arbitrum-dispute-game': {
+    id: 'fraud-proofs-arbitrum',
+    title: 'Fraud Proofs (Optimistic Rollup Arbitrum Dispute Game)',
+    category: 'scaling',
+    difficulty: 'Advanced',
+    thumbnail: '⚖️',
+    description:
+      'Interactive Arbitrum-style dispute game: challenge an invalid rollup assertion via bisection until L1 verifies a single step.',
+    concepts: ['Rollups', 'Fraud Proofs', 'Bisection', 'Challenge Period', 'Bond'],
+    keyTakeaways: [
+      'A proposer posts an assertion and a bond; a challenger can dispute within a window',
+      'Interactive bisection narrows the disagreement to a single disputed step',
+      'L1 verification of one step keeps disputes cheap while preserving security'
+    ],
+    tags: ['Arbitrum', 'Optimistic Rollups', 'Fraud Proofs', 'Dispute Game']
   }
 };

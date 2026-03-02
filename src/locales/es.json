@@ -72,6 +72,15 @@
         "2": "Las aprobaciones/allowances son una superficie clave de UX y seguridad en estos estándares"
       }
     },
+    "fraud-proofs-arbitrum": {
+      "title": "Pruebas de fraude (juego de disputa de Arbitrum - optimistic rollup)",
+      "description": "Juego de disputa interactivo (estilo Arbitrum): desafía una aserción inválida mediante bisección hasta que L1 verifica un solo paso.",
+      "keyTakeaways": {
+        "0": "Un proponente publica una aserción y un bond; un challenger puede disputarla dentro de una ventana",
+        "1": "La bisección (búsqueda binaria) reduce el desacuerdo a un único paso en disputa",
+        "2": "La verificación de un solo paso en L1 mantiene las disputas baratas preservando la seguridad"
+      }
+    },
     "blockchain-interop": {
       "title": "Protocolos cross-chain",
       "description": "Compara IBC, CCIP y LayerZero: distintos modelos de confianza para mensajería entre cadenas.",

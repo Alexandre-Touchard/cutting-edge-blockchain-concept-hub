@@ -205,18 +205,14 @@ export default function Hub({
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-12">
-          <div className="flex items-start justify-between gap-4">
-            <div className="shrink-0 pt-1">
-              <button
-                type="button"
-                onClick={() => setAreFiltersVisible((v) => !v)}
-                className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold"
-              >
-                {areFiltersVisible ? t('hub.hideFilters') : t('hub.showFilters')}
-              </button>
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            {/* Right: language (stays top-right on small screens) */}
+            <div className="order-1 md:order-3 self-end md:self-auto shrink-0">
+              <LanguageSwitcher />
             </div>
 
-            <div className="flex-1 min-w-0 text-center">
+            {/* Center: title */}
+            <div className="order-2 md:order-2 flex-1 min-w-0 text-center">
               <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 {t('app.title')}
               </h1>
@@ -235,10 +231,28 @@ export default function Hub({
                   </div>
                 </div>
               )}
+
+              {/* Small screens: button below title */}
+              <div className="mt-4 flex justify-center md:hidden">
+                <button
+                  type="button"
+                  onClick={() => setAreFiltersVisible((v) => !v)}
+                  className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold"
+                >
+                  {areFiltersVisible ? t('hub.hideFilters') : t('hub.showFilters')}
+                </button>
+              </div>
             </div>
 
-            <div className="shrink-0">
-              <LanguageSwitcher />
+            {/* Left: button (md+) */}
+            <div className="order-3 md:order-1 hidden md:block shrink-0 pt-1">
+              <button
+                type="button"
+                onClick={() => setAreFiltersVisible((v) => !v)}
+                className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold"
+              >
+                {areFiltersVisible ? t('hub.hideFilters') : t('hub.showFilters')}
+              </button>
             </div>
           </div>
         </div>

@@ -41,47 +41,54 @@ export default function EduTooltip({
   const iconRef = useRef<HTMLSpanElement | null>(null);
   const tooltipRef = useRef<HTMLSpanElement | null>(null);
 
-  const [placement, setPlacement] = useState<{ side: 'top' | 'bottom'; align: 'left' | 'center' | 'right' }>(
-    { side: 'top', align: 'center' }
-  );
+  const [coords, setCoords] = useState<{
+    side: 'top' | 'bottom';
+    left: number;
+    top: number;
+    arrowLeft: number;
+  } | null>(null);
 
   useLayoutEffect(() => {
     if (!open) return;
+
     const iconEl = iconRef.current;
-    if (!iconEl) return;
+    const tipEl = tooltipRef.current;
+    if (!iconEl || !tipEl) return;
 
     const rect = iconEl.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    // side: prefer showing above, but flip if near top
-    const side: 'top' | 'bottom' = rect.top < 140 ? 'bottom' : 'top';
+    // Measure tooltip
+    const tipRect = tipEl.getBoundingClientRect();
+    const tipW = tipRect.width;
+    const tipH = tipRect.height;
 
-    // align: keep within viewport
-    const align: 'left' | 'center' | 'right' =
-      rect.left < 180 ? 'left' : vw - rect.right < 180 ? 'right' : 'center';
+    const margin = 8;
+    const iconCenterX = rect.left + rect.width / 2;
 
-    setPlacement({ side, align });
+    // Prefer above; flip below if not enough space.
+    const preferTop = rect.top >= tipH + 16;
+    const side: 'top' | 'bottom' = preferTop ? 'top' : 'bottom';
 
-    // If the tooltip still overflows due to long content, we rely on maxWidth + wrapping.
-    // (We avoid expensive continuous reflows; this is a best-effort placement.)
-  }, [open]);
+    const unclampedLeft = iconCenterX - tipW / 2;
+    const left = Math.max(margin, Math.min(unclampedLeft, vw - tipW - margin));
 
-  const containerSideClass = placement.side === 'top' ? 'bottom-full mb-2' : 'top-full mt-2';
-  const containerAlignClass =
-    placement.align === 'center'
-      ? 'left-1/2 -translate-x-1/2'
-      : placement.align === 'left'
-        ? 'left-0'
-        : 'right-0';
+    const top =
+      side === 'top'
+        ? Math.max(margin, rect.top - tipH - 8)
+        : Math.min(vh - tipH - margin, rect.bottom + 8);
 
-  const arrowSideClass = placement.side === 'top' ? 'top-full -mt-1 border-t-blue-500' : 'bottom-full -mb-1 border-b-blue-500';
-  const arrowAlignClass =
-    placement.align === 'center'
-      ? 'left-1/2 -translate-x-1/2'
-      : placement.align === 'left'
-        ? 'left-4'
-        : 'right-4';
+    // Arrow X inside tooltip (clamp so it doesn't touch edges)
+    const arrowLeft = Math.max(12, Math.min(iconCenterX - left, tipW - 12));
+
+    setCoords({ side, left, top, arrowLeft });
+  }, [open, text, widthClassName]);
+
+  const arrowSideClass =
+    coords?.side === 'top'
+      ? 'top-full -mt-1 border-t-blue-500'
+      : 'bottom-full -mb-1 border-b-blue-500';
 
   return (
     <span className="relative inline-flex items-center gap-1 align-middle">
@@ -107,12 +114,18 @@ export default function EduTooltip({
           ref={tooltipRef}
           id={tooltipId}
           role="tooltip"
-          style={{ maxWidth: 'calc(100vw - 1rem)' }}
-          className={`absolute z-50 ${containerSideClass} ${containerAlignClass} ${widthClassName} bg-slate-950 border border-blue-500 rounded-lg p-3 text-xs text-slate-200 shadow-xl whitespace-normal`}
+          style={{
+            maxWidth: 'calc(100vw - 1rem)',
+            position: 'fixed',
+            left: coords?.left ?? 8,
+            top: coords?.top ?? 8
+          }}
+          className={`z-50 ${widthClassName} bg-slate-950 border border-blue-500 rounded-lg p-3 text-xs text-slate-200 shadow-xl whitespace-normal`}
         >
           {text}
           <span
-            className={`absolute ${arrowSideClass} ${arrowAlignClass} border-4 border-transparent`}
+            className={`absolute ${arrowSideClass} border-4 border-transparent`}
+            style={{ left: coords?.arrowLeft ?? 16, transform: 'translateX(-50%)' }}
           />
         </span>
       ) : null}

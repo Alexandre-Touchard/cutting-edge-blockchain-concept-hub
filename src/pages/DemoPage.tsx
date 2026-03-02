@@ -57,9 +57,20 @@ export default function DemoPage() {
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
-          <div className="text-xs font-semibold text-slate-400 mb-2">{t('modal.keyConcepts')}</div>
-          <div className="flex flex-wrap gap-2">
+        <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900 p-4 relative overflow-hidden">
+          {/* Big demo icon on the right (does not change card size) */}
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-35 z-10 pointer-events-none select-none drop-shadow">
+            {/(\.png|\.jpe?g|\.webp|\.svg)(\?.*)?$/i.test(demo.meta.thumbnail) ? (
+              <img src={demo.meta.thumbnail} alt="" className="h-16 w-16 object-contain" />
+            ) : (
+              <span aria-hidden className="text-6xl leading-none">{demo.meta.thumbnail}</span>
+            )}
+          </div>
+
+          <div className="text-xs font-semibold text-slate-400 mb-2 flex items-center gap-2 relative z-20">
+            <span>{t('modal.keyConcepts')}</span>
+          </div>
+          <div className="flex flex-wrap gap-2 pr-20 relative z-20">
             {demo.meta.concepts.map((concept) => {
               const chip = getConceptChip(concept, demo.meta.category);
               const Icon = chip.Icon;

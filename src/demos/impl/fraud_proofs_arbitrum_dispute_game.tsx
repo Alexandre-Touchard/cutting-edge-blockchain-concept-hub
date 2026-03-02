@@ -11,7 +11,9 @@ import {
   BookOpen,
   Swords,
   Split,
-  Gavel
+  Gavel,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useDemoI18n } from '../useDemoI18n';
 import EduTooltip from '../../ui/EduTooltip';
@@ -118,6 +120,9 @@ export default function FraudProofsArbitrumDisputeGame() {
 
   const [bondProposer, setBondProposer] = useState(1.0);
   const [bondChallenger, setBondChallenger] = useState(1.0);
+
+  const [isSetupVisible, setIsSetupVisible] = useState(true);
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false);
 
   // disputed state index interval [lo, hi]
   const [lo, setLo] = useState(0);
@@ -274,12 +279,31 @@ export default function FraudProofsArbitrumDisputeGame() {
               'Simulate an interactive fraud proof: a proposer posts an assertion, a challenger disputes, and both bisect the execution trace until L1 verifies a single step.'
             )}
           </p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">{statusPill}</div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsSetupVisible((v) => !v)}
+              className="text-sm text-slate-300 hover:text-white inline-flex items-center gap-1 whitespace-nowrap"
+            >
+              {isSetupVisible ? (
+                <>
+                  <ChevronDown size={16} /> {tr('Hide setup')}
+                </>
+              ) : (
+                <>
+                  <ChevronRight size={16} /> {tr('Show setup')}
+                </>
+              )}
+            </button>
+
+            <div className="ml-auto">{statusPill}</div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`grid grid-cols-1 gap-6 ${isSetupVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-1'}`}>
           {/* Controls */}
-          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+          {isSetupVisible && (
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Settings size={18} className="text-blue-300" />
               {tr('Setup')}
@@ -444,9 +468,12 @@ export default function FraudProofsArbitrumDisputeGame() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Visualization */}
-          <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+          <div
+            className={`${isSetupVisible ? 'lg:col-span-2' : ''} bg-slate-900/50 border border-slate-800 rounded-xl p-5`}
+          >
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -458,6 +485,52 @@ export default function FraudProofsArbitrumDisputeGame() {
                     'The dispute range [lo..hi] refers to state indices. When it shrinks to a single transition (hi = lo + 1), L1 can verify that one step to decide the winner.'
                   )}
                 </p>
+
+                {/* Bisection Track */}
+                <div className="mt-3 bg-slate-950/40 border border-slate-800 rounded-lg p-3">
+                  <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                    <span className="inline-flex items-center gap-2">
+                      {tr('Bisection Track')}
+                      <EduTooltip
+                        text={tr(
+                          'This bar visualizes the current disputed interval [lo..hi] over the execution trace. Each bisection round shrinks the highlighted segment until only one step remains for the one-step proof.'
+                        )}
+                      />
+                    </span>
+                    <span className="font-mono">0 → {steps}</span>
+                  </div>
+
+                  <div className="relative h-3 rounded-full bg-slate-800 overflow-hidden">
+                    {/* disputed interval */}
+                    <div
+                      className="absolute top-0 h-3 bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-300"
+                      style={{
+                        left: `${(lo / steps) * 100}%`,
+                        width: `${((hi - lo) / steps) * 100}%`
+                      }}
+                    />
+
+                    {/* midpoint marker */}
+                    {hi - lo > 1 && (
+                      <div
+                        className="absolute top-[-6px] w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-yellow-300 transition-all duration-300"
+                        style={{ left: `${(Math.floor((lo + hi) / 2) / steps) * 100}%` }}
+                        title={tr('Midpoint')}
+                      />
+                    )}
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between text-xs">
+                    <span className="font-mono text-slate-300">lo={lo}</span>
+                    <span className="font-mono text-slate-300">hi={hi}</span>
+                  </div>
+
+                  {hi - lo === 1 && (
+                    <div className="mt-2 text-xs text-emerald-300">
+                      {tr('Ready for one-step proof (hi = lo + 1).')}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="text-right text-sm">
                 <div>
@@ -475,8 +548,8 @@ export default function FraudProofsArbitrumDisputeGame() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-4 md:col-span-2">
                 <div className="text-sm text-slate-400 mb-2 flex items-center gap-2">
                   {tr('Assertion')}
                   <EduTooltip
@@ -499,11 +572,138 @@ export default function FraudProofsArbitrumDisputeGame() {
                         idx: trace.bugStep + 1
                       })}
                 </div>
+
+                {/* Detailed state table */}
+                <div className="mt-4">
+                  <div className="text-sm text-slate-400 mb-2">{tr('Claimed vs True (per state index)')}</div>
+
+                  <div className="max-h-64 overflow-auto rounded-lg border border-slate-800">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-slate-950 z-10">
+                        <tr className="text-slate-400">
+                          <th className="text-left py-2 px-3">
+                            <span className="inline-flex items-center gap-2">
+                              {tr('State index')}
+                              <EduTooltip
+                                text={tr(
+                                  'State index i refers to the state *after* i steps of execution. The transition from index i to i+1 is one execution step (and uses input[i]).'
+                                )}
+                              />
+                            </span>
+                          </th>
+                          <th className="text-left py-2 px-3">
+                            <span className="inline-flex items-center gap-2">
+                              {tr('Input')}
+                              <EduTooltip
+                                text={tr(
+                                  'The per-step input used to compute the next state for the transition i → i+1. (The last state has no input.)'
+                                )}
+                              />
+                            </span>
+                          </th>
+                          <th className="text-left py-2 px-3">
+                            <span className="inline-flex items-center gap-2">
+                              {tr('Claimed')}
+                              <EduTooltip
+                                text={tr(
+                                  'The proposer\'s claimed state value at this index. This is what the assertion commits to.'
+                                )}
+                              />
+                            </span>
+                          </th>
+                          <th className="text-left py-2 px-3">
+                            <span className="inline-flex items-center gap-2">
+                              {tr('True')}
+                              <EduTooltip
+                                text={tr(
+                                  'The true state value produced by the honest execution trace (ground truth in this simulation).'
+                                )}
+                              />
+                            </span>
+                          </th>
+                          <th className="text-left py-2 px-3">
+                            <span className="inline-flex items-center gap-2">
+                              {tr('Match')}
+                              <EduTooltip
+                                text={tr(
+                                  'Whether the claimed and true states are equal at this index. A mismatch indicates fraud somewhere in the disputed interval.'
+                                )}
+                              />
+                            </span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.from({ length: steps + 1 }).map((_, idx) => {
+                          const claimed = trace.claimedStates[idx];
+                          const truth = trace.trueStates[idx];
+                          const match = claimed === truth;
+                          const inRange = idx >= lo && idx <= hi;
+
+                          return (
+                            <tr
+                              key={idx}
+                              className={`${
+                                inRange ? 'bg-slate-900/40' : ''
+                              } border-t border-slate-800`}
+                            >
+                              <td className="py-2 px-3 font-mono text-slate-200">{idx}</td>
+                              <td
+                                className={`py-2 px-3 font-mono ${
+                                  inRange ? 'text-slate-200' : 'text-slate-500'
+                                }`}
+                              >
+                                {idx < steps ? trace.inputs[idx] : '-'}
+                              </td>
+                              <td className="py-2 px-3 font-mono text-slate-200">{claimed}</td>
+                              <td className="py-2 px-3 font-mono text-slate-200">{truth}</td>
+                              <td className="py-2 px-3">
+                                {match ? (
+                                  <span className="text-emerald-300">{tr('✓')}</span>
+                                ) : (
+                                  <span className="text-rose-300">{tr('✗')}</span>
+                                )}
+                                {inRange && (
+                                  <span className="ml-2 text-[10px] text-slate-400">
+                                    {tr('in dispute')}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-2 text-[11px] text-slate-400">
+                    {tr('Highlighted rows are inside the current disputed interval [lo..hi].')}
+                  </div>
+                </div>
               </div>
 
               <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-4">
-                <div className="text-sm text-slate-400 mb-2">{tr('Timeline')}</div>
-                <div className="flex gap-1 flex-wrap">
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  <div className="text-sm text-slate-400">{tr('Timeline')}</div>
+                  <button
+                    type="button"
+                    onClick={() => setIsTimelineOpen((v) => !v)}
+                    className="md:hidden text-sm text-slate-300 hover:text-white inline-flex items-center gap-1"
+                  >
+                    {isTimelineOpen ? (
+                      <>
+                        <ChevronDown size={16} /> {tr('Hide')}
+                      </>
+                    ) : (
+                      <>
+                        <ChevronRight size={16} /> {tr('Show')}
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className={`${isTimelineOpen ? 'block' : 'hidden'} md:block`}>
+                  <div className="flex gap-1 flex-wrap">
                   {Array.from({ length: steps + 1 }).map((_, idx) => {
                     const inRange = idx >= lo && idx <= hi;
                     const mismatch = trace.trueStates[idx] !== trace.claimedStates[idx];
@@ -523,11 +723,61 @@ export default function FraudProofsArbitrumDisputeGame() {
                     );
                   })}
                 </div>
-                <div className="mt-2 text-xs text-slate-400">
-                  {tr('Green = states match, Red = mismatch. Highlighted = currently disputed interval.')}
+                  </div>
+                  <div className="mt-2 text-xs text-slate-400">
+                    {tr('Green = states match, Red = mismatch. Highlighted = currently disputed interval.')}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* One-step proof details */}
+            {hi - lo === 1 && (
+              <div className="mt-4 bg-slate-950/40 border border-emerald-800 rounded-lg p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-sm text-slate-400">{tr('One-step proof')}</div>
+                    <div className="text-lg font-semibold text-emerald-200">
+                      {tr('Verify transition {{i}} → {{j}} on L1', { i: lo, j: lo + 1 })}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1">
+                      {tr(
+                        'At this point, L1 only needs to check a single transition. If claimed and true results differ, the assertion is fraudulent.'
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-right text-xs text-slate-400">
+                    <div>
+                      {tr('Input')}: <span className="font-mono">{trace.inputs[lo] ?? '-'} </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-3">
+                    <div className="text-xs text-slate-400 mb-1">{tr('Prev state')}</div>
+                    <div className="font-mono text-sm">{trace.trueStates[lo]}</div>
+                  </div>
+                  <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-3">
+                    <div className="text-xs text-slate-400 mb-1">{tr('Claimed next')}</div>
+                    <div className="font-mono text-sm">{trace.claimedStates[lo + 1]}</div>
+                  </div>
+                  <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-3">
+                    <div className="text-xs text-slate-400 mb-1">{tr('True next')}</div>
+                    <div className="font-mono text-sm">{trace.trueStates[lo + 1]}</div>
+                  </div>
+                </div>
+
+                <div className="mt-3 text-sm">
+                  {trace.trueStates[lo + 1] === trace.claimedStates[lo + 1] ? (
+                    <span className="text-emerald-300">{tr('No mismatch at this step — challenger loses if executed now.')}</span>
+                  ) : (
+                    <span className="text-rose-300">{tr('Mismatch at this step — fraud proof will succeed.')}</span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="mt-4 bg-slate-950/40 border border-slate-800 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
@@ -556,7 +806,9 @@ export default function FraudProofsArbitrumDisputeGame() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              className={`mt-6 grid grid-cols-1 ${isSetupVisible ? '' : 'md:grid-cols-2'} gap-4`}
+            >
               <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-4">
                 <h3 className="font-semibold mb-2 text-blue-300">{tr('How the Arbitrum-style dispute game works')}</h3>
                 <ol className="list-decimal ml-5 text-sm text-slate-300 space-y-1">
@@ -584,7 +836,7 @@ export default function FraudProofsArbitrumDisputeGame() {
                 {tr('Real-World Applications')}
               </h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className={`grid grid-cols-1 ${isSetupVisible ? '' : 'md:grid-cols-2'} gap-6`}>
                 <div>
                   <div className="font-semibold text-emerald-300 mb-2">{tr('Arbitrum Nitro')}</div>
                   <p className="text-slate-300 mb-2">
@@ -677,6 +929,5 @@ export default function FraudProofsArbitrumDisputeGame() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

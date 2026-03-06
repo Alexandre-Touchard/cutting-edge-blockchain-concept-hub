@@ -39,6 +39,9 @@ export type GlossaryKey =
   | 'Oracle Networks'
   | 'Cross-Chain Messaging'
   | 'Trust Models'
+  // State channels
+  | 'State Channels'
+  | 'Signatures'
   // ERC standards
   | 'ERC Standards'
   | 'ERC-20'
@@ -207,6 +210,12 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
   'Trust Models':
     'The assumptions required for security (e.g., light-client verification vs multisig vs oracle/relayer). Different interoperability protocols trade off trust, cost, and complexity.',
 
+  // State channels
+  'State Channels':
+    'A scaling technique where participants lock funds on-chain, then exchange signed off-chain state updates. Only open/close (or disputes) touch the blockchain.',
+  Signatures:
+    'Cryptographic proofs that a message/state was approved by a party. In channels, both parties sign each update so the latest signed state can be enforced on-chain.',
+
   // ERC standards
   'ERC Standards':
     'Ethereum Request for Comments (ERC) standards define common interfaces (function signatures + events) so wallets, dApps, and tooling can integrate assets consistently.',
@@ -323,7 +332,7 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
   Difficulty:
     'Difficulty controls how hard mining is. Higher difficulty means the block hash must have more leading zeros, requiring more trial-and-error.',
   Nonce:
-    'A nonce is a number miners vary to find a block hash that satisfies the difficulty target.',
+    'A nonce is a number/counter used in different contexts. In mining it is varied to find a valid block hash; in accounts/channels it is a monotonically increasing counter that orders updates and prevents replay.',
   'Parallel Execution':
     'Parallel execution runs non-conflicting transactions at the same time to increase throughput. Conflicts happen when transactions touch overlapping state (read/write sets).',
   'Conflict Rate':

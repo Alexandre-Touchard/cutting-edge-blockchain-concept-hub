@@ -280,10 +280,12 @@ export default function FraudProofsArbitrumDisputeGame() {
             )}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
+            <div>{statusPill}</div>
+
             <button
               type="button"
               onClick={() => setIsSetupVisible((v) => !v)}
-              className="text-sm text-slate-300 hover:text-white inline-flex items-center gap-1 whitespace-nowrap"
+              className="ml-auto text-sm text-slate-300 hover:text-white inline-flex items-center gap-1 whitespace-nowrap"
             >
               {isSetupVisible ? (
                 <>
@@ -295,8 +297,6 @@ export default function FraudProofsArbitrumDisputeGame() {
                 </>
               )}
             </button>
-
-            <div className="ml-auto">{statusPill}</div>
           </div>
         </div>
 
@@ -807,7 +807,7 @@ export default function FraudProofsArbitrumDisputeGame() {
             </div>
 
             <div
-              className={`mt-6 grid grid-cols-1 ${isSetupVisible ? '' : 'md:grid-cols-2'} gap-4`}
+              className={`mt-6 grid grid-cols-1 ${isSetupVisible ? '' : 'lg:grid-cols-2'} gap-4`}
             >
               <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-4">
                 <h3 className="font-semibold mb-2 text-blue-300">{tr('How the Arbitrum-style dispute game works')}</h3>
@@ -836,7 +836,7 @@ export default function FraudProofsArbitrumDisputeGame() {
                 {tr('Real-World Applications')}
               </h2>
 
-              <div className={`grid grid-cols-1 ${isSetupVisible ? '' : 'md:grid-cols-2'} gap-6`}>
+              <div className={`grid grid-cols-1 ${isSetupVisible ? '' : 'lg:grid-cols-2'} gap-6`}>
                 <div>
                   <div className="font-semibold text-emerald-300 mb-2">{tr('Arbitrum Nitro')}</div>
                   <p className="text-slate-300 mb-2">

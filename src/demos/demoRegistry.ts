@@ -162,5 +162,22 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
       'L1 verification of one step keeps disputes cheap while preserving security'
     ],
     tags: ['Arbitrum', 'Optimistic Rollups', 'Fraud Proofs', 'Dispute Game']
+  },
+
+  'state-channels-demo': {
+    id: 'state-channels',
+    title: 'State Channels (Payment Channels)',
+    category: 'scaling',
+    difficulty: 'Intermediate',
+    thumbnail: new URL('../public/photo/Demo11.png', import.meta.url).href,
+    description:
+      'Lock deposits on L1, exchange signed updates off-chain, then settle cooperatively or via a dispute window.',
+    concepts: ['State Channels', 'Challenge Period', 'Nonce', 'Signatures'],
+    keyTakeaways: [
+      'Most interactions happen off-chain; only open/close touch L1',
+      'The newest signed state (highest nonce) wins during disputes',
+      'Channels enable instant micro-payments and high-frequency app interactions'
+    ],
+    tags: ['Lightning', 'Raiden', 'Micropayments', 'Scaling']
   }
 };

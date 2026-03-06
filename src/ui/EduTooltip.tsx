@@ -31,7 +31,7 @@ export default function EduTooltip({
   children,
   term,
   showIcon = true,
-  widthClassName = 'w-72'
+  widthClassName = 'w-80 md:w-96',
 }: EduTooltipProps) {
   const [open, setOpen] = useState(false);
   const tooltipId = useId();
@@ -116,11 +116,12 @@ export default function EduTooltip({
           role="tooltip"
           style={{
             maxWidth: 'calc(100vw - 1rem)',
+            maxHeight: 'calc(100vh - 1rem)',
             position: 'fixed',
             left: coords?.left ?? 8,
             top: coords?.top ?? 8
           }}
-          className={`z-50 ${widthClassName} bg-slate-950 border border-blue-500 rounded-lg p-3 text-xs text-slate-200 shadow-xl whitespace-normal`}
+          className={`z-50 ${widthClassName} bg-slate-950 border border-blue-500 rounded-lg p-3 text-xs text-slate-200 shadow-xl whitespace-normal overflow-auto`}
         >
           {text}
           <span

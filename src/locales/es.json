@@ -81,6 +81,15 @@
         "2": "La verificación de un solo paso en L1 mantiene las disputas baratas preservando la seguridad"
       }
     },
+    "state-channels": {
+      "title": "Canales de estado (canales de pago)",
+      "description": "Bloquea depósitos en L1, intercambia actualizaciones firmadas off-chain y luego liquida de forma cooperativa o mediante una ventana de disputa.",
+      "keyTakeaways": {
+        "0": "La mayoría de interacciones ocurren off-chain; solo abrir/cerrar toca L1",
+        "1": "Durante disputas, el estado firmado más reciente (nonce más alto) gana",
+        "2": "Los canales permiten micropagos instantáneos e interacciones de alta frecuencia"
+      }
+    },
     "blockchain-interop": {
       "title": "Protocolos cross-chain",
       "description": "Compara IBC, CCIP y LayerZero: distintos modelos de confianza para mensajería entre cadenas.",
@@ -127,6 +136,9 @@
     "Light Clients": "Clientes que verifican la corrección de la cadena usando solo cabeceras y pruebas criptográficas, sin descargar bloques/estado completos.",
     "Oracle Networks": "Redes descentralizadas que obtienen/verifican datos off-chain y los publican on-chain con supuestos de seguridad (quórum, staking, slashing, etc.).",
     "Cross-Chain Messaging": "Enviar mensajes autenticados entre blockchains (no necesariamente tokens). La pregunta clave es cómo la cadena destino verifica el evento de origen.",
+
+    "State Channels": "Técnica de escalado donde los participantes bloquean fondos on-chain y luego intercambian actualizaciones de estado firmadas off-chain. Solo abrir/cerrar (o disputas) toca la blockchain.",
+    "Signatures": "Pruebas criptográficas de que un mensaje/estado fue aprobado por una parte. En canales, ambas partes firman cada actualización para que el último estado firmado pueda hacerse cumplir on-chain.",
 
     "Impermanent Loss": "Pérdida relativa para un proveedor de liquidez cuando cambia el precio, comparado con holdear los activos."
   },

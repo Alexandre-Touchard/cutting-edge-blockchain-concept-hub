@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -29,7 +29,14 @@ export default function DemoPage() {
     );
   }
 
-  const DemoComponent = demo.Component;
+  const DemoComponent = useMemo(
+    () =>
+      React.lazy(async () => {
+        const mod = await demo.load();
+        return { default: mod.default };
+      }),
+    [demo.sourcePath]
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -89,7 +96,16 @@ export default function DemoPage() {
           </div>
         </div>
 
-        <DemoComponent />
+        <Suspense
+          fallback={
+            <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 text-slate-200">
+              <div className="text-sm text-slate-400">{t('common.loading', { defaultValue: 'Loading demo…' })}</div>
+              <div className="mt-2 font-semibold">{demo.meta.title}</div>
+            </div>
+          }
+        >
+          <DemoComponent />
+        </Suspense>
       </div>
     </div>
   );

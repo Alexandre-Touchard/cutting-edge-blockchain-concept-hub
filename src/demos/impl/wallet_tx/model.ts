@@ -1,4 +1,7 @@
-export type Address = 'Alice' | 'Bob' | 'DEX' | 'Miner';
+export const EOA_ADDRESSES = ['Alice', 'Bob', 'Charlie', 'Dave'] as const;
+export type EOA = (typeof EOA_ADDRESSES)[number];
+
+export type Address = EOA | 'DEX' | 'Miner';
 export type TxType = 'eth_transfer' | 'erc20_approve' | 'dex_swap' | 'dex_swap_permit';
 export type TxStatus =
   | 'mempool'
@@ -11,7 +14,7 @@ export type TxStatus =
 export type Account = { eth: number; dai: number; nonce: number };
 
 export type PermitSig = {
-  owner: 'Alice' | 'Bob';
+  owner: EOA;
   spender: 'DEX';
   valueDai: number;
   nonce: number;
@@ -46,7 +49,7 @@ export type ReplacementReport = {
 export type Tx = {
   hash: string;
   type: TxType;
-  from: 'Alice' | 'Bob';
+  from: EOA;
   to: Address;
   nonce: number;
 
@@ -161,14 +164,16 @@ export function makeInitialWalletTxState(): WalletTxState {
     blocks: [],
     reorgSnapshot: null,
     lastReorg: null,
-    permitNonce: { Alice: 0, Bob: 0 },
+    permitNonce: { Alice: 0, Bob: 0, Charlie: 0, Dave: 0 },
     accounts: {
       Alice: { eth: 1.2, dai: 1000, nonce: 0 },
       Bob: { eth: 0.4, dai: 50, nonce: 0 },
+      Charlie: { eth: 0.8, dai: 200, nonce: 0 },
+      Dave: { eth: 0.7, dai: 120, nonce: 0 },
       DEX: { eth: 0, dai: 10_000, nonce: 0 },
       Miner: { eth: 0, dai: 0, nonce: 0 }
     },
-    dexAllowance: { Alice: 0, Bob: 0 },
+    dexAllowance: { Alice: 0, Bob: 0, Charlie: 0, Dave: 0 },
     mempool: [],
     history: {}
   };

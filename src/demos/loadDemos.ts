@@ -15,7 +15,7 @@ export type ImplDemoModule = {
 
 export type LoadedDemo = {
   meta: DemoMeta;
-  Component: React.ComponentType;
+  load: () => Promise<ImplDemoModule>;
   sourcePath: string;
 };
 
@@ -62,17 +62,16 @@ function inferDefaultsFromPath(sourcePath: string): Pick<DemoMeta, 'id' | 'title
 export function loadDemos(): LoadedDemo[] {
   // Auto-discover demo implementations.
   // Files must default-export a React component.
-  const modules = import.meta.glob<ImplDemoModule>('./impl/*.tsx', { eager: true });
+  // IMPORTANT: do NOT eager-import demo modules. We want them split into separate chunks.
+  const modules = import.meta.glob<ImplDemoModule>('./impl/*.tsx');
 
-  const demos = (Object.entries(modules) as Array<[string, ImplDemoModule]>).map(([sourcePath, mod]) => {
+  const demos = (Object.entries(modules) as Array<[string, () => Promise<ImplDemoModule>]>).map(([sourcePath, load]) => {
     const defaults = inferDefaultsFromPath(sourcePath);
-    const metaOverride = (mod.demoMeta ?? {}) as NonNullable<ImplDemoModule['demoMeta']>;
 
+    // We intentionally avoid reading mod.demoMeta here because that would require loading the module.
+    // All hub metadata should live in demoMetaRegistry (demoRegistry.ts) or be inferred from filename.
     const metaBase: DemoMeta = {
-      ...defaults,
-      ...metaOverride,
-      id: metaOverride.id ?? defaults.id,
-      title: metaOverride.title ?? defaults.title
+      ...defaults
     };
 
     const meta: DemoMeta = {
@@ -88,7 +87,7 @@ export function loadDemos(): LoadedDemo[] {
 
     return {
       meta,
-      Component: mod.default,
+      load,
       sourcePath
     };
   });

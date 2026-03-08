@@ -1,4 +1,5 @@
 import React, { useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
 
 export type EduTooltipProps = {
@@ -40,6 +41,23 @@ export default function EduTooltip({
 
   const iconRef = useRef<HTMLSpanElement | null>(null);
   const tooltipRef = useRef<HTMLSpanElement | null>(null);
+
+  const closeTimerRef = useRef<number | null>(null);
+  const hoveringTooltipRef = useRef(false);
+
+  function cancelCloseTimer() {
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }
+
+  function scheduleClose() {
+    cancelCloseTimer();
+    closeTimerRef.current = window.setTimeout(() => {
+      if (!hoveringTooltipRef.current) setOpen(false);
+    }, 120);
+  }
 
   const [coords, setCoords] = useState<{
     side: 'top' | 'bottom';
@@ -97,9 +115,15 @@ export default function EduTooltip({
       {showIcon ? (
         <span
           ref={iconRef}
-          onMouseEnter={() => setOpen(true)}
-          onMouseLeave={() => setOpen(false)}
-          onFocus={() => setOpen(true)}
+          onMouseEnter={() => {
+            cancelCloseTimer();
+            setOpen(true);
+          }}
+          onMouseLeave={() => scheduleClose()}
+          onFocus={() => {
+            cancelCloseTimer();
+            setOpen(true);
+          }}
           onBlur={() => setOpen(false)}
           aria-describedby={open ? tooltipId : undefined}
           tabIndex={0}
@@ -109,27 +133,40 @@ export default function EduTooltip({
         </span>
       ) : null}
 
-      {open ? (
-        <span
-          ref={tooltipRef}
-          id={tooltipId}
-          role="tooltip"
-          style={{
-            maxWidth: 'calc(100vw - 1rem)',
-            maxHeight: 'calc(100vh - 1rem)',
-            position: 'fixed',
-            left: coords?.left ?? 8,
-            top: coords?.top ?? 8
-          }}
-          className={`z-50 ${widthClassName} bg-slate-950 border border-blue-500 rounded-lg p-3 text-xs text-slate-200 shadow-xl whitespace-normal overflow-auto`}
-        >
-          {text}
-          <span
-            className={`absolute ${arrowSideClass} border-4 border-transparent`}
-            style={{ left: coords?.arrowLeft ?? 16, transform: 'translateX(-50%)' }}
-          />
-        </span>
-      ) : null}
+      {open
+        ? createPortal(
+            <span
+              ref={tooltipRef}
+              id={tooltipId}
+              role="tooltip"
+              onMouseEnter={() => {
+                hoveringTooltipRef.current = true;
+                cancelCloseTimer();
+              }}
+              onMouseLeave={() => {
+                hoveringTooltipRef.current = false;
+                setOpen(false);
+              }}
+              style={{
+                maxWidth: 'calc(100vw - 1rem)',
+                maxHeight: 'calc(100vh - 1rem)',
+                position: 'fixed',
+                left: coords?.left ?? 8,
+                top: coords?.top ?? 8
+              }}
+              className={`z-[9999] ${widthClassName} bg-slate-950 border border-blue-500 rounded-lg p-3 text-xs text-slate-200 shadow-xl whitespace-normal overflow-auto pointer-events-auto`}
+            >
+              <span className="relative block">
+                {text}
+                <span
+                  className={`absolute ${arrowSideClass} border-4 border-transparent`}
+                  style={{ left: coords?.arrowLeft ?? 16, transform: 'translateX(-50%)' }}
+                />
+              </span>
+            </span>,
+            document.body
+          )
+        : null}
     </span>
   );
 }

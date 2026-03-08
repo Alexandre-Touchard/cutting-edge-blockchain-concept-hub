@@ -164,6 +164,25 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
     tags: ['Arbitrum', 'Optimistic Rollups', 'Fraud Proofs', 'Dispute Game']
   },
 
+  'wallet-transaction-lifecycle': {
+    id: 'wallet-tx-lifecycle',
+    title: 'Wallet UX & Transaction lifecycle',
+    category: 'execution',
+    difficulty: 'Beginner',
+    thumbnail: '👛',
+    description:
+      'Simulate what happens when you click “confirm” in a wallet: nonces, EIP-1559 fees, mempool inclusion, ignored vs pending txs, replacement (speed up / cancel), and common revert reasons.',
+    concepts: ['Nonce', 'Gas Economics', 'Transaction Pool', 'Approval', 'Allowance'],
+    keyTakeaways: [
+      'Your nonce enforces per-account ordering; a gap blocks later txs from being mined',
+      'With EIP-1559, you set max fee + priority fee; effective gas price is min(maxFee, baseFee + priorityFee)',
+      'Wallets check affordability using the cap: value + gasLimit × maxFee (not today’s effective price)',
+      'If base fee rises above max fee, the tx is ignored until base fee drops (or you replace it)',
+      'Speed up / cancel replaces the pending tx (same nonce) and typically requires a fee bump (≈10%)'
+    ],
+    tags: ['Wallets', 'EIP-1559', 'Mempool', 'Gas', 'Nonce']
+  },
+
   'state-channels-demo': {
     id: 'state-channels',
     title: 'State Channels (Payment Channels)',

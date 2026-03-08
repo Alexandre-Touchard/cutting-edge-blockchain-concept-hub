@@ -42,5 +42,18 @@
     "tryAdjustingSearch": "Try adjusting your search or filters",
     "hideFilters": "Hide filters",
     "showFilters": "Show filters"
+  },
+  "demos": {
+    "wallet-tx-lifecycle": {
+      "title": "Wallet UX & Transaction lifecycle",
+      "description": "Simulate what happens when you click “confirm” in a wallet: nonces, EIP-1559 fees, mempool inclusion, replacement (speed up / cancel), and common revert reasons.",
+      "keyTakeaways": {
+        "0": "Your nonce enforces per-account ordering; a gap blocks later txs from being mined",
+        "1": "With EIP-1559, you set max fee + priority fee; effective gas price is min(maxFee, baseFee + priorityFee)",
+        "2": "Wallets check affordability using the cap: value + gasLimit × maxFee (not today’s effective price)",
+        "3": "If base fee rises above max fee, the tx is ignored until base fee drops (or you replace it)",
+        "4": "Speed up / cancel replaces the pending tx (same nonce) and typically requires a fee bump (≈10%)"
+      }
+    }
   }
 }

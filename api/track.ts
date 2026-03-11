@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
-import { redisPipeline } from './_upstash';
-import { hasSupabaseEnv, insertAnalyticsEvent } from './_supabase_rest';
+import { redisPipeline } from './_upstash.js';
+import { hasSupabaseEnv, insertAnalyticsEvent } from './_supabase_rest.js';
 
 export const config = { runtime: 'nodejs' };
 

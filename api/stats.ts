@@ -1,5 +1,5 @@
-import { parseRedisHgetall, parseRedisInt, redisPipeline } from './_upstash';
-import { fetchAnalyticsEventsRange, hasSupabaseEnv } from './_supabase_rest';
+import { parseRedisHgetall, parseRedisInt, redisPipeline } from './_upstash.js';
+import { fetchAnalyticsEventsRange, hasSupabaseEnv } from './_supabase_rest.js';
 
 export const config = { runtime: 'nodejs' };
 

@@ -103,6 +103,10 @@ export default function WalletTransactionLifecycleImpl() {
   const [maxFee, setMaxFee] = useState(25);
   const [maxPriority, setMaxPriority] = useState(1.5);
 
+  type BuilderMode = 'new' | 'speedup' | 'cancel';
+  const [builderMode, setBuilderMode] = useState<BuilderMode>('new');
+  const [builderBaseHash, setBuilderBaseHash] = useState<string | null>(null);
+
   const resolvedNonce = manualNonce ? draftNonce : state.accounts[draftFrom].nonce;
   const neededGas = requiredGas(draftType);
 
@@ -335,9 +339,7 @@ export default function WalletTransactionLifecycleImpl() {
     setSelectedHash(r1.hash);
   }
 
-  function doReset() {
-    setState(makeInitialWalletTxState());
-    setSelectedHash(null);
+  function resetDraftOnly() {
     setDraftType('eth_transfer');
     setDraftFrom('Alice');
     setDraftTo('Bob');
@@ -352,9 +354,20 @@ export default function WalletTransactionLifecycleImpl() {
     setGasLimit(60_000);
     setMaxFee(25);
     setMaxPriority(1.5);
+    setBuilderMode('new');
+    setBuilderBaseHash(null);
+  }
+
+  function doReset() {
+    setState(makeInitialWalletTxState());
+    setSelectedHash(null);
+    resetDraftOnly();
   }
 
   function speedUp(tx: Tx) {
+    setBuilderMode('speedup');
+    setBuilderBaseHash(tx.hash);
+
     setDraftType(tx.type);
     setDraftFrom(tx.from);
     setDraftTo(tx.to);
@@ -369,6 +382,9 @@ export default function WalletTransactionLifecycleImpl() {
   }
 
   function cancelTx(tx: Tx) {
+    setBuilderMode('cancel');
+    setBuilderBaseHash(tx.hash);
+
     setDraftType('eth_transfer');
     setDraftFrom(tx.from);
     setDraftTo(tx.from);
@@ -782,9 +798,82 @@ export default function WalletTransactionLifecycleImpl() {
 
           {/* Builder */}
           <div className="bg-slate-900/60 rounded-xl border border-slate-700 p-4">
-            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
               <Wrench size={18} className="text-emerald-300" /> {tr('Build a transaction')}
             </h2>
+
+            {/* Builder mode indicator */}
+            <div className="mb-3 rounded-lg border border-slate-700 bg-slate-950/20 p-3 text-xs text-slate-200">
+              {builderMode === 'new' ? (
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-semibold flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full border border-emerald-700 bg-emerald-900/10 text-emerald-200">{tr('Mode')}: {tr('New transaction')}</span>
+                    </div>
+                    <div
+                      className="mt-1 text-slate-400"
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      {selectedTx
+                        ? tr('A tx is selected in the panel on the right. The builder is still composing a new tx from scratch. Use Speed up / Cancel to prefill a replacement.')
+                        : tr('Use the builder to compose a new tx, then sign and broadcast it to the mempool.')}
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={resetDraftOnly}
+                      className="inline-flex items-center gap-2 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 whitespace-nowrap"
+                    >
+                      <TimerReset size={14} /> {tr('Reset builder')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-semibold flex items-center gap-2">
+                      <span
+                        className={
+                          builderMode === 'speedup'
+                            ? 'px-2 py-0.5 rounded-full border border-blue-700 bg-blue-900/10 text-blue-200 inline-block leading-tight'
+                            : 'px-2 py-0.5 rounded-full border border-red-700 bg-red-900/10 text-red-200 inline-block leading-tight'
+                        }
+                      >
+                        <span className="block">{tr('Mode')}:</span>
+                        <span className="block">
+                          {builderMode === 'speedup' ? tr('Editing replacement (Speed up)') : tr('Editing replacement (Cancel)')}
+                        </span>
+                      </span>
+                      {builderBaseHash && <span className="text-slate-400">({tr('base tx')} {shortHash(builderBaseHash)})</span>}
+                    </div>
+                    <div className="mt-1 text-slate-400">
+                      {builderMode === 'speedup'
+                        ? tr('You are preparing a replacement tx with the same nonce and higher fees. Broadcast it to replace the pending tx.')
+                        : tr('You are preparing a cancel tx: a 0-value self-transfer with the same nonce and higher fees. Broadcast it to replace the pending tx.')}
+                    </div>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBuilderMode('new');
+                        setBuilderBaseHash(null);
+                        setManualNonce(false);
+                      }}
+                      className="inline-flex items-center gap-2 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 whitespace-nowrap"
+                    >
+                      {tr('Build from scratch')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 gap-3">
               <div>
@@ -1177,8 +1266,24 @@ export default function WalletTransactionLifecycleImpl() {
                 onClick={doBroadcast}
                 className="w-full inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 border border-emerald-500 font-semibold"
               >
-                <span className="inline-flex items-center gap-2 min-w-0">
-                  <Zap size={16} /> {tr('Sign & broadcast')}
+                <span className="inline-flex items-center gap-2 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis">
+                  <Zap size={16} className="shrink-0" />
+                  <span
+                    className={builderMode === 'new' ? 'whitespace-nowrap' : 'whitespace-nowrap text-xs'}
+                    title={
+                      builderMode === 'new'
+                        ? undefined
+                        : builderMode === 'speedup'
+                          ? tr('Sign & broadcast (replacement: speed up)')
+                          : tr('Sign & broadcast (replacement: cancel)')
+                    }
+                  >
+                    {builderMode === 'new'
+                      ? tr('Sign & broadcast')
+                      : builderMode === 'speedup'
+                        ? tr('Sign & broadcast (replacement: speed up)')
+                        : tr('Sign & broadcast (replacement: cancel)')}
+                  </span>
                 </span>
                 <span
                   className="ml-1"
@@ -1462,13 +1567,22 @@ export default function WalletTransactionLifecycleImpl() {
               <div className="mt-4 rounded-lg bg-slate-900 border border-slate-700 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-semibold">{tr('Selected tx')}</div>
-                  <button
-                    type="button"
-                    onClick={() => copyHash(selectedTx.hash)}
-                    className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 inline-flex items-center gap-2"
-                  >
-                    <Copy size={14} /> {tr('Copy hash')}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedHash(null)}
+                      className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 whitespace-nowrap"
+                    >
+                      {tr('Clear selection')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyHash(selectedTx.hash)}
+                      className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 inline-flex items-center gap-2 whitespace-nowrap"
+                    >
+                      <Copy size={14} /> {tr('Copy hash')}
+                    </button>
+                  </div>
                 </div>
                 <div className="text-xs text-slate-400 mt-1">{selectedTx.hash}</div>
 
@@ -1586,7 +1700,20 @@ export default function WalletTransactionLifecycleImpl() {
                       onClick={() => speedUp(selectedTx)}
                       className="flex-1 inline-flex items-center justify-center gap-2 px-2 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm"
                     >
-                      <Zap size={16} /> {tr('Speed up')}
+                      <Zap size={16} />
+                      <span>{tr('Speed up')}</span>
+                      <span
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        <EduTooltip
+                          widthClassName="w-96"
+                          text={tr(
+                            'Speed up (real wallets) usually means sending a new transaction with the same nonce and higher fees, so it replaces the old pending tx. If the replacement is mined, the original cannot be mined anymore. Many nodes require a fee bump (~10%) for replacement.'
+                          )}
+                        />
+                      </span>
                     </button>
                     <button
                       type="button"

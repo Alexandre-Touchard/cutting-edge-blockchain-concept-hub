@@ -16,6 +16,8 @@ import {
   Zap
 } from 'lucide-react';
 
+const homepageBackgroundUrl = new URL('../public/photo/Homepage_background.jpg', import.meta.url).href;
+
 export type CategoryId = 'all' | 'consensus' | 'scaling' | 'execution' | 'data' | 'interop' | 'security' | 'defi';
 
 export type DemoMeta = {
@@ -203,12 +205,38 @@ export default function Hub({
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Upper Hero (header + filters) */}
+        <div className="relative rounded-2xl">
+          {/* Background (clipped to rounded corners) */}
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-2xl">
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-45"
+              style={{ backgroundImage: `url(${homepageBackgroundUrl})` }}
+            />
+            <div className="absolute inset-0 bg-slate-950/70" />
+          </div>
+
+          {/* Content (lets dropdown overflow) */}
+          <div className="relative z-10">
+            {/* Header */}
         <div className="mb-12">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             {/* Right: language (stays top-right on small screens) */}
-            <div className="order-1 md:order-3 self-end md:self-auto shrink-0">
+            <div className="order-1 md:order-3 self-end md:self-auto shrink-0 flex flex-col items-end gap-3">
               <LanguageSwitcher />
+
+              {areFiltersVisible && (
+                <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                  <div className="px-4 py-2 bg-slate-800 rounded-full text-sm inline-flex items-center gap-1 whitespace-nowrap">
+                    <span className="text-slate-400">{t('app.totalDemos')}</span>
+                    <span className="font-bold text-blue-400">{demos.length}</span>
+                  </div>
+                  <div className="px-4 py-2 bg-slate-800 rounded-full text-sm inline-flex items-center gap-1 whitespace-nowrap">
+                    <span className="text-slate-400">{t('app.categories')}</span>
+                    <span className="font-bold text-purple-400">{Object.keys(categories).length - 1}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Center: title */}
@@ -216,22 +244,9 @@ export default function Hub({
               <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 {t('app.title')}
               </h1>
-              <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+              <p className="text-xl text-slate-300 max-w-3xl mx-auto whitespace-nowrap">
                 {t('app.subtitle')}
               </p>
-              {areFiltersVisible && (
-                <div className="flex items-center justify-center gap-4 mt-6">
-                  <div className="px-4 py-2 bg-slate-800 rounded-full text-sm">
-                    <span className="text-slate-400">{t('app.totalDemos')}</span>{' '}
-                    <span className="font-bold text-blue-400">{demos.length}</span>
-                  </div>
-                  <div className="px-4 py-2 bg-slate-800 rounded-full text-sm">
-                    <span className="text-slate-400">{t('app.categories')}</span>{' '}
-                    <span className="font-bold text-purple-400">{Object.keys(categories).length - 1}</span>
-                  </div>
-                </div>
-              )}
-
               {/* Small screens: button below title */}
               <div className="mt-4 flex justify-center md:hidden">
                 <button
@@ -261,7 +276,7 @@ export default function Hub({
         {areFiltersVisible && (
           <div className="mb-8">
           <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div ref={searchWrapRef} className="flex-1 relative">
+            <div ref={searchWrapRef} className="flex-1 md:flex-none md:w-[820px] relative">
               <Search
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
                 size={20}
@@ -319,7 +334,7 @@ export default function Hub({
                     }
                   }
                 }}
-                className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
               />
 
               {isSuggestOpen && suggestions.length > 0 && (
@@ -389,6 +404,8 @@ export default function Hub({
           </div>
         </div>
         )}
+          </div>
+        </div>
 
         {/* Results Count */}
         <div className="mb-6 text-sm text-slate-400">

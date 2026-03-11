@@ -1329,6 +1329,7 @@
         "how_to_complete_1_choose_a_tx_type_li_fcjiyq": "Comment réussir : (1) Choisissez un type de tx comme ERC-20 approve ou DEX swap. (2) Réglez la limite de gas en dessous du Required gas affiché. (3) Sign and broadcast. (4) Minez un bloc : la tx doit échouer (out of gas).",
         "how_to_complete_1_after_quest_3_rebu_imzytg": "Comment réussir : (1) Après la quête 3, reconstruisez la même action. (2) Réglez Gas limit >= Required gas. (3) Sign and broadcast puis minez des blocs jusqu’à ce que la tx réussisse.",
         "how_to_complete_1_try_a_dex_swap_with_304k9k": "Comment réussir : (1) Essayez un DEX swap sans allowance et minez un bloc pour voir un revert pour insufficient allowance. (2) Envoyez une tx ERC-20 approve vers le DEX et minez-la avec succès. (3) Refaite le swap et minez un bloc : il doit réussir.",
+        "replaces_the_selected_pending_tx_same_n_ppms1w": "Remplace la transaction en attente sélectionnée (même nonce) avec des frais plus élevés. À utiliser quand la tx est bloquée ou quand la base fee a dépassé votre max fee.",
         "reset_3swjlc": "Réinitialiser",  
         "reverted_but_still_paid_gas_136l8de": "Revert mais gas payé",
         "rollups_and_l2s_v14l2g": "Rollups et L2",

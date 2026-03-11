@@ -225,6 +225,14 @@ export default async function handler(req: any, res: any) {
       topEvents: topN(topEventsAgg, 15)
     });
   } catch (e: any) {
-    json(res, 500, { ok: false, error: e?.message ?? 'Internal error' });
+    const msg = e?.message ?? 'Internal error';
+    json(res, 500, {
+      ok: false,
+      error: msg,
+      hint:
+        !process.env.SUPABASE_URL && !process.env.UPSTASH_REDIS_REST_URL
+          ? 'Missing storage env vars: set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (Supabase) OR UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN (Upstash).'
+          : undefined
+    });
   }
 }

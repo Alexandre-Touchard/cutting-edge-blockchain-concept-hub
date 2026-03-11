@@ -6,6 +6,8 @@ import type { DemoMeta } from '../ui/Hub';
  * Key: inferred id from filename in `src/demos/impl` (see `filenameToId()` in loadDemos.ts).
  * Value: any DemoMeta fields you want to override/enrich.
  */
+const demo13Thumb = new URL('../public/photo/Demo13.png', import.meta.url).href;
+
 export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
   'automated-market-maker-demo': {
     id: 'amm-demo',
@@ -198,5 +200,18 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
       'Channels enable instant micro-payments and high-frequency app interactions'
     ],
     tags: ['Lightning', 'Raiden', 'Micropayments', 'Scaling']
-  }
+  },
+  'evm-vs-svm': {
+    id: 'evm-vs-svm',
+    title: 'EVM vs SVM',
+    thumbnail: demo13Thumb,
+    description:
+      'Coming soon: a more realistic, beginner-friendly and developer-accurate simulation of sequential (EVM-style) execution vs parallel (Solana-style) scheduling.',
+    category: 'execution',
+    difficulty: 'Beginner',
+    tags: ['Coming soon'],
+    concepts: ['Sequential execution', 'Parallel scheduling', 'Account locks', 'Read/write conflicts'],
+    keyTakeaways: ['Why parallel scheduling increases throughput when transactions do not conflict'],
+    status: 'coming_soon'
+  },
 };

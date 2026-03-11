@@ -34,6 +34,21 @@ export default function DemoPage() {
     );
   }
 
+  if (demo.meta.status === 'coming_soon') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white p-6">
+        <div className="max-w-3xl mx-auto">
+          <Link to="/" className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300">
+            <ArrowLeft size={16} /> {t('nav.backToHub')}
+          </Link>
+          <h1 className="text-2xl font-bold mt-6">{demo.meta.title}</h1>
+          <p className="text-slate-300 mt-2">{t('common.comingSoon', { defaultValue: 'Coming soon' })}</p>
+          <p className="text-slate-400 mt-3">{demo.meta.description}</p>
+        </div>
+      </div>
+    );
+  }
+
   const DemoComponent = useMemo(
     () =>
       React.lazy(async () => {

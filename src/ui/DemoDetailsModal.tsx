@@ -87,9 +87,16 @@ export default function DemoDetailsModal({
           </button>
           <button
             onClick={() => onStart(demo.id)}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 border border-blue-500 font-semibold"
+            disabled={demo.status === 'coming_soon'}
+            className={`px-4 py-2 rounded-lg border font-semibold ${
+              demo.status === 'coming_soon'
+                ? 'bg-slate-700 border-slate-600 text-slate-200 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 border-blue-500'
+            }`}
           >
-            {t('modal.startDemo')}
+            {demo.status === 'coming_soon'
+              ? t('common.comingSoon', { defaultValue: 'Coming soon' })
+              : t('modal.startDemo')}
           </button>
         </div>
       </div>

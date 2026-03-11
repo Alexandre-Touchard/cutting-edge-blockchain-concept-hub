@@ -59,7 +59,15 @@ export default function AnalyticsPage() {
           'x-analytics-slug': analyticsSlug
         }
       });
-      const payload = (await res.json()) as StatsResponse;
+      const raw = await res.text();
+      let payload: StatsResponse;
+      try {
+        payload = JSON.parse(raw) as StatsResponse;
+      } catch {
+        // Non-JSON error (e.g., platform error page)
+        payload = { ok: false, error: raw.slice(0, 500) || `HTTP ${res.status}` };
+      }
+
       setData(payload);
       if (payload.ok === false) setError(payload.error);
 

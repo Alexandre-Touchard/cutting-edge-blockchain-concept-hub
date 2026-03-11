@@ -38,7 +38,9 @@ function filenameToTitle(filename: string): string {
   return words;
 }
 
-function inferDefaultsFromPath(sourcePath: string): Pick<DemoMeta, 'id' | 'title' | 'thumbnail' | 'description' | 'tags' | 'concepts' | 'keyTakeaways' | 'category' | 'difficulty'> {
+function inferDefaultsFromPath(
+  sourcePath: string
+): Pick<DemoMeta, 'id' | 'title' | 'thumbnail' | 'description' | 'tags' | 'concepts' | 'keyTakeaways' | 'category' | 'difficulty' | 'status'> {
   const filename = sourcePath.split('/').pop() ?? sourcePath;
   const inferredId = filenameToId(filename);
   const inferredTitle = filenameToTitle(filename);
@@ -55,7 +57,8 @@ function inferDefaultsFromPath(sourcePath: string): Pick<DemoMeta, 'id' | 'title
     keyTakeaways: registry?.keyTakeaways ?? [],
     tags: registry?.tags ?? [],
     category: (registry?.category as DemoMeta['category']) ?? 'execution',
-    difficulty: (registry?.difficulty as DemoMeta['difficulty']) ?? 'Intermediate'
+    difficulty: (registry?.difficulty as DemoMeta['difficulty']) ?? 'Intermediate',
+    status: registry?.status
   };
 }
 
@@ -66,7 +69,7 @@ export function loadDemos(): LoadedDemo[] {
   // Auto-discover demo implementations.
   // Note: Vite parses all files matched by the glob. We exclude a known-corrupted demo
   // file at the glob level so production builds succeed.
-  const modules = import.meta.glob<ImplDemoModule>(['./impl/*.tsx', '!./impl/evm_vs_svm.tsx']);
+  const modules = import.meta.glob<ImplDemoModule>('./impl/*.tsx');
 
   const demos = (Object.entries(modules) as Array<[string, () => Promise<ImplDemoModule>]>).map(([sourcePath, load]) => {
     const defaults = inferDefaultsFromPath(sourcePath);

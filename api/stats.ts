@@ -1,4 +1,5 @@
 import { parseRedisHgetall, parseRedisInt, redisPipeline } from './_upstash';
+import { fetchAnalyticsEventsRange, hasSupabaseEnv } from './_supabase_rest';
 
 export const config = { runtime: 'nodejs' };
 
@@ -83,6 +84,78 @@ export default async function handler(req: any, res: any) {
     for (let i = days - 1; i >= 0; i--) {
       dayList.push(dayKey(shiftDays(today, -i)));
     }
+
+    // Prefer Supabase when configured; fallback to Upstash.
+    if (hasSupabaseEnv()) {
+      const start = shiftDays(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())), -(days - 1));
+      const end = shiftDays(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1)), 0);
+
+      // Fetch events in pages (keeps it robust if you have more traffic)
+      const all: Awaited<ReturnType<typeof fetchAnalyticsEventsRange>> = [];
+      const pageSize = 1000;
+      for (let offset = 0; offset < 50_000; offset += pageSize) {
+        const chunk = await fetchAnalyticsEventsRange({
+          startIso: start.toISOString(),
+          endIso: end.toISOString(),
+          limit: pageSize,
+          offset
+        });
+        all.push(...chunk);
+        if (chunk.length < pageSize) break;
+      }
+
+      // Aggregate per-day
+      const seriesMap = new Map<string, { pageviews: number; fps: Set<string> }>();
+      for (const day of dayList) seriesMap.set(day, { pageviews: 0, fps: new Set() });
+
+      const topPathsAgg: Record<string, number> = {};
+      const topDemosAgg: Record<string, number> = {};
+      const topEventsAgg: Record<string, number> = {};
+
+      for (const e of all) {
+        const d = dayKey(new Date(e.ts));
+        const bucket = seriesMap.get(d);
+        if (!bucket) continue;
+
+        if (e.fp_hash) bucket.fps.add(e.fp_hash);
+
+        if (e.type === 'pageview') {
+          bucket.pageviews += 1;
+          if (e.path) topPathsAgg[e.path] = (topPathsAgg[e.path] ?? 0) + 1;
+          if (e.demo_id) topDemosAgg[e.demo_id] = (topDemosAgg[e.demo_id] ?? 0) + 1;
+        } else {
+          const ev = e.event ?? 'event';
+          topEventsAgg[ev] = (topEventsAgg[ev] ?? 0) + 1;
+        }
+      }
+
+      const series = dayList.map((day) => {
+        const b = seriesMap.get(day)!;
+        return { day, pageviews: b.pageviews, uniques: b.fps.size };
+      });
+
+      const totals = series.reduce(
+        (acc, d) => {
+          acc.pageviews += d.pageviews;
+          acc.sumDailyUniques += d.uniques;
+          return acc;
+        },
+        { pageviews: 0, sumDailyUniques: 0 }
+      );
+
+      json(res, 200, {
+        ok: true,
+        rangeDays: days,
+        totals,
+        series,
+        topPaths: topN(topPathsAgg, 15),
+        topDemos: topN(topDemosAgg, 15),
+        topEvents: topN(topEventsAgg, 15)
+      });
+      return;
+    }
+
+    // --- Upstash fallback ---
 
     // Pipeline day series counts
     const seriesCmds: Array<Array<string | number>> = [];

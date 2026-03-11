@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { redisPipeline } from './_upstash';
+import { hasSupabaseEnv, insertAnalyticsEvent } from './_supabase_rest';
 
 export const config = { runtime: 'nodejs' };
 
@@ -57,37 +58,49 @@ export default async function handler(req: any, res: any) {
     const demoId = typeof body?.demoId === 'string' ? body.demoId.slice(0, 100) : '';
     const event = typeof body?.event === 'string' ? body.event.slice(0, 100) : '';
 
-    // TTL to keep analytics small and inexpensive (90 days)
-    const ttlSeconds = 90 * 24 * 60 * 60;
-
-    const cmds: Array<Array<string | number>> = [];
-
-    // Total counters
-    if (type === 'pageview') {
-      cmds.push(['INCR', 'analytics:pv:total']);
-      cmds.push(['INCR', `analytics:pv:day:${day}`]);
-      cmds.push(['EXPIRE', `analytics:pv:day:${day}`, ttlSeconds]);
-
-      if (path) {
-        cmds.push(['HINCRBY', `analytics:path:day:${day}`, path, 1]);
-        cmds.push(['EXPIRE', `analytics:path:day:${day}`, ttlSeconds]);
-      }
-      if (demoId) {
-        cmds.push(['HINCRBY', `analytics:demo:day:${day}`, demoId, 1]);
-        cmds.push(['EXPIRE', `analytics:demo:day:${day}`, ttlSeconds]);
-      }
-    } else {
-      const e = event || 'event';
-      cmds.push(['HINCRBY', `analytics:event:day:${day}`, e, 1]);
-      cmds.push(['EXPIRE', `analytics:event:day:${day}`, ttlSeconds]);
-    }
-
-    // Approximate unique visitors/day
     const fp = fingerprint(req);
-    cmds.push(['SADD', `analytics:uv:day:${day}`, fp]);
-    cmds.push(['EXPIRE', `analytics:uv:day:${day}`, ttlSeconds]);
 
-    await redisPipeline(cmds);
+    // Prefer Supabase when configured; fallback to Upstash.
+    if (hasSupabaseEnv()) {
+      await insertAnalyticsEvent({
+        type: type === 'pageview' ? 'pageview' : 'event',
+        path: path || undefined,
+        demo_id: demoId || undefined,
+        event: event || undefined,
+        fp_hash: fp
+      });
+    } else {
+      // TTL to keep analytics small and inexpensive (90 days)
+      const ttlSeconds = 90 * 24 * 60 * 60;
+
+      const cmds: Array<Array<string | number>> = [];
+
+      // Total counters
+      if (type === 'pageview') {
+        cmds.push(['INCR', 'analytics:pv:total']);
+        cmds.push(['INCR', `analytics:pv:day:${day}`]);
+        cmds.push(['EXPIRE', `analytics:pv:day:${day}`, ttlSeconds]);
+
+        if (path) {
+          cmds.push(['HINCRBY', `analytics:path:day:${day}`, path, 1]);
+          cmds.push(['EXPIRE', `analytics:path:day:${day}`, ttlSeconds]);
+        }
+        if (demoId) {
+          cmds.push(['HINCRBY', `analytics:demo:day:${day}`, demoId, 1]);
+          cmds.push(['EXPIRE', `analytics:demo:day:${day}`, ttlSeconds]);
+        }
+      } else {
+        const e = event || 'event';
+        cmds.push(['HINCRBY', `analytics:event:day:${day}`, e, 1]);
+        cmds.push(['EXPIRE', `analytics:event:day:${day}`, ttlSeconds]);
+      }
+
+      // Approximate unique visitors/day
+      cmds.push(['SADD', `analytics:uv:day:${day}`, fp]);
+      cmds.push(['EXPIRE', `analytics:uv:day:${day}`, ttlSeconds]);
+
+      await redisPipeline(cmds);
+    }
 
     json(res, 200, { ok: true });
   } catch (e: any) {

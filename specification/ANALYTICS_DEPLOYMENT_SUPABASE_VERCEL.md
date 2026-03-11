@@ -6,10 +6,12 @@ This repo includes a small custom analytics system:
 - A private analytics dashboard at `/a/:slug/analytics` fetches data from `GET /api/stats`
 - The stats endpoint is protected by **Basic Auth** + an **unguessable URL slug**
 
-> Note: **The current implementation in this repo uses Upstash Redis** (`UPSTASH_REDIS_REST_URL/TOKEN`) for storage.
+> Note: The analytics code supports **two storage backends**:
 >
-> If you want analytics to be stored in **Supabase**, you’ll need a small storage-layer swap in the API routes (`api/track.ts` and `api/stats.ts`).
-> This document explains (1) how to deploy what’s already here on Vercel, and (2) how to move storage to Supabase.
+> - **Supabase** (preferred): enabled automatically when `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are set.
+> - **Upstash Redis** (fallback): used when Supabase env vars are not set.
+>
+> So you can deploy on Vercel and choose the backend purely via environment variables.
 
 ---
 
@@ -188,38 +190,30 @@ Example:
 
 ---
 
-## 5) Code changes required to use Supabase (storage-layer swap)
+## 5) Supabase backend (now supported by code)
 
-The repo currently persists analytics using **Upstash Redis** in:
+No extra library is needed. The serverless functions use **Supabase PostgREST** directly.
 
-- `api/track.ts`
-- `api/stats.ts`
+When these env vars are set in Vercel:
 
-To move to Supabase:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-1) Add the dependency:
+…the API automatically stores analytics in Supabase.
 
-```bash
-npm install @supabase/supabase-js
-```
+### What the API does
+- `POST /api/track` inserts rows into `public.analytics_events`
+- `GET /api/stats` queries the table for the last N days and aggregates:
+  - daily pageviews
+  - daily uniques (approx, based on hashed fingerprint)
+  - top pages
+  - top demos
+  - top events
 
-2) In `api/track.ts`:
-- Create a Supabase client using `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`
-- Replace the Redis counter increments with an `insert` into `analytics_events`
-  - `type = 'pageview'` or `'event'`
-  - `path`, `demo_id`, `event`
-  - `fp_hash` (you can reuse the current SHA-256 of `ip + user-agent`)
+### Notes on performance
+For early-stage traffic, aggregating in the API by reading rows in the range is totally fine.
+If you later need more scale, the next step is to implement SQL views/materialized views or Supabase RPC functions.
 
-3) In `api/stats.ts`:
-- Validate Basic Auth + slug as it does today
-- Query Supabase for aggregated stats:
-  - Daily pageviews: `count(*)` grouped by day where `type='pageview'`
-  - Daily uniques: `count(distinct fp_hash)` grouped by day
-  - Top paths: `count(*)` grouped by `path` where `type='pageview'`
-  - Top demos: `count(*)` grouped by `demo_id` where `type='pageview' and demo_id is not null`
-  - Top events: `count(*)` grouped by `event` where `type='event'`
-
-A simple approach is to use SQL views or RPC:
 
 ```sql
 -- Example: pageviews per day (UTC)

@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo } from 'react';
+import React, { Suspense, useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +6,7 @@ import { loadDemos } from '../demos/loadDemos';
 import EduTooltip from '../ui/EduTooltip';
 import { getConceptChip } from '../ui/concepts';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
+import { trackEvent } from '../analytics/client';
 
 export default function DemoPage() {
   const { t, i18n } = useTranslation();
@@ -14,6 +15,10 @@ export default function DemoPage() {
   const demos = useMemo(() => loadDemos(), [i18n.resolvedLanguage]);
 
   const demo = demos.find((d) => d.meta.id === demoId);
+
+  useEffect(() => {
+    if (demoId) trackEvent('demo_view', { demoId, path: `/demo/${demoId}` });
+  }, [demoId]);
 
   if (!demo) {
     return (

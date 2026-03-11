@@ -16,6 +16,7 @@ import {
   XCircle,
   Bug,
   ListTodo,
+  CircleCheckBig,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
@@ -32,6 +33,46 @@ function nonceGapInfo(state: ReturnType<typeof makeInitialWalletTxState>, tx: Tx
   if (tx.status !== 'mempool' && tx.status !== 'ignored') return { blocked: false };
   if (tx.nonce > expected) return { blocked: true, waitingForNonce: expected };
   return { blocked: false };
+}
+
+function isBlockedByEarlierNonceInMempool(state: ReturnType<typeof makeInitialWalletTxState>, tx: Tx): boolean {
+  if (tx.status !== 'mempool') return false;
+  const expected = state.accounts[tx.from].nonce;
+  if (tx.nonce !== expected) return false;
+
+  // If there exists any pending tx from the same sender with nonce < expected, the miner can't include this nonce yet.
+  return state.mempool.some((t) => t.from === tx.from && t.status === 'mempool' && t.nonce < expected);
+}
+
+function mineabilityInfo(state: ReturnType<typeof makeInitialWalletTxState>, tx: Tx): { mineable: boolean; reason?: string } {
+  if (tx.status !== 'mempool' && tx.status !== 'ignored') return { mineable: false, reason: 'Not pending' };
+
+  // Fee cap vs base fee
+  if (tx.maxFeeGwei < state.baseFeeGwei) {
+    return { mineable: false, reason: 'maxFee < baseFee' };
+  }
+
+  // EIP-1559 affordability cap (same pre-check as the miner): must cover value + gasLimit * maxFee.
+  const value = tx.type === 'eth_transfer' ? tx.valueEth : 0;
+  const upfrontMaxCostEth = value + gweiGasToEth(tx.maxFeeGwei, tx.gasLimit);
+  if (state.accounts[tx.from].eth < upfrontMaxCostEth) {
+    return { mineable: false, reason: 'Insufficient ETH for (value + gasLimit × maxFee)' };
+  }
+
+  // Nonce ordering
+  const expected = state.accounts[tx.from].nonce;
+  if (tx.nonce > expected) {
+    return { mineable: false, reason: `Nonce gap (waiting for nonce ${expected})` };
+  }
+  if (tx.nonce < expected) {
+    return { mineable: false, reason: `Nonce too low (expected >= ${expected})` };
+  }
+
+  if (isBlockedByEarlierNonceInMempool(state, tx)) {
+    return { mineable: false, reason: `Blocked by earlier pending nonce` };
+  }
+
+  return { mineable: true, reason: 'May wait if outbid by higher tip txs' };
 }
 
 function fmtEth(n: number) {
@@ -130,7 +171,12 @@ export default function WalletTransactionLifecycleImpl() {
     return state.history[selectedHash] ?? state.mempool.find((t) => t.hash === selectedHash) ?? null;
   }, [selectedHash, state.history, state.mempool]);
 
+  const warnNonceTooLow = manualNonce && draftNonce < state.accounts[draftFrom].nonce;
+
   const warnings = [
+    warnNonceTooLow
+      ? tr('Nonce is too low: this nonce was already used. Turn off “Manual nonce” or use the next nonce suggested by the wallet.')
+      : null,
     warnMaxFeeTooLow ? tr('Max fee is below base fee: nodes ignore this tx until base fee drops.') : null,
     warnOutOfGas ? tr('Gas limit is too low: this will revert (out of gas).') : null,
     warnCannotAfford ? tr('Sender likely cannot afford value + worst-case fee.') : null
@@ -178,7 +224,36 @@ export default function WalletTransactionLifecycleImpl() {
     };
   }, [allTxs]);
 
-  const questsCompletedCount = (Object.values(questProgress).filter(Boolean).length);
+  // Make quest completion monotonic: once completed, it stays completed until Reset.
+  const [questsDone, setQuestsDone] = useState(() => ({ q1: false, q2: false, q3: false, q4: false, q5: false }));
+
+  function markQuestDone(patch: Partial<typeof questsDone>) {
+    setQuestsDone((prev) => ({
+      q1: prev.q1 || !!patch.q1,
+      q2: prev.q2 || !!patch.q2,
+      q3: prev.q3 || !!patch.q3,
+      q4: prev.q4 || !!patch.q4,
+      q5: prev.q5 || !!patch.q5
+    }));
+  }
+
+  // Internal helper state for multi-step quests (kept stable even if tx status/error changes later).
+  const [q4Pairs, setQ4Pairs] = useState<string[]>([]); // strings like "Alice:dex_swap"
+  const [q5Flags, setQ5Flags] = useState(() => ({ sawNoAllowanceRevert: false, sawApprove: false, sawSwapSuccess: false }));
+
+  // Keep the derived questProgress as a fallback (useful if something is achieved via scenario buttons).
+  React.useEffect(() => {
+    markQuestDone({
+      q1: questProgress.q1,
+      q2: questProgress.q2,
+      q3: questProgress.q3,
+      q4: questProgress.q4,
+      q5: questProgress.q5
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questProgress.q1, questProgress.q2, questProgress.q3, questProgress.q4, questProgress.q5]);
+
+  const questsCompletedCount = Object.values(questsDone).filter(Boolean).length;
 
   function statusPill(status: Tx['status']) {
     switch (status) {
@@ -246,31 +321,61 @@ export default function WalletTransactionLifecycleImpl() {
     }
 
     const { next, result } = broadcast(state, txBase);
+
+    // Record quest completions immediately (prevents missing a momentary state due to React batching).
+    if (result.status === 'ignored' && (result.error ?? '').includes('Ignored: max fee')) {
+      markQuestDone({ q1: true });
+    }
+
+    // Quest 2: a speedup/cancel is a replacement attempt. If it wasn't rejected (dropped), count it.
+    if ((builderMode === 'speedup' || builderMode === 'cancel') && result.status !== 'dropped') {
+      markQuestDone({ q2: true });
+    }
+
     setState(next);
     setSelectedHash(result.hash);
   }
 
   function spawnBackgroundTxs(current: typeof state): typeof state {
-    // Simple background traffic generator: adds 1-2 txs from Charlie/Dave with random-ish fees.
+    // Background traffic generator: simulates other users.
+    // Behavior:
+    // - If the user hasn't approved the DEX yet, we mostly spawn an approval first (so not everything reverts).
+    // - Otherwise, we spawn mostly swaps and occasionally simple ETH transfers.
     const senders: Array<'Charlie' | 'Dave'> = ['Charlie', 'Dave'];
     let s = current;
 
     for (const from of senders) {
-      // 50% chance to send a tx
+      // ~50% chance to send a tx
       if (Math.random() < 0.5) continue;
 
       const maxFeeGwei = current.baseFeeGwei + 1 + Math.random() * 25;
       const maxPriorityGwei = 0.5 + Math.random() * 2.5;
+
+      const needsApproval = (s.dexAllowance[from] ?? 0) <= 0;
+
+      // If not approved, send an approve with high probability.
+      const roll = Math.random();
+      const type: TxType = needsApproval ? (roll < 0.85 ? 'erc20_approve' : 'dex_swap') : roll < 0.75 ? 'dex_swap' : 'eth_transfer';
+
       const swapAmount = Math.max(1, Math.floor(5 + Math.random() * 40));
+      const safeSwapAmount = Math.min(swapAmount, Math.floor(s.accounts[from].dai));
+
+      // If we don't have enough DAI for a swap, fall back to an ETH transfer.
+      const finalType: TxType = type === 'dex_swap' && safeSwapAmount <= 0 ? 'eth_transfer' : type;
 
       const draft: Draft = {
-        type: 'dex_swap',
+        type: finalType,
         from,
-        to: 'DEX',
+        to: finalType === 'eth_transfer' ? (from === 'Charlie' ? 'Dave' : 'Charlie') : 'DEX',
         nonce: s.accounts[from].nonce,
-        valueEth: 0,
-        daiAmount: swapAmount,
-        gasLimit: 90_000,
+        valueEth: finalType === 'eth_transfer' ? 0.005 : 0,
+        daiAmount:
+          finalType === 'erc20_approve'
+            ? 1_000_000 // big approval
+            : finalType === 'dex_swap'
+              ? safeSwapAmount
+              : 0,
+        gasLimit: finalType === 'eth_transfer' ? 21_000 : finalType === 'erc20_approve' ? 60_000 : 90_000,
         maxFeeGwei,
         maxPriorityGwei
       };
@@ -286,6 +391,52 @@ export default function WalletTransactionLifecycleImpl() {
   function doMine() {
     const pre = autoTraffic ? spawnBackgroundTxs(state) : state;
     const { next, included } = mineBlock(pre);
+
+    // Quest 3/4/5 can be recognized from what was actually included.
+    // Local working sets avoid closure-staleness (React state updates are async).
+    const localQ4 = new Set(q4Pairs);
+
+    for (const t of included) {
+      const errLc = (t.error ?? '').toLowerCase();
+
+      if (t.status === 'executed_revert' && errLc.includes('out of gas')) {
+        markQuestDone({ q3: true });
+        localQ4.add(`${t.from}:${t.type}`);
+      }
+
+      if (t.status === 'executed_success') {
+        const key = `${t.from}:${t.type}`;
+        if (localQ4.has(key) && t.gasLimit >= requiredGas(t.type)) {
+          markQuestDone({ q4: true });
+        }
+
+        if (t.type === 'erc20_approve') {
+          setQ5Flags((prev) => ({ ...prev, sawApprove: true }));
+        }
+        if (t.type === 'dex_swap') {
+          setQ5Flags((prev) => ({ ...prev, sawSwapSuccess: true }));
+        }
+      }
+
+      if (t.type === 'dex_swap' && t.status === 'executed_revert' && errLc.includes('insufficient allowance')) {
+        setQ5Flags((prev) => ({ ...prev, sawNoAllowanceRevert: true }));
+      }
+    }
+
+    // Persist the observed out-of-gas pairs.
+    setQ4Pairs(Array.from(localQ4));
+
+    // If all parts of quest 5 have been observed, mark it done.
+    // (We check the next flags pessimistically by reading the current state plus any immediate updates.)
+    const nextQ5 = {
+      sawNoAllowanceRevert: q5Flags.sawNoAllowanceRevert || included.some((t) => (t.error ?? '').toLowerCase().includes('insufficient allowance')),
+      sawApprove: q5Flags.sawApprove || included.some((t) => t.type === 'erc20_approve' && t.status === 'executed_success'),
+      sawSwapSuccess: q5Flags.sawSwapSuccess || included.some((t) => t.type === 'dex_swap' && t.status === 'executed_success')
+    };
+    if (nextQ5.sawNoAllowanceRevert && nextQ5.sawApprove && nextQ5.sawSwapSuccess) {
+      markQuestDone({ q5: true });
+    }
+
     setState(next);
     if (included[0]) setSelectedHash(included[0].hash);
   }
@@ -339,6 +490,58 @@ export default function WalletTransactionLifecycleImpl() {
     setSelectedHash(r1.hash);
   }
 
+  function loadQuest5Scenario() {
+    // For a deterministic learning flow, turn off background traffic so the swap isn't starved by higher-tip txs.
+    setAutoTraffic(false);
+
+    // Goal: demonstrate the classic DEX allowance flow:
+    // (1) swap reverts due to insufficient allowance
+    // (2) approve succeeds
+    // (3) swap succeeds
+
+    // Start from a clean draft and create a swap that will revert.
+    const from: 'Alice' | 'Bob' = 'Alice';
+    const amount = 25;
+
+    // Ensure allowance is zero for this demo.
+    setState((s) => {
+      const next = { ...s, dexAllowance: { ...s.dexAllowance, [from]: 0 } };
+
+      const swapDraft: Draft = {
+        type: 'dex_swap',
+        from,
+        to: 'DEX',
+        nonce: next.accounts[from].nonce,
+        valueEth: 0,
+        daiAmount: amount,
+        gasLimit: 90_000,
+        maxFeeGwei: next.baseFeeGwei + 10,
+        maxPriorityGwei: 2
+      };
+
+      const tx = txFromDraft(swapDraft, Date.now());
+      const out = broadcast(next, tx);
+      setSelectedHash(out.result.hash);
+
+      return out.next;
+    });
+
+    // Prefill the builder for the next step: approve.
+    // Use a safe fee based on the *current* base fee.
+    const feeBase = Math.max(1, state.baseFeeGwei);
+
+    setBuilderMode('new');
+    setBuilderBaseHash(null);
+    setDraftFrom(from);
+    setDraftType('erc20_approve');
+    setDraftDaiAmount(amount);
+    setInfiniteApproval(false);
+    setManualNonce(false);
+    setGasLimit(60_000);
+    setMaxFee(feeBase + 10);
+    setMaxPriority(2);
+  }
+
   function resetDraftOnly() {
     setDraftType('eth_transfer');
     setDraftFrom('Alice');
@@ -361,6 +564,10 @@ export default function WalletTransactionLifecycleImpl() {
   function doReset() {
     setState(makeInitialWalletTxState());
     setSelectedHash(null);
+    setSelectedBlockNumber(null);
+    setQuestsDone({ q1: false, q2: false, q3: false, q4: false, q5: false });
+    setQ4Pairs([]);
+    setQ5Flags({ sawNoAllowanceRevert: false, sawApprove: false, sawSwapSuccess: false });
     resetDraftOnly();
   }
 
@@ -473,10 +680,10 @@ export default function WalletTransactionLifecycleImpl() {
 
             <div className="mt-3 rounded-lg bg-slate-900 border border-slate-700 p-3">
               <div className="text-xs text-slate-400 mb-2 flex items-center gap-2">
-                <span>{tr('Block gas meter (EIP-1559)')}</span>
+                <span>{tr('Last mined block gas (EIP-1559)')}</span>
                 <EduTooltip
                   text={tr(
-                    'If blocks use more gas than the target, base fee goes up next block. If they use less, base fee goes down.'
+                    'This meter shows gasUsed for the last block you mined in this simulation. If gasUsed > target, base fee goes up next block. If gasUsed < target, base fee goes down.'
                   )}
                 />
               </div>
@@ -529,7 +736,15 @@ export default function WalletTransactionLifecycleImpl() {
                   className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm"
                   disabled={!state.reorgSnapshot}
                 >
-                  {tr('Trigger reorg')}
+                  <span className="inline-flex items-center gap-2">
+                    {tr('Trigger reorg')}
+                    <EduTooltip
+                      widthClassName="w-96"
+                      text={tr(
+                        'A reorg happens when the chain switches to a different recent block (a different fork becomes canonical). In this demo, triggering a reorg removes the last mined block and re-adds its txs back to the mempool, so you can see confirmations decrease and pending status return.'
+                      )}
+                    />
+                  </span>
                 </button>
               </div>
             </div>
@@ -569,9 +784,12 @@ export default function WalletTransactionLifecycleImpl() {
 
               {showLearningPanel && (
                 <div className="mt-3 space-y-2 text-sm">
-                  <div className={`rounded border p-3 ${questProgress.q1 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                  <div className={`rounded border p-3 ${questsDone.q1 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
                     <div className="font-semibold flex items-center gap-2">
-                      <span>{tr('Quest 1')}: {tr('Create an ignored tx')}</span>
+                      <span className="inline-flex items-center gap-2">
+                        {questsDone.q1 && <CircleCheckBig size={16} className="text-emerald-300" />}
+                        <span>{tr('Quest 1')}: {tr('Create an ignored tx')}</span>
+                      </span>
                       <EduTooltip
                         widthClassName="w-96"
                         text={tr(
@@ -581,9 +799,12 @@ export default function WalletTransactionLifecycleImpl() {
                     </div>
                     <div className="text-slate-300 mt-1">{tr('Broadcast a tx where maxFee < baseFee so it becomes Ignored.')}</div>
                   </div>
-                  <div className={`rounded border p-3 ${questProgress.q2 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                  <div className={`rounded border p-3 ${questsDone.q2 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
                     <div className="font-semibold flex items-center gap-2">
-                      <span>{tr('Quest 2')}: {tr('Speed it up')}</span>
+                      <span className="inline-flex items-center gap-2">
+                        {questsDone.q2 && <CircleCheckBig size={16} className="text-emerald-300" />}
+                        <span>{tr('Quest 2')}: {tr('Speed it up')}</span>
+                      </span>
                       <EduTooltip
                         widthClassName="w-96"
                         text={tr(
@@ -593,9 +814,12 @@ export default function WalletTransactionLifecycleImpl() {
                     </div>
                     <div className="text-slate-300 mt-1">{tr('Replace a pending tx (same nonce) with higher fees so it gets accepted.')}</div>
                   </div>
-                  <div className={`rounded border p-3 ${questProgress.q3 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                  <div className={`rounded border p-3 ${questsDone.q3 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
                     <div className="font-semibold flex items-center gap-2">
-                      <span>{tr('Quest 3')}: {tr('Cause an out-of-gas revert')}</span>
+                      <span className="inline-flex items-center gap-2">
+                        {questsDone.q3 && <CircleCheckBig size={16} className="text-emerald-300" />}
+                        <span>{tr('Quest 3')}: {tr('Cause an out-of-gas revert')}</span>
+                      </span>
                       <EduTooltip
                         widthClassName="w-96"
                         text={tr(
@@ -605,9 +829,12 @@ export default function WalletTransactionLifecycleImpl() {
                     </div>
                     <div className="text-slate-300 mt-1">{tr('Set gasLimit below required gas, then mine a block.')}</div>
                   </div>
-                  <div className={`rounded border p-3 ${questProgress.q4 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                  <div className={`rounded border p-3 ${questsDone.q4 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
                     <div className="font-semibold flex items-center gap-2">
-                      <span>{tr('Quest 4')}: {tr('Fix out-of-gas')}</span>
+                      <span className="inline-flex items-center gap-2">
+                        {questsDone.q4 && <CircleCheckBig size={16} className="text-emerald-300" />}
+                        <span>{tr('Quest 4')}: {tr('Fix out-of-gas')}</span>
+                      </span>
                       <EduTooltip
                         widthClassName="w-96"
                         text={tr(
@@ -617,9 +844,12 @@ export default function WalletTransactionLifecycleImpl() {
                     </div>
                     <div className="text-slate-300 mt-1">{tr('Increase gasLimit and retry the same action until it succeeds.')}</div>
                   </div>
-                  <div className={`rounded border p-3 ${questProgress.q5 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                  <div className={`rounded border p-3 ${questsDone.q5 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
                     <div className="font-semibold flex items-center gap-2">
-                      <span>{tr('Quest 5')}: {tr('Allowance flow')}</span>
+                      <span className="inline-flex items-center gap-2">
+                        {questsDone.q5 && <CircleCheckBig size={16} className="text-emerald-300" />}
+                        <span>{tr('Quest 5')}: {tr('Allowance flow')}</span>
+                      </span>
                       <EduTooltip
                         widthClassName="w-96"
                         text={tr(
@@ -631,7 +861,7 @@ export default function WalletTransactionLifecycleImpl() {
                   </div>
 
                   <div className="pt-2 text-xs text-slate-400">
-                    {tr('Tip: Use the “Load nonce gap scenario” button for a quick stuck/ignored example, and the Selected tx panel for Speed up / Cancel actions.')}
+                    {tr('Tip: Use the scenario buttons in the State panel for quick nonce-gap and allowance examples, and the Selected tx panel for Speed up / Cancel actions.')}
                   </div>
                 </div>
               )}
@@ -740,7 +970,7 @@ export default function WalletTransactionLifecycleImpl() {
                     <EduTooltip
                       widthClassName="w-96"
                       text={tr(
-                        'Spawns a few “other user” transactions (Charlie/Dave) into the mempool. This creates fee competition: higher tips are mined first.'
+                        'Spawns a few “other user” transactions (Charlie/Dave) into the mempool. They typically approve once, then submit swaps, creating fee competition (higher tips are mined first).'
                       )}
                     />
                   </span>
@@ -793,6 +1023,52 @@ export default function WalletTransactionLifecycleImpl() {
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Scenarios */}
+            <div className="mt-4 pt-4 border-t border-slate-700">
+              <div className="text-xs text-slate-400 mb-2">{tr('Scenarios')}</div>
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  type="button"
+                  onClick={loadNonceGapScenario}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left flex items-center justify-between gap-3"
+                >
+                  <span className="min-w-0 truncate">{tr('Load nonce gap scenario')}</span>
+                  <span
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <EduTooltip
+                      widthClassName="w-96"
+                      text={tr(
+                        'Loads a preset scenario where nonce 0 is stuck/ignored and nonce 1 is blocked. This demonstrates per-account nonce ordering: later nonces cannot be mined until the missing nonce is handled via fee bump (replacement) or base fee drops.'
+                      )}
+                    />
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={loadQuest5Scenario}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left flex items-center justify-between gap-3"
+                >
+                  <span className="min-w-0 truncate">{tr('Load Quest 5 scenario (Allowance flow)')}</span>
+                  <span
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <EduTooltip
+                      widthClassName="w-96"
+                      text={tr(
+                        'Loads a preset DEX allowance situation: a swap tx is broadcast with zero allowance (so it will revert when mined). Then the builder is prefilled for the next step: an ERC-20 approve. Mine a block to see the revert, approve, then swap again to complete Quest 5.'
+                      )}
+                    />
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1527,6 +1803,7 @@ export default function WalletTransactionLifecycleImpl() {
               )}
               {state.mempool.map((tx) => {
                 const gap = nonceGapInfo(state, tx);
+                const mineability = mineabilityInfo(state, tx);
                 const age = state.blockNumber - tx.firstSeenBlock;
                 const ttl = 20;
                 const ttlRemaining = Math.max(0, ttl - age);
@@ -1555,9 +1832,19 @@ export default function WalletTransactionLifecycleImpl() {
 
                   {gap.blocked ? (
                     <div className="mt-1 text-xs text-amber-300">
-                      {tr('Blocked by nonce gap')} — {tr('waiting for nonce')} {gap.waitingForNonce}
+                      {tr('Blocked by nonce gap')}  {tr('waiting for nonce')} {gap.waitingForNonce}
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="mt-1 text-[11px]">
+                      {mineability.mineable ? (
+                        <span className="text-emerald-300">{tr('Mineable now')}</span>
+                      ) : (
+                        <span className="text-amber-300">
+                          {tr('Not mineable')}: {mineability.reason}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </button>
               );
               })}

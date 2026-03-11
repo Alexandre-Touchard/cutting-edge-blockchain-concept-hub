@@ -137,6 +137,19 @@ export function rememberTx(state: WalletTxState, tx: Tx): WalletTxState {
 }
 
 export function broadcast(state: WalletTxState, tx: UnsignedTx): { next: WalletTxState; result: Tx } {
+  // Reject nonce-too-low (already used) like real nodes.
+  const expected = state.accounts[tx.from].nonce;
+  if (tx.nonce < expected) {
+    const dropped: Tx = {
+      ...tx,
+      firstSeenBlock: state.blockNumber,
+      status: 'dropped',
+      error: `Dropped: nonce too low (already used). Expected nonce >= ${expected}, got ${tx.nonce}.`
+    };
+    const next = rememberTx(state, dropped);
+    return { next, result: dropped };
+  }
+
   const isIgnored = tx.maxFeeGwei < state.baseFeeGwei;
   const candidate: Tx = {
     ...tx,
@@ -256,7 +269,8 @@ export function mineBlock(state: WalletTxState): MineResult {
   let blockGasUsed = 0;
 
   for (const c of candidates) {
-    if (included.length >= 6) break;
+    // Include as many transactions as fit in the block gas limit.
+    // (Avoid arbitrary caps so users don't see "stuck" txs just because of a demo limit.)
     if (blockGasUsed >= blockMaxGas) break;
     const t = c.t;
     if (t.nonce !== expectedNonce[t.from]) continue;

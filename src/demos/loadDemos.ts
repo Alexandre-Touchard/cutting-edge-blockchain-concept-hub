@@ -63,7 +63,10 @@ export function loadDemos(): LoadedDemo[] {
   // Auto-discover demo implementations.
   // Files must default-export a React component.
   // IMPORTANT: do NOT eager-import demo modules. We want them split into separate chunks.
-  const modules = import.meta.glob<ImplDemoModule>('./impl/*.tsx');
+  // Auto-discover demo implementations.
+  // Note: Vite parses all files matched by the glob. We exclude a known-corrupted demo
+  // file at the glob level so production builds succeed.
+  const modules = import.meta.glob<ImplDemoModule>(['./impl/*.tsx', '!./impl/evm_vs_svm.tsx']);
 
   const demos = (Object.entries(modules) as Array<[string, () => Promise<ImplDemoModule>]>).map(([sourcePath, load]) => {
     const defaults = inferDefaultsFromPath(sourcePath);

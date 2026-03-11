@@ -30,6 +30,8 @@ export type DemoMeta = {
   concepts: string[];
   keyTakeaways: string[];
   tags: string[];
+  /** Optional status for displaying disabled "Coming soon" cards. */
+  status?: 'live' | 'coming_soon';
 };
 
 export default function Hub({
@@ -173,6 +175,8 @@ export default function Hub({
     return () => document.removeEventListener('mousedown', onDocMouseDown);
   }, []);
 
+  const liveDemos = demos.filter((d) => d.status !== 'coming_soon');
+
   const filteredDemos = demos.filter((demo) => {
     const matchesCategory = selectedCategory === 'all' || demo.category === selectedCategory;
     const q = normalizedQuery;
@@ -229,7 +233,7 @@ export default function Hub({
                 <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                   <div className="px-4 py-2 bg-slate-800 rounded-full text-sm inline-flex items-center gap-1 whitespace-nowrap">
                     <span className="text-slate-400">{t('app.totalDemos')}</span>
-                    <span className="font-bold text-blue-400">{demos.length}</span>
+                    <span className="font-bold text-blue-400">{liveDemos.length}</span>
                   </div>
                   <div className="px-4 py-2 bg-slate-800 rounded-full text-sm inline-flex items-center gap-1 whitespace-nowrap">
                     <span className="text-slate-400">{t('app.categories')}</span>
@@ -396,7 +400,7 @@ export default function Hub({
                       isSelected ? colorStyles[category.colorKey].countSelected : 'bg-slate-700'
                     }`}
                   >
-                    {demos.filter((d) => key === 'all' || d.category === key).length}
+                    {liveDemos.filter((d) => key === 'all' || d.category === key).length}
                   </span>
                 </button>
               );
@@ -426,16 +430,25 @@ export default function Hub({
           {filteredDemos.map((demo) => {
             const categoryColorKey = getCategoryColorKey(demo.category);
             const categoryStyle = colorStyles[categoryColorKey];
+            const isComingSoon = demo.status === 'coming_soon';
+
             return (
               <div
                 key={demo.id}
-                onClick={() => onOpenDemo(demo)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') onOpenDemo(demo);
-                }}
-                role="button"
-                tabIndex={0}
-                className="group relative bg-slate-800 rounded-xl border-2 border-slate-700 hover:border-blue-500 transition-all duration-300 overflow-hidden cursor-pointer transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onClick={isComingSoon ? undefined : () => onOpenDemo(demo)}
+                onKeyDown={
+                  isComingSoon
+                    ? undefined
+                    : (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') onOpenDemo(demo);
+                      }
+                }
+                role={isComingSoon ? undefined : 'button'}
+                tabIndex={isComingSoon ? -1 : 0}
+                aria-disabled={isComingSoon ? true : undefined}
+                className={`group relative bg-slate-800 rounded-xl border-2 border-slate-700 transition-all duration-300 overflow-hidden transform focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  isComingSoon ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500 hover:scale-105'
+                }`}
               >
                 {/* Thumbnail */}
                 <div
@@ -457,11 +470,11 @@ export default function Hub({
                     )}
                   </div>
                   <div
-                    className={`absolute top-3 right-3 px-2 py-1 rounded text-xs font-bold ${getDifficultyColor(
-                      demo.difficulty
-                    )}`}
+                    className={`absolute top-3 right-3 px-2 py-1 rounded text-xs font-bold ${
+                      demo.status === 'coming_soon' ? 'bg-slate-700 text-slate-200' : getDifficultyColor(demo.difficulty)
+                    }`}
                   >
-                    {demo.difficulty}
+                    {demo.status === 'coming_soon' ? t('common.comingSoon', { defaultValue: 'Coming soon' }) : demo.difficulty}
                   </div>
 
                   {/* Key Takeaways (thumbnail hover) */}
@@ -482,7 +495,11 @@ export default function Hub({
 
                 {/* Content */}
                 <div className="p-5">
-                  <h3 className="text-xl font-bold mb-2 group-hover:text-blue-400 transition-colors">
+                  <h3
+                    className={`text-xl font-bold mb-2 transition-colors ${
+                      isComingSoon ? 'text-slate-200' : 'group-hover:text-blue-400'
+                    }`}
+                  >
                     {demo.title}
                   </h3>
 
@@ -529,16 +546,26 @@ export default function Hub({
                   </div>
 
                   {/* View Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenDemo(demo);
-                    }}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
-                  >
-                    {t('hub.viewDetails')}
-                    <ChevronRight size={16} />
-                  </button>
+                  {demo.status === 'coming_soon' ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full py-2 bg-slate-700 rounded-lg font-semibold flex items-center justify-center gap-2 text-slate-200 cursor-not-allowed"
+                    >
+                      {t('common.comingSoon', { defaultValue: 'Coming soon' })}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenDemo(demo);
+                      }}
+                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
+                    >
+                      {t('hub.viewDetails')}
+                      <ChevronRight size={16} />
+                    </button>
+                  )}
                 </div>
 
               </div>

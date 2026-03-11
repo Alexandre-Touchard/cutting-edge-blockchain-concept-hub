@@ -69,7 +69,7 @@ export default function AnalyticsPage() {
       }
 
       setData(payload);
-      if (payload.ok === false) setError(payload.error);
+      if (payload.ok === false) setError(`${payload.error} (HTTP ${res.status})`);
 
       if (payload.ok === true) {
         try {

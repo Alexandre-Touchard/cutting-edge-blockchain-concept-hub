@@ -110,6 +110,12 @@
         "4": "Acelerar/cancelar reemplaza la tx pendiente (mismo nonce) y suele requerir un bump de tarifas (≈10%)"
       },
       "auto": {
+        "auto_traffic_1t1idif": "Tráfico automático",
+        "spawn_traffic_now_ruwpj9": "Generar tráfico ahora",
+        "age_375fxi": "edad",
+        "blocks_owrl0f": "bloques",
+        "ttl_376js9": "TTL",
+        "mempool_ttl_in_this_simulator_pending__1kggrur": "TTL del mempool: en este simulador, las txs pendientes se expulsan tras ~20 bloques si no se incluyen.",
         "approval_before_swap_s1rhim": "Aprobación antes del swap",
         "approve_amount_dai_1sp72x7": "Cantidad aprobada (DAI)",
         "base_fee_eip1559_ldynqm": "Tarifa base (EIP-1559)",

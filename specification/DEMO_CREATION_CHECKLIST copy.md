@@ -1,6 +1,6 @@
 # Demo creation checklist (Blockchain Learning Hub)
 
-This file captures the requirements/patterns we've converged on for implementing new demos in this repo.
+This file captures the requirements/patterns we’ve converged on for implementing new demos in this repo.
 
 ## 1) Demo registration (Hub + modal)
 
@@ -12,7 +12,7 @@ Update `src/demos/demoRegistry.ts` with:
 - `thumbnail`
   - Can be an emoji OR an image URL
   - If using an image, prefer: `thumbnail: new URL('../public/photo/DemoX.png', import.meta.url).href`
-- `concepts`: glossary terms shown as "Key concepts" chips in demo page/modal
+- `concepts`: glossary terms shown as “Key concepts” chips in demo page/modal
 - `keyTakeaways`: 3 concise bullets (English)
 - `tags`: short discoverability strings
 
@@ -25,7 +25,7 @@ Add these to locale JSONs:
   - `demos.<id>.keyTakeaways.{0,1,2}`
 - `src/locales/es.json`: same fields (recommended)
 
-> Tip: The "View details" modal reads `demos.<id>.keyTakeaways.*`. If missing, it falls back to English.
+> Tip: The “View details” modal reads `demos.<id>.keyTakeaways.*`. If missing, it falls back to English.
 
 ## 2) i18n inside demo implementation (UI copy)
 
@@ -53,28 +53,28 @@ node tmp_rovodev_extract_demo_keys.mjs src/demos/impl/<file>.tsx <id>
 
 Then add translations under:
 
-- `src/locales/fr.json` -> `demos.<id>.auto.*`
-- `src/locales/es.json` -> `demos.<id>.auto.*` (recommended)
+- `src/locales/fr.json` → `demos.<id>.auto.*`
+- `src/locales/es.json` → `demos.<id>.auto.*` (recommended)
 
 ## 3) Tooltips (education-first)
 
 - Add `EduTooltip` for:
-  - action buttons ("Post...", "Challenge...", "Commit...", "Execute...") explaining why/what happens
-  - ambiguous table headers/labels (e.g. "State index", "Input", "Claimed", "True")
-  - key status indicators (e.g. "Mismatch exists") with a short explanation
+  - action buttons (“Post…”, “Challenge…”, “Commit…”, “Execute…”) explaining *why/what* happens
+  - ambiguous table headers/labels (e.g. “State index”, “Input”, “Claimed”, “True”)
+  - key status indicators (e.g. “Mismatch exists”) with a short explanation
 
 ### Tooltip overflow requirement
 `EduTooltip` must not overflow off-screen. (The component now clamps to viewport.)
 
 ## 4) Visual explanation requirements
 
-A "great" demo should make the mechanism obvious visually.
+A “great” demo should make the mechanism obvious visually.
 
 Recommended patterns:
 
-- A step/phase indicator ("Phase", "Round", "Range", etc.)
+- A step/phase indicator (“Phase”, “Round”, “Range”, etc.)
 - A visual trace/graph/track that updates as the user interacts
-- A final "resolution" panel that explains the decisive step (e.g. one-step proof)
+- A final “resolution” panel that explains the decisive step (e.g. one-step proof)
 - Event log (most-recent-first) for narration
 
 ## 5) Real-World Applications + Further Reading sections
@@ -82,7 +82,7 @@ Recommended patterns:
 Include sections similar to AMM/PeerDAS/etc.:
 
 - `🌐 Real-World Applications`
-  - 3-5 short cards/blocks
+  - 3–5 short cards/blocks
   - each block should include a crisp practical takeaway
 - `📚 Further Reading`
   - link list (use `LinkWithCopy` or `<a>`)
@@ -95,11 +95,11 @@ All text must use `tr('...')`.
   - important H2 titles
   - main action buttons
 - Ensure important button labels remain on one line:
-  - add `inline-flex ... whitespace-nowrap` when needed
+  - add `inline-flex … whitespace-nowrap` when needed
 
 ## 7) Responsive layout expectations
 
-- Don't let key text wrap awkwardly (e.g. "Range: [0, 16]" should be `whitespace-nowrap`)
+- Don’t let key text wrap awkwardly (e.g. “Range: [0, 16]” should be `whitespace-nowrap`)
 - Consider collapsible panels on small screens (timeline, logs)
 - Optionally hide entire control panels (setup) to give the visualization more width
 
@@ -109,32 +109,10 @@ All text must use `tr('...')`.
 - Add missing glossary terms in:
   - `src/demos/glossary.ts` (`GlossaryKey` + `EN_GLOSSARY`)
 - Add translations in:
-  - `src/locales/fr.json` -> `glossary.<Term>`
-  - `src/locales/es.json` -> `glossary.<Term>`
+  - `src/locales/fr.json` → `glossary.<Term>`
+  - `src/locales/es.json` → `glossary.<Term>`
 
-## 9) Learning product features (quests + debug)
-
-The hub is not just a gallery - each demo should help users prove they understood the mechanism.
-
-Recommended additions (especially for complex demos):
-
-### 9.1 In-demo quests / checkpoints
-- Add a small in-demo checklist panel (collapsible on small screens).
-- Include 3-6 tasks that map directly to the learning objectives (e.g. "make a tx become Ignored", "replace a tx via Speed up", "cause an out-of-gas revert").
-- Track completion using deterministic state checks (e.g. a tx reached a certain status, a specific revert reason occurred).
-- Add an `EduTooltip` next to each quest explaining exactly how to complete it.
-
-### 9.2 Advanced / Debug panel
-- Add an "Advanced" or "Debug" toggle that shows:
-  - which checks the simulator performs (e.g. nonce ordering, affordability cap)
-  - key formulas used and the computed values for the currently selected item/transaction
-- Keep it optional so the main UI stays beginner-friendly.
-
-### 9.3 Tooltip-in-button micro-UX
-If a tooltip icon lives inside a clickable control (button/chip), prevent accidental action triggers:
-- Wrap the tooltip in an inner element that calls `stopPropagation()` on click/mousedown/pointerdown.
-
-## 10) Final validation before shipping
+## 9) Final validation before shipping
 
 Run:
 
@@ -147,5 +125,5 @@ Then spot-check:
 
 - language switching (EN/FR/ES)
 - tooltips positioning near screen edges
-- "View details" modal shows translated takeaways
+- “View details” modal shows translated takeaways
 - demo thumbnail renders correctly (emoji vs image)

@@ -113,9 +113,9 @@ export type WalletTxSnapshot = {
   blockTargetGas: number;
   lastBlockGasUsed: number;
   lastReorg: ReorgLog | null;
-  permitNonce: Record<'Alice' | 'Bob', number>;
+  permitNonce: Record<EOA, number>;
   accounts: Record<Address, Account>;
-  dexAllowance: Record<'Alice' | 'Bob', number>;
+  dexAllowance: Record<EOA, number>;
   mempool: Tx[];
   history: Record<string, Tx>;
   blocks: ChainBlock[];
@@ -143,10 +143,10 @@ export type WalletTxState = {
   lastReorg: ReorgLog | null;
 
   /** Toy ERC-20 permit nonces (like EIP-2612 nonces(owner)). */
-  permitNonce: Record<'Alice' | 'Bob', number>;
+  permitNonce: Record<EOA, number>;
 
   accounts: Record<Address, Account>;
-  dexAllowance: Record<'Alice' | 'Bob', number>;
+  dexAllowance: Record<EOA, number>;
   mempool: Tx[];
   history: Record<string, Tx>;
 };

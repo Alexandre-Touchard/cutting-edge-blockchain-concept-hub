@@ -8,6 +8,7 @@ import {
   type Address,
   type Tx,
   type ChainBlock,
+  type EOA,
   type ReorgLog,
   type TxStatus,
   type WalletTxSnapshot,
@@ -233,10 +234,12 @@ export function mineBlock(state: WalletTxState): MineResult {
   const nextAllowance = JSON.parse(JSON.stringify(state.dexAllowance)) as WalletTxState['dexAllowance'];
   let nextPermitNonce = { ...state.permitNonce };
 
-  const expectedNonce: Record<'Alice' | 'Bob', number> = {
+  const expectedNonce = {
     Alice: nextAccounts.Alice.nonce,
-    Bob: nextAccounts.Bob.nonce
-  };
+    Bob: nextAccounts.Bob.nonce,
+    Charlie: nextAccounts.Charlie.nonce,
+    Dave: nextAccounts.Dave.nonce
+  } as Record<EOA, number>;
 
   const candidates = state.mempool
     // Only mine txs that are currently viable at this base fee.
@@ -312,7 +315,7 @@ export function mineBlock(state: WalletTxState): MineResult {
       const hasBalance = nextAccounts[t.from].dai;
 
       // If this is swap+permit, validate and apply permit first (toy EIP-2612).
-      let stagedPermit: { owner: 'Alice' | 'Bob'; valueDai: number } | null = null;
+      let stagedPermit: { owner: EOA; valueDai: number } | null = null;
 
       if (t.type === 'dex_swap_permit') {
         const sig = t.permitSig;
@@ -325,7 +328,7 @@ export function mineBlock(state: WalletTxState): MineResult {
         } else if (sig.deadlineBlock < newBlockNumber) {
           status = 'executed_revert';
           error = 'Reverted: permit expired (deadline passed).';
-        } else if (sig.nonce !== nextPermitNonce[t.from]) {
+        } else if (sig.nonce !== nextPermitNonce[t.from]) { /* ok */
           status = 'executed_revert';
           error = `Reverted: invalid permit nonce (have ${nextPermitNonce[t.from]}, got ${sig.nonce}).`;
         } else if (sig.valueDai < need) {

@@ -13,9 +13,14 @@ import {
   Wallet,
   Wrench,
   Zap,
-  XCircle
+  XCircle,
+  Bug,
+  ListTodo,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import EduTooltip from '../../../ui/EduTooltip';
+import LinkWithCopy from '../../../ui/LinkWithCopy';
 import { define } from '../../glossary';
 import { useDemoI18n } from '../../useDemoI18n';
 import { makeInitialWalletTxState, type Address, type Tx, type TxType, effectiveGasPriceGwei, gweiGasToEth, requiredGas, tipGwei } from './model';
@@ -68,6 +73,10 @@ export default function WalletTransactionLifecycleImpl() {
   const [selectedHash, setSelectedHash] = useState<string | null>(null);
   const [selectedBlockNumber, setSelectedBlockNumber] = useState<number | null>(null);
 
+  const [autoTraffic, setAutoTraffic] = useState(false);
+  const [showLearningPanel, setShowLearningPanel] = useState(true);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+
   // Draft
   const [draftType, _setDraftType] = useState<TxType>('eth_transfer');
 
@@ -80,7 +89,7 @@ export default function WalletTransactionLifecycleImpl() {
       if (!permitSigText) setPermitSigText(null);
     }
   }
-  const [draftFrom, setDraftFrom] = useState<'Alice' | 'Bob'>('Alice');
+  const [draftFrom, setDraftFrom] = useState<'Alice' | 'Bob' | 'Charlie' | 'Dave'>('Alice');
   const [draftTo, setDraftTo] = useState<Address>('Bob');
   const [draftValueEth, setDraftValueEth] = useState(0.05);
   const [draftDaiAmount, setDraftDaiAmount] = useState(50);
@@ -122,6 +131,50 @@ export default function WalletTransactionLifecycleImpl() {
     warnOutOfGas ? tr('Gas limit is too low: this will revert (out of gas).') : null,
     warnCannotAfford ? tr('Sender likely cannot afford value + worst-case fee.') : null
   ].filter(Boolean) as string[];
+
+  const allTxs = useMemo(() => {
+    const mem = state.mempool;
+    const hist = Object.values(state.history);
+    // Deduplicate by hash
+    const byHash = new Map<string, Tx>();
+    for (const t of [...mem, ...hist]) byHash.set(t.hash, t);
+    return [...byHash.values()];
+  }, [state.mempool, state.history]);
+
+  const questProgress = useMemo(() => {
+    const ignoredMaxFee = allTxs.some((t) => t.status === 'ignored' && t.error?.includes('Ignored: max fee'));
+    const replaced = allTxs.some((t) => t.status === 'replaced');
+    const outOfGasRevert = allTxs.some((t) => t.status === 'executed_revert' && (t.error ?? '').toLowerCase().includes('out of gas'));
+
+    // Quest 4: after an out-of-gas revert, later mine a success tx of same type/from with >= required gas.
+    const outOfGasByFromType = new Set<string>();
+    for (const t of allTxs) {
+      if (t.status === 'executed_revert' && (t.error ?? '').toLowerCase().includes('out of gas')) {
+        outOfGasByFromType.add(`${t.from}:${t.type}`);
+      }
+    }
+    const fixedOutOfGas = allTxs.some((t) =>
+      t.status === 'executed_success' && outOfGasByFromType.has(`${t.from}:${t.type}`) && t.gasLimit >= requiredGas(t.type)
+    );
+
+    // Quest 5: swap revert due to allowance, then an approve success, then a swap success.
+    const swapNoAllowanceRevert = allTxs.some(
+      (t) => t.type === 'dex_swap' && t.status === 'executed_revert' && (t.error ?? '').toLowerCase().includes('insufficient allowance')
+    );
+    const approveSuccess = allTxs.some((t) => t.type === 'erc20_approve' && t.status === 'executed_success');
+    const swapSuccess = allTxs.some((t) => t.type === 'dex_swap' && t.status === 'executed_success');
+    const allowanceFlow = swapNoAllowanceRevert && approveSuccess && swapSuccess;
+
+    return {
+      q1: ignoredMaxFee,
+      q2: replaced,
+      q3: outOfGasRevert,
+      q4: fixedOutOfGas,
+      q5: allowanceFlow
+    };
+  }, [allTxs]);
+
+  const questsCompletedCount = (Object.values(questProgress).filter(Boolean).length);
 
   function statusPill(status: Tx['status']) {
     switch (status) {
@@ -193,8 +246,42 @@ export default function WalletTransactionLifecycleImpl() {
     setSelectedHash(result.hash);
   }
 
+  function spawnBackgroundTxs(current: typeof state): typeof state {
+    // Simple background traffic generator: adds 1-2 txs from Charlie/Dave with random-ish fees.
+    const senders: Array<'Charlie' | 'Dave'> = ['Charlie', 'Dave'];
+    let s = current;
+
+    for (const from of senders) {
+      // 50% chance to send a tx
+      if (Math.random() < 0.5) continue;
+
+      const maxFeeGwei = current.baseFeeGwei + 1 + Math.random() * 25;
+      const maxPriorityGwei = 0.5 + Math.random() * 2.5;
+      const swapAmount = Math.max(1, Math.floor(5 + Math.random() * 40));
+
+      const draft: Draft = {
+        type: 'dex_swap',
+        from,
+        to: 'DEX',
+        nonce: s.accounts[from].nonce,
+        valueEth: 0,
+        daiAmount: swapAmount,
+        gasLimit: 90_000,
+        maxFeeGwei,
+        maxPriorityGwei
+      };
+
+      const txBase = txFromDraft(draft, Date.now() + Math.floor(Math.random() * 1000));
+      const out = broadcast(s, txBase);
+      s = out.next;
+    }
+
+    return s;
+  }
+
   function doMine() {
-    const { next, included } = mineBlock(state);
+    const pre = autoTraffic ? spawnBackgroundTxs(state) : state;
+    const { next, included } = mineBlock(pre);
     setState(next);
     if (included[0]) setSelectedHash(included[0].hash);
   }
@@ -447,17 +534,206 @@ export default function WalletTransactionLifecycleImpl() {
           </div>
         </div>
 
+        <div className="mt-6 grid grid-cols-1 gap-4">
+          {/* Learning / Debug panels */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-slate-900/60 rounded-xl border border-slate-700 p-4">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between gap-2"
+                onClick={() => setShowLearningPanel((v) => !v)}
+              >
+                <div className="flex items-center gap-2">
+                  <ListTodo size={18} className="text-emerald-300" />
+                  <div className="text-lg font-semibold">{tr('Learning quests')}</div>
+                  <span className="text-xs text-slate-400">({questsCompletedCount}/5)</span>
+                </div>
+                <div className="text-slate-400">{showLearningPanel ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</div>
+              </button>
+
+              {showLearningPanel && (
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className={`rounded border p-3 ${questProgress.q1 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                    <div className="font-semibold flex items-center gap-2">
+                      <span>{tr('Quest 1')}: {tr('Create an ignored tx')}</span>
+                      <EduTooltip
+                        widthClassName="w-96"
+                        text={tr(
+                          'How to complete: (1) Set Max fee (gwei) lower than the current Base fee. (2) Click Sign and broadcast. (3) The tx should show status Ignored.'
+                        )}
+                      />
+                    </div>
+                    <div className="text-slate-300 mt-1">{tr('Broadcast a tx where maxFee < baseFee so it becomes Ignored.')}</div>
+                  </div>
+                  <div className={`rounded border p-3 ${questProgress.q2 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                    <div className="font-semibold flex items-center gap-2">
+                      <span>{tr('Quest 2')}: {tr('Speed it up')}</span>
+                      <EduTooltip
+                        widthClassName="w-96"
+                        text={tr(
+                          'How to complete: (1) Create a pending tx (status Mempool). (2) Select it, then click Speed up in the Selected tx panel. (3) Bump Max fee and/or Priority fee, then Sign and broadcast to replace it (same nonce). (4) Mine a block.'
+                        )}
+                      />
+                    </div>
+                    <div className="text-slate-300 mt-1">{tr('Replace a pending tx (same nonce) with higher fees so it gets accepted.')}</div>
+                  </div>
+                  <div className={`rounded border p-3 ${questProgress.q3 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                    <div className="font-semibold flex items-center gap-2">
+                      <span>{tr('Quest 3')}: {tr('Cause an out-of-gas revert')}</span>
+                      <EduTooltip
+                        widthClassName="w-96"
+                        text={tr(
+                          'How to complete: (1) Choose a tx type like ERC-20 approve or DEX swap. (2) Set Gas limit lower than the Required gas shown. (3) Sign and broadcast. (4) Mine a block and the tx should revert out of gas.'
+                        )}
+                      />
+                    </div>
+                    <div className="text-slate-300 mt-1">{tr('Set gasLimit below required gas, then mine a block.')}</div>
+                  </div>
+                  <div className={`rounded border p-3 ${questProgress.q4 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                    <div className="font-semibold flex items-center gap-2">
+                      <span>{tr('Quest 4')}: {tr('Fix out-of-gas')}</span>
+                      <EduTooltip
+                        widthClassName="w-96"
+                        text={tr(
+                          'How to complete: (1) After Quest 3, rebuild the same action. (2) Set Gas limit >= Required gas. (3) Sign and broadcast and then Mine a block until it succeeds.'
+                        )}
+                      />
+                    </div>
+                    <div className="text-slate-300 mt-1">{tr('Increase gasLimit and retry the same action until it succeeds.')}</div>
+                  </div>
+                  <div className={`rounded border p-3 ${questProgress.q5 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                    <div className="font-semibold flex items-center gap-2">
+                      <span>{tr('Quest 5')}: {tr('Allowance flow')}</span>
+                      <EduTooltip
+                        widthClassName="w-96"
+                        text={tr(
+                          'How to complete: (1) Try a DEX swap without allowance and mine a block to see a revert for insufficient allowance. (2) Send an ERC-20 approve tx for the DEX and mine it successfully. (3) Retry the swap and mine a block; it should succeed.'
+                        )}
+                      />
+                    </div>
+                    <div className="text-slate-300 mt-1">{tr('Make a swap revert due to missing allowance, then approve, then retry the swap.')}</div>
+                  </div>
+
+                  <div className="pt-2 text-xs text-slate-400">
+                    {tr('Tip: Use the “Load nonce gap scenario” button for a quick stuck/ignored example, and the Selected tx panel for Speed up / Cancel actions.')}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-slate-900/60 rounded-xl border border-slate-700 p-4">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between gap-2"
+                onClick={() => setShowDebugPanel((v) => !v)}
+              >
+                <div className="flex items-center gap-2">
+                  <Bug size={18} className="text-amber-300" />
+                  <div className="text-lg font-semibold">{tr('Debug panel')}</div>
+                  <span className="text-xs text-slate-400">{tr('advanced')}</span>
+                </div>
+                <div className="text-slate-400">{showDebugPanel ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</div>
+              </button>
+
+              {showDebugPanel && (
+                <div className="mt-3 text-sm text-slate-200 space-y-3">
+                  {!selectedTx ? (
+                    <div className="text-slate-400">{tr('Select a tx in the mempool or history to see detailed checks and formulas.')}</div>
+                  ) : (
+                    (() => {
+                      const baseFee = state.baseFeeGwei;
+                      const effective = effectiveGasPriceGwei(baseFee, selectedTx.maxFeeGwei, selectedTx.maxPriorityGwei);
+                      const tip = tipGwei(baseFee, effective);
+                      const value = selectedTx.type === 'eth_transfer' ? selectedTx.valueEth : 0;
+                      const upfrontCap = value + gweiGasToEth(selectedTx.maxFeeGwei, selectedTx.gasLimit);
+                      const required = requiredGas(selectedTx.type);
+                      const wouldBeOutOfGas = selectedTx.gasLimit < required;
+                      const ignoredNow = selectedTx.maxFeeGwei < baseFee;
+
+                      return (
+                        <>
+                          <div className="rounded border border-slate-700 bg-slate-950/20 p-3">
+                            <div className="font-semibold">{tr('Checks performed')}</div>
+                            <ul className="list-disc pl-5 mt-2 space-y-1 text-slate-300">
+                              <li>{tr('Nonce ordering')}: {tr('miners require per-sender sequential nonces; higher nonces wait for the missing nonce')}</li>
+                              <li>{tr('Affordability cap (EIP-1559)')}: {tr('must cover value + gasLimit × maxFee')}</li>
+                              <li>{tr('Replacement policy')}: {tr('same nonce replaces only if maxFee and priority fee are bumped (~10%) and tip increases')}</li>
+                              <li>{tr('Execution gas')}: {tr('if gasLimit < required gas, execution reverts and full gasLimit is charged')}</li>
+                            </ul>
+                          </div>
+
+                          <div className="rounded border border-slate-700 bg-slate-950/20 p-3">
+                            <div className="font-semibold">{tr('Formulas')}</div>
+                            <div className="mt-2 text-slate-300 space-y-1">
+                              <div><code>effectiveGasPrice = min(maxFee, baseFee + maxPriority)</code></div>
+                              <div><code>tip = max(0, effectiveGasPrice - baseFee)</code></div>
+                              <div><code>upfrontCap = value + gasLimit × maxFee</code></div>
+                              <div><code>feePaid = gasUsed × effectiveGasPrice</code></div>
+                              <div><code>burned = gasUsed × baseFee</code></div>
+                              <div><code>tipPaid = gasUsed × tip</code></div>
+                            </div>
+                          </div>
+
+                          <div className="rounded border border-slate-700 bg-slate-950/20 p-3">
+                            <div className="font-semibold">{tr('Computed for this tx')}</div>
+                            <div className="mt-2 grid grid-cols-2 gap-2 text-slate-300">
+                              <div>{tr('baseFee')}: <span className="font-semibold">{fmtGwei(baseFee)} gwei</span></div>
+                              <div>{tr('maxFee')}: <span className="font-semibold">{fmtGwei(selectedTx.maxFeeGwei)} gwei</span></div>
+                              <div>{tr('maxPriority')}: <span className="font-semibold">{fmtGwei(selectedTx.maxPriorityGwei)} gwei</span></div>
+                              <div>{tr('effective')}: <span className="font-semibold">{fmtGwei(effective)} gwei</span></div>
+                              <div>{tr('tip')}: <span className="font-semibold">{fmtGwei(tip)} gwei</span></div>
+                              <div>{tr('upfront cap')}: <span className="font-semibold">{fmtEth(upfrontCap)} ETH</span></div>
+                              <div>{tr('requiredGas')}: <span className="font-semibold">{required.toLocaleString()}</span></div>
+                              <div>{tr('out of gas?')}: <span className="font-semibold">{wouldBeOutOfGas ? tr('yes') : tr('no')}</span></div>
+                              <div>{tr('ignored at current baseFee?')}: <span className="font-semibold">{ignoredNow ? tr('yes') : tr('no')}</span></div>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
           {/* State */}
           <div className="bg-slate-900/60 rounded-xl border border-slate-700 p-4">
-            <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <Info size={18} className="text-slate-300" /> {tr('State')}
               </h2>
-              <EduTooltip widthClassName="w-96" text={stateContextTooltip} />
+              <div className="flex items-center gap-3 flex-wrap">
+                <label className="text-xs text-slate-300 inline-flex items-center gap-2">
+                  <input type="checkbox" checked={autoTraffic} onChange={(e) => setAutoTraffic(e.target.checked)} />
+                  {tr('Auto traffic')}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setState((s) => spawnBackgroundTxs(s))}
+                  className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 whitespace-nowrap inline-flex items-center gap-2"
+                >
+                  <span>{tr('Spawn traffic now')}</span>
+                  <span
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <EduTooltip
+                      widthClassName="w-96"
+                      text={tr(
+                        'Spawns a few “other user” transactions (Charlie/Dave) into the mempool. This creates fee competition: higher tips are mined first.'
+                      )}
+                    />
+                  </span>
+                </button>
+                <EduTooltip widthClassName="w-96" text={stateContextTooltip} />
+              </div>
             </div>
             <div className="space-y-3">
-              {(['Alice', 'Bob', 'DEX', 'Miner'] as Address[]).map((a) => (
+              {(['Alice', 'Bob', 'Charlie', 'Dave', 'DEX', 'Miner'] as Address[]).map((a) => (
                 <div key={a} className="rounded-lg bg-slate-900 border border-slate-700 p-3">
                   <div className="flex items-center justify-between">
                     <div className="font-semibold flex items-center gap-2">
@@ -465,6 +741,10 @@ export default function WalletTransactionLifecycleImpl() {
                         <UserRound size={16} className="text-pink-300" />
                       ) : a === 'Bob' ? (
                         <User size={16} className="text-blue-300" />
+                      ) : a === 'Charlie' ? (
+                        <User size={16} className="text-emerald-300" />
+                      ) : a === 'Dave' ? (
+                        <User size={16} className="text-yellow-300" />
                       ) : a === 'DEX' ? (
                         <Shuffle size={16} className="text-purple-300" />
                       ) : (
@@ -526,11 +806,13 @@ export default function WalletTransactionLifecycleImpl() {
                   <div className="text-xs text-slate-400 mb-1">{tr('From')}</div>
                   <select
                     value={draftFrom}
-                    onChange={(e) => setDraftFrom(e.target.value as 'Alice' | 'Bob')}
+                    onChange={(e) => setDraftFrom(e.target.value as 'Alice' | 'Bob' | 'Charlie' | 'Dave')}
                     className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700"
                   >
                     <option value="Alice">Alice</option>
                     <option value="Bob">Bob</option>
+                    <option value="Charlie">Charlie</option>
+                    <option value="Dave">Dave</option>
                   </select>
                 </div>
 
@@ -752,7 +1034,15 @@ export default function WalletTransactionLifecycleImpl() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">{tr('Gas limit')}</div>
+                  <div className="text-xs text-slate-400 mb-1 flex items-center gap-2">
+                    <span>{tr('Gas limit')}</span>
+                    <EduTooltip
+                      widthClassName="w-96"
+                      text={tr(
+                        'Gas limit is the maximum gas you allow this transaction to consume. If it runs out, execution reverts but you still pay for gas used up to the limit.'
+                      )}
+                    />
+                  </div>
                   <input
                     type="number"
                     min={21_000}
@@ -786,7 +1076,15 @@ export default function WalletTransactionLifecycleImpl() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">{tr('Max fee (gwei)')}</div>
+                  <div className="text-xs text-slate-400 mb-1 flex items-center gap-2">
+                    <span>{tr('Max fee (gwei)')}</span>
+                    <EduTooltip
+                      widthClassName="w-96"
+                      text={tr(
+                        'EIP-1559 max fee is a cap: effectiveGasPrice = min(maxFee, baseFee + maxPriority). If baseFee rises above maxFee, the tx is ignored until baseFee drops (or you replace it).' 
+                      )}
+                    />
+                  </div>
                   <input
                     type="number"
                     min={0}
@@ -797,7 +1095,15 @@ export default function WalletTransactionLifecycleImpl() {
                   />
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">{tr('Priority fee (gwei)')}</div>
+                  <div className="text-xs text-slate-400 mb-1 flex items-center gap-2">
+                    <span>{tr('Priority fee (gwei)')}</span>
+                    <EduTooltip
+                      widthClassName="w-96"
+                      text={tr(
+                        'Priority fee (tip) is the part paid to the validator. Miners/validators typically include higher-tip transactions first.'
+                      )}
+                    />
+                  </div>
                   <input
                     type="number"
                     min={0}
@@ -816,11 +1122,23 @@ export default function WalletTransactionLifecycleImpl() {
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <div>
-                    <div className="text-xs text-slate-400">{tr('Effective gas price')}</div>
+                    <div className="text-xs text-slate-400 flex items-center gap-1">
+                      <span>{tr('Effective gas price')}</span>
+                      <EduTooltip
+                        widthClassName="w-96"
+                        text={tr('Effective gas price is what you would pay per gas if included now: min(maxFee, baseFee + maxPriority).')}
+                      />
+                    </div>
                     <div className="font-semibold">{fmtGwei(effectiveGwei)} gwei</div>
                   </div>
                   <div>
-                    <div className="text-xs text-slate-400">{tr('Tip')}</div>
+                    <div className="text-xs text-slate-400 flex items-center gap-1">
+                      <span>{tr('Tip')}</span>
+                      <EduTooltip
+                        widthClassName="w-96"
+                        text={tr('Tip (priority fee actually paid) = max(0, effectiveGasPrice − baseFee). It can be lower than your max priority fee if maxFee is tight.')}
+                      />
+                    </div>
                     <div className="font-semibold">{fmtGwei(tip)} gwei</div>
                   </div>
                   <div>
@@ -828,7 +1146,13 @@ export default function WalletTransactionLifecycleImpl() {
                     <div className="font-semibold">{fmtEth(feeIfSuccessEth)} ETH</div>
                   </div>
                   <div>
-                    <div className="text-xs text-slate-400">{tr('Fee worst-case')}</div>
+                    <div className="text-xs text-slate-400 flex items-center gap-1">
+                      <span>{tr('Fee worst-case')}</span>
+                      <EduTooltip
+                        widthClassName="w-96"
+                        text={tr('Worst-case fee uses the cap: gasLimit × maxFee. Wallets use this bound for affordability checks (plus any ETH value sent).')}
+                      />
+                    </div>
                     <div className="font-semibold">{fmtEth(feeWorstEth)} ETH</div>
                   </div>
                 </div>
@@ -1098,6 +1422,9 @@ export default function WalletTransactionLifecycleImpl() {
               )}
               {state.mempool.map((tx) => {
                 const gap = nonceGapInfo(state, tx);
+                const age = state.blockNumber - tx.firstSeenBlock;
+                const ttl = 20;
+                const ttlRemaining = Math.max(0, ttl - age);
                 return (
                 <button
                   key={tx.hash}
@@ -1111,6 +1438,14 @@ export default function WalletTransactionLifecycleImpl() {
                   </div>
                   <div className="text-xs text-slate-400 mt-1">
                     {shortHash(tx.hash)} · {tr('nonce')} {tx.nonce} · {tr('tip')} {fmtGwei(tipGwei(state.baseFeeGwei, effectiveGasPriceGwei(state.baseFeeGwei, tx.maxFeeGwei, tx.maxPriorityGwei)))} gwei
+                    <span className="text-slate-500"> · {tr('age')} {age} {tr('blocks')}</span>
+                    <span className="text-slate-500 inline-flex items-center gap-1">
+                      · {tr('TTL')} {ttlRemaining}
+                      <EduTooltip
+                        widthClassName="w-80"
+                        text={tr('Mempool TTL: in this simulator, pending txs are evicted after ~20 blocks if they are not included.')}
+                      />
+                    </span>
                   </div>
 
                   {gap.blocked ? (
@@ -1438,10 +1773,31 @@ export default function WalletTransactionLifecycleImpl() {
           </div>
         </div>
 
+        {/* Further Reading */}
+        <div className="mt-6 bg-slate-900/60 rounded-lg p-6 border border-slate-700">
+          <h2 className="text-2xl font-bold mb-4 text-slate-200">
+            📚 {tr('Further Reading')}
+          </h2>
+          <div className="space-y-3 text-sm text-slate-200">
+            <div>
+              <LinkWithCopy href="https://eips.ethereum.org/EIPS/eip-1559" label={tr('EIP-1559: Fee market change')} />
+            </div>
+            <div>
+              <LinkWithCopy href="https://ethereum.org/en/developers/docs/transactions/" label={tr('ethereum.org: Transactions overview')} />
+            </div>
+            <div>
+              <LinkWithCopy href="https://support.metamask.io/transactions-and-gas/how-to-speed-up-or-cancel-a-pending-transaction/" label={tr('MetaMask: Speed up or cancel a pending transaction')} />
+            </div>
+            <div>
+              <LinkWithCopy href="https://ethereum.org/en/developers/docs/standards/tokens/erc-20/" label={tr('ERC-20 allowances and approvals')} />
+            </div>
+          </div>
+        </div>
+
         <div className="mt-6 text-xs text-slate-400 flex items-start gap-2">
           <Info size={14} className="mt-0.5" />
           <div>
-            {tr('This is a simplified simulator: no signatures, no reorgs, and a toy DEX swap model. Mempool TTL is simulated.')}
+            {tr('This is a simplified simulator: no real signatures, a toy 1-block reorg, and a toy DEX swap model. Mempool TTL is simulated.')}
           </div>
         </div>
       </div>
@@ -1451,11 +1807,28 @@ export default function WalletTransactionLifecycleImpl() {
   function labelTx(tx: Tx) {
     switch (tx.type) {
       case 'eth_transfer':
-        return `${tx.from} → ${tx.to} (${fmtEth(tx.valueEth)} ETH)`;
+        return tr('{{from}} → {{to}} ({{value}} ETH)', {
+          from: tx.from,
+          to: tx.to,
+          value: fmtEth(tx.valueEth)
+        });
       case 'erc20_approve':
-        return `${tx.from} approve DEX (${tx.daiAmount} DAI)`;
+        return tr('{{from}} approve DEX ({{amount}} DAI)', {
+          from: tx.from,
+          amount: tx.daiAmount
+        });
       case 'dex_swap':
-        return `${tx.from} swap (${tx.daiAmount} DAI)`;
+        return tr('{{from}} swap ({{amount}} DAI)', {
+          from: tx.from,
+          amount: tx.daiAmount
+        });
+      case 'dex_swap_permit':
+        return tr('{{from}} swap+permit ({{amount}} DAI)', {
+          from: tx.from,
+          amount: tx.daiAmount
+        });
+      default:
+        return tr('{{from}} tx', { from: tx.from });
     }
   }
 }

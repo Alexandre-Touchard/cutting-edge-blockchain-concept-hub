@@ -1,18 +1,25 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from './toast';
 import { useTranslation } from 'react-i18next';
 import EduTooltip from './EduTooltip';
 import { getConceptChip } from './concepts';
 import LanguageSwitcher from './LanguageSwitcher';
 import {
   ChevronRight,
+  Copy,
   Database,
   GitBranch,
+  Github,
+  HeartHandshake,
   Layers,
+  Wallet,
   Lock,
   Search,
+  Share2,
   Shield,
   TrendingUp,
   Users,
+  X,
   Zap
 } from 'lucide-react';
 
@@ -41,6 +48,40 @@ export default function Hub({
   demos: DemoMeta[];
   onOpenDemo: (demo: DemoMeta) => void;
 }) {
+  const SUPPORT_ADDRESS = '0xb4052F23366aaB355ba67C2c6D2dF465cf067c9A';
+  const [showDonate, setShowDonate] = useState(false);
+
+  const copyDonateAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(SUPPORT_ADDRESS);
+      toast('Address copied');
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = SUPPORT_ADDRESS;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast('Address copied');
+    }
+  };
+
+  const shareSite = async () => {
+    const url = 'https://blockchain-demo-hub.vercel.app';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Blockchain Learning Hub', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast('Link copied');
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -582,22 +623,101 @@ export default function Hub({
           </div>
         )}
 
-        {/* Author Footer */}
-        <div className="mt-12 pt-6 border-t border-slate-800 text-center">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <span className="text-slate-400">Created by</span>
-            <span className="font-semibold text-white">Alexandre Touchard</span>
+        {/* Footer */}
+        <div className="mt-12 pt-6 border-t border-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div className="text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                <span className="text-slate-400">Created by</span>
+                <span className="font-semibold text-white">Alexandre Touchard</span>
+              </div>
+              <a
+                href="https://www.linkedin.com/in/alexandre-touchard-577b3baa/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm font-semibold"
+              >
+                <span className="font-bold">in</span>
+                Connect on LinkedIn
+              </a>
+            </div>
+
+            <div className="text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+                <HeartHandshake size={18} className="text-emerald-300" />
+                <div className="font-semibold text-white">Support Blockchain Learning Hub</div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDonate(true)}
+                  className="inline-flex items-center justify-center md:justify-start gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm text-slate-200"
+                >
+                  <Wallet size={16} className="text-slate-300" />
+                  Crypto donations (ETH / USDC)
+                </button>
+
+                <a
+                  href="https://github.com/Alexandre-Touchard/cutting-edge-blockchain-concept-hub"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center md:justify-start gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm text-slate-200"
+                >
+                  <Github size={16} className="text-slate-300" />
+                  Star the project on GitHub
+                </a>
+
+                <button
+                  type="button"
+                  onClick={shareSite}
+                  className="inline-flex items-center justify-center md:justify-start gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm text-slate-200"
+                >
+                  <Share2 size={16} className="text-slate-300" />
+                  Share the site
+                </button>
+              </div>
+            </div>
           </div>
-          <a
-            href="https://www.linkedin.com/in/alexandre-touchard-577b3baa/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm font-semibold"
-          >
-            <span className="font-bold">in</span>
-            Connect on LinkedIn
-          </a>
-          <p className="text-xs text-slate-500 mt-4">© 2026 Alexandre Touchard. Interactive blockchain education demos.</p>
+
+          <p className="text-xs text-slate-500 mt-6 text-center md:text-left">© 2026 Alexandre Touchard. Interactive blockchain education demos.</p>
+
+          {showDonate && (
+            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/70" onClick={() => setShowDonate(false)} />
+              <div className="relative w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-950 p-5 shadow-xl">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-lg font-bold">Crypto donations (ETH / USDC)</div>
+                    <div className="text-sm text-slate-400 mt-1">Ethereum address</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDonate(false)}
+                    className="p-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800"
+                    aria-label="Close"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                  <div className="font-mono text-sm break-all text-slate-200">{SUPPORT_ADDRESS}</div>
+                  <button
+                    type="button"
+                    onClick={copyDonateAddress}
+                    className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold"
+                  >
+                    <Copy size={16} />
+                    Copy address
+                  </button>
+                  <div className="text-xs text-slate-400 mt-3">
+                    Send ETH or USDC on Ethereum mainnet to support the project.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

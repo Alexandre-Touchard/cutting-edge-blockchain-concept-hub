@@ -25,7 +25,7 @@ type Tx = {
   computeUnits: number;
   // What the tx really touches at runtime (EVM: implicit)
   actual: Record<AccountId, AccessMode>;
-  // What the tx *declares* ahead of time (SVM-style)
+  // What the tx declares ahead of time (Solana-style account locks)
   declared: Partial<Record<AccountId, AccessMode>>;
 };
 
@@ -37,11 +37,23 @@ type Outcome =
 type Wave = {
   txs: Tx[];
   time: number; // max CU in wave
+  // Solana-style account locks implied by declarations (W dominates R)
+  locks: Partial<Record<AccountId, AccessMode>>;
+  // For each locked account, which tx ids contributed to the lock (useful for explanations)
+  lockSources: Partial<Record<AccountId, number[]>>;
+  slotsUsed: number;
+  slotsTotal: number;
+};
+
+type ScheduleDebug = {
+  txId: number;
+  placedWave: number;
+  attempts: Array<{ wave: number; reason: string }>;
 };
 
 type LogEntry = {
   at: number;
-  scope: 'SYSTEM' | 'EVM' | 'SVM';
+  scope: 'SYSTEM' | 'EVM' | 'SOLANA';
   kind: 'info' | 'success' | 'error' | 'phase';
   message: string;
 };
@@ -57,7 +69,7 @@ function declaredCoversActual(tx: Tx): boolean {
 }
 
 function conflicts(a: Partial<Record<AccountId, AccessMode>>, b: Partial<Record<AccountId, AccessMode>>): boolean {
-  // RW conflicts:
+  // RW conflicts (account locks):
   // - read/read does not conflict
   // - any write conflicts if same account is touched
   for (const acct of Object.keys({ ...a, ...b }) as AccountId[]) {
@@ -69,25 +81,96 @@ function conflicts(a: Partial<Record<AccountId, AccessMode>>, b: Partial<Record<
   return false;
 }
 
-function computeWaves(txs: Tx[], threads: number): Wave[] {
-  const waves: Tx[][] = [];
-  for (const tx of txs) {
-    let placed = false;
+function mergeLocks(into: Partial<Record<AccountId, AccessMode>>, add: Partial<Record<AccountId, AccessMode>>) {
+  for (const [acct, mode] of Object.entries(add) as Array<[AccountId, AccessMode]>) {
+    const cur = into[acct];
+    // write dominates
+    if (!cur) into[acct] = mode;
+    else if (cur === 'r' && mode === 'w') into[acct] = 'w';
+  }
+}
 
-    for (const wave of waves) {
-      if (wave.length >= threads) continue;
-      const fits = wave.every((wtx) => !conflicts(wtx.declared, tx.declared));
-      if (fits) {
-        wave.push(tx);
-        placed = true;
-        break;
+function mergeLockSources(into: Partial<Record<AccountId, number[]>>, tx: Tx) {
+  for (const acct of Object.keys(tx.declared) as AccountId[]) {
+    const cur = into[acct] ?? [];
+    into[acct] = cur.includes(tx.id) ? cur : [...cur, tx.id];
+  }
+}
+
+function computeSchedule(txs: Tx[], threads: number): { waves: Wave[]; debug: ScheduleDebug[] } {
+  const waves: Array<{
+    txs: Tx[];
+    locks: Partial<Record<AccountId, AccessMode>>;
+    lockSources: Partial<Record<AccountId, number[]>>;
+  }> = [];
+  const debug: ScheduleDebug[] = [];
+
+  for (const tx of txs) {
+    let placedWave = -1;
+    const attempts: Array<{ wave: number; reason: string }> = [];
+
+    for (let w = 0; w < waves.length; w++) {
+      const wave = waves[w];
+
+      if (wave.txs.length >= threads) {
+        attempts.push({ wave: w, reason: 'Wave full (thread limit)' });
+        continue;
       }
+
+      // If it conflicts with the wave's current locks, it can't be scheduled here.
+      const hasConflict = wave.txs.some((wtx) => conflicts(wtx.declared, tx.declared));
+      if (hasConflict) {
+        // Produce a human explanation: which accounts conflict and with which txs
+        const conflictAccounts = new Set<AccountId>();
+        const conflictWith: number[] = [];
+        for (const wtx of wave.txs) {
+          if (!conflicts(wtx.declared, tx.declared)) continue;
+          conflictWith.push(wtx.id);
+          for (const acct of Object.keys({ ...wtx.declared, ...tx.declared }) as AccountId[]) {
+            const am = wtx.declared[acct];
+            const bm = tx.declared[acct];
+            if (!am || !bm) continue;
+            if (am === 'w' || bm === 'w') conflictAccounts.add(acct);
+          }
+        }
+        attempts.push({
+          wave: w,
+          reason: `Conflicts on ${Array.from(conflictAccounts).join(', ')} (with TX ${conflictWith.join(', ')})`
+        });
+        continue;
+      }
+
+      // Fits this wave
+      wave.txs.push(tx);
+      mergeLocks(wave.locks, tx.declared);
+      mergeLockSources(wave.lockSources, tx);
+      placedWave = w;
+      break;
     }
 
-    if (!placed) waves.push([tx]);
+    if (placedWave === -1) {
+      // Create a new wave
+      const locks: Partial<Record<AccountId, AccessMode>> = {};
+      mergeLocks(locks, tx.declared);
+      const lockSources: Partial<Record<AccountId, number[]>> = {};
+      mergeLockSources(lockSources, tx);
+      waves.push({ txs: [tx], locks, lockSources });
+      placedWave = waves.length - 1;
+    }
+
+    debug.push({ txId: tx.id, placedWave, attempts });
   }
 
-  return waves.map((w) => ({ txs: w, time: Math.max(...w.map((t) => t.computeUnits)) }));
+  const finalWaves: Wave[] = waves.map((w) => ({
+    txs: w.txs,
+    time: Math.max(...w.txs.map((t) => t.computeUnits)),
+    locks: w.locks,
+    lockSources: w.lockSources,
+    slotsUsed: w.txs.length,
+    slotsTotal: threads
+  }));
+
+  return { waves: finalWaves, debug };
 }
 
 function defaultTxs(): Tx[] {
@@ -141,7 +224,7 @@ export default function EvmVsSvmDemo() {
   const concepts = useMemo(
     () => [
       define('EVM (sequential execution)', tr('Executes transactions in a strict order. State access is implicit.')),
-      define('SVM-style (parallel scheduling)', tr('Transactions can run in parallel when they declare non-conflicting state access.')),
+      define('Solana-style (parallel scheduling)', tr('Transactions can run in parallel when they declare non-conflicting account read/write sets (account locks).')),
       define('Account declarations', tr('A tx declares which accounts it will read/write. Missing declarations can cause failure.')),
       define('Conflicts', tr('Two txs conflict if they touch the same account and at least one writes.'))
     ],
@@ -152,7 +235,8 @@ export default function EvmVsSvmDemo() {
   const [txs, setTxs] = useState<Tx[]>(() => defaultTxs());
 
   const evmTime = useMemo(() => sumCu(txs), [txs]);
-  const waves = useMemo(() => computeWaves(txs, threads), [txs, threads]);
+  const schedule = useMemo(() => computeSchedule(txs, threads), [txs, threads]);
+  const waves = schedule.waves;
   const svmTime = useMemo(() => waves.reduce((a, w) => a + w.time, 0), [waves]);
   const speedup = useMemo(() => (svmTime > 0 ? evmTime / svmTime : 1), [evmTime, svmTime]);
 
@@ -164,6 +248,12 @@ export default function EvmVsSvmDemo() {
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showDebug, setShowDebug] = useState(false);
+
+  const scheduleDebugByTxId = useMemo(() => {
+    const m = new Map<number, ScheduleDebug>();
+    for (const d of schedule.debug) m.set(d.txId, d);
+    return m;
+  }, [schedule.debug]);
   const [nextId, setNextId] = useState(() => Math.max(...defaultTxs().map((t) => t.id)) + 1);
 
   function appendLog(scope: LogEntry['scope'], kind: LogEntry['kind'], message: string) {
@@ -198,18 +288,18 @@ export default function EvmVsSvmDemo() {
     appendLog('SYSTEM', 'info', reason);
   }
 
-  function toggleDeclared(txId: number, acct: AccountId, mode: AccessMode) {
+  function cycleDeclared(txId: number, acct: AccountId) {
     setTxs((prev) => {
       const next = prev.map((t) => {
         if (t.id !== txId) return t;
         const cur = t.declared[acct];
-        const nt: Tx = {
-          ...t,
-          declared: { ...t.declared }
-        };
-        if (!cur) nt.declared[acct] = mode;
-        else if (cur === 'r' && mode === 'w') nt.declared[acct] = 'w';
+        const nt: Tx = { ...t, declared: { ...t.declared } };
+
+        // Cycle: none -> read -> write -> none
+        if (!cur) nt.declared[acct] = 'r';
+        else if (cur === 'r') nt.declared[acct] = 'w';
         else delete nt.declared[acct];
+
         return nt;
       });
       return next;
@@ -266,7 +356,7 @@ export default function EvmVsSvmDemo() {
     if (svmWaveIndex >= waves.length) return;
     const wave = waves[svmWaveIndex];
 
-    appendLog('SVM', 'phase', `${tr('Execute wave')} ${svmWaveIndex + 1}/${waves.length} (${wave.txs.length} txs)`);
+    appendLog('SOLANA', 'phase', `${tr('Execute wave')} ${svmWaveIndex + 1}/${waves.length} (${wave.txs.length} txs)`);
 
     const patch: Record<number, Outcome> = {};
     for (const t of wave.txs) {
@@ -276,10 +366,10 @@ export default function EvmVsSvmDemo() {
           reason: 'MissingAccountDeclaration',
           summary: tr('Missing declaration for at least one actual account')
         };
-        appendLog('SVM', 'error', `${tr('FAILED')} — #${t.id}: ${tr('Missing declaration')}`);
+        appendLog('SOLANA', 'error', `${tr('FAILED')} — #${t.id}: ${tr('Missing declaration')}`);
       } else {
         patch[t.id] = { status: 'ok', summary: tr('Executed') };
-        appendLog('SVM', 'success', `${tr('OK')} — #${t.id}: ${tr(t.label)}`);
+        appendLog('SOLANA', 'success', `${tr('OK')} — #${t.id}: ${tr(t.label)}`);
       }
     }
 
@@ -301,7 +391,7 @@ export default function EvmVsSvmDemo() {
   }
 
   function runSvmAll() {
-    appendLog('SVM', 'phase', tr('Run all (SVM)'));
+    appendLog('SOLANA', 'phase', tr('Run all (Solana-style)'));
 
     const out: Record<number, Outcome> = {};
     for (const t of txs) {
@@ -319,7 +409,11 @@ export default function EvmVsSvmDemo() {
     setSvmWaveIndex(waves.length);
 
     const hasFail = Object.values(out).some((o) => o.status === 'failed');
-    appendLog('SVM', hasFail ? 'error' : 'success', hasFail ? tr('SVM completed with failures') : tr('SVM completed'));
+    appendLog(
+      'SOLANA',
+      hasFail ? 'error' : 'success',
+      hasFail ? tr('Solana-style completed with failures') : tr('Solana-style completed')
+    );
   }
 
   function reset() {
@@ -339,11 +433,11 @@ export default function EvmVsSvmDemo() {
           <div className="min-w-0">
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
               <Cpu className="text-blue-300" />
-              {tr('EVM vs SVM: Sequential vs Parallel execution')}
+              {tr('EVM vs Solana-style: Sequential vs Parallel execution')}
             </h1>
             <p className="text-slate-300 mt-2 max-w-3xl">
               {tr(
-                'This simulation compares a sequential EVM-style pipeline with an SVM-style scheduler that can run non-conflicting transactions in parallel when accounts are declared upfront.'
+                'This simulation compares a sequential EVM-style pipeline with a Solana-style scheduler that can run non-conflicting transactions in parallel when accounts are declared upfront (account locks).'
               )}
             </p>
 
@@ -410,7 +504,7 @@ export default function EvmVsSvmDemo() {
                 {tr('EVM time')}: <span className="font-bold">{evmTime}</span> CU
               </span>
               <span className="px-2 py-1 rounded border border-emerald-700 bg-emerald-900/20 text-emerald-100">
-                {tr('SVM time')}: <span className="font-bold">{svmTime}</span> CU
+                {tr('Solana-style time')}: <span className="font-bold">{svmTime}</span> CU
               </span>
               <span className="px-2 py-1 rounded border border-slate-700 bg-slate-900 text-slate-200">
                 {tr('Speedup')}: <span className="font-bold text-emerald-300">{speedup.toFixed(2)}×</span>
@@ -443,7 +537,7 @@ export default function EvmVsSvmDemo() {
               </div>
 
               <div className="rounded-lg border border-slate-800 bg-slate-950/30 p-3">
-                <div className="text-xs font-semibold text-slate-400">{tr('SVM-style (waves)')}</div>
+                <div className="text-xs font-semibold text-slate-400">{tr('Solana-style (waves)')}</div>
                 <div className="text-xs text-slate-500 mt-1">
                   {tr('Wave')}: {svmWaveIndex}/{waves.length}
                 </div>
@@ -483,7 +577,7 @@ export default function EvmVsSvmDemo() {
 
           {/* Waves */}
           <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-            <div className="text-sm font-semibold text-slate-200">{tr('SVM waves (from declarations)')}</div>
+            <div className="text-sm font-semibold text-slate-200">{tr('Solana-style waves (from declarations)')}</div>
             <div className="mt-3 space-y-2">
               {waves.map((w, idx) => (
                 <div key={idx} className="rounded-lg border border-slate-700 bg-slate-900/30 p-2">
@@ -491,18 +585,86 @@ export default function EvmVsSvmDemo() {
                     <span className="text-slate-200">
                       {tr('Wave')} {idx + 1}
                     </span>
-                    <span className="text-xs text-slate-400">{tr('time')}: {w.time} CU</span>
+                    <span className="text-xs text-slate-400">
+                      {tr('time')}: {w.time} CU • {w.slotsUsed}/{w.slotsTotal} {tr('slots')}
+                    </span>
                   </div>
+
                   <div className="mt-1 text-xs text-slate-300">{w.txs.map((t) => `#${t.id}`).join(', ')}</div>
+
+                  <div className="mt-2 text-[11px] text-slate-400">
+                    {tr('Account locks')}: {
+                      Object.keys(w.locks).length === 0
+                        ? tr('none')
+                        : (Object.entries(w.locks) as Array<[string, any]>).map(([a, m]) => `${a}:${m}`).join(', ')
+                    }
+                  </div>
+
+                  {showDebug && (
+                    <div className="mt-2 text-[11px] text-slate-500">
+                      {tr('Why these txs are grouped')}: {tr('no declared conflicts inside this wave')}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
             {showDebug && (
-              <div className="mt-4 pt-4 border-t border-slate-800 text-xs text-slate-400 space-y-1">
-                <div>{tr('Debug')}:</div>
-                <div>{tr('Conflicts are computed from declared read/write sets.')}</div>
+              <div className="mt-4 pt-4 border-t border-slate-800 text-xs text-slate-400 space-y-3">
+                <div className="font-semibold text-slate-300">{tr('Debug')}</div>
+                <div>{tr('Conflicts are computed from declared read/write sets (account locks).')}</div>
                 <div>{tr('A wave can contain up to N txs (threads) if none conflict.')}</div>
+
+                {/* Account lock timeline (accounts × waves) */}
+                <div className="mt-2">
+                  <div className="text-slate-300 font-semibold mb-2">{tr('Account lock timeline')}</div>
+                  <div className="overflow-auto">
+                    <div
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: `minmax(120px, 160px) repeat(${Math.max(1, waves.length)}, minmax(90px, 1fr))`
+                      }}
+                    >
+                      <div className="text-[11px] text-slate-500 py-1 pr-2">{tr('Account')}</div>
+                      {waves.map((_, wIdx) => (
+                        <div key={wIdx} className="text-[11px] text-slate-500 py-1 px-2">
+                          {tr('Wave')} {wIdx + 1}
+                        </div>
+                      ))}
+
+                      {allAccounts.map((acct) => (
+                        <React.Fragment key={acct}>
+                          <div className="text-[11px] text-slate-300 py-1 pr-2 font-mono">{acct}</div>
+                          {waves.map((w, wIdx) => {
+                            const mode = w.locks[acct];
+                            const src = w.lockSources[acct] ?? [];
+                            const cls =
+                              mode === 'w'
+                                ? 'bg-emerald-900/30 border-emerald-700 text-emerald-100'
+                                : mode === 'r'
+                                  ? 'bg-blue-900/25 border-blue-700 text-blue-100'
+                                  : 'bg-slate-950/30 border-slate-800 text-slate-500';
+
+                            return (
+                              <div key={`${acct}-${wIdx}`} className="py-1 px-2">
+                                <div className={`rounded border px-2 py-1 text-[11px] ${cls}`}>
+                                  {mode ? (mode === 'w' ? tr('W') : tr('R')) : tr('—')}
+                                  {mode && src.length > 0 ? (
+                                    <span className="ml-2 text-[10px] opacity-80">TX {src.join(', ')}</span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-2 text-[11px] text-slate-500">
+                    {tr('Legend')}: <span className="text-blue-200">R</span>={tr('read lock')}, <span className="text-emerald-200">W</span>={tr('write lock')}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -587,11 +749,27 @@ export default function EvmVsSvmDemo() {
                         )}
                       </div>
                       <div className="mt-1 text-xs text-slate-400">
-                        {tr('EVM')}: <OutcomePill out={evmOut[tx.id]} /> &nbsp;|&nbsp; {tr('SVM')}: <OutcomePill out={svmOut[tx.id]} />
+                        {tr('EVM')}: <OutcomePill out={evmOut[tx.id]} /> &nbsp;|&nbsp; {tr('Solana-style')}: <OutcomePill out={svmOut[tx.id]} />
                       </div>
 
                       <div className="mt-2 text-xs text-slate-300">
                         {tr('Actual access')}: {Object.entries(tx.actual).map(([a, m]) => `${a}:${m}`).join(', ')}
+                      </div>
+
+                      <div className="mt-2 text-xs text-slate-400 flex items-center gap-2">
+                        <span>
+                          {tr('Scheduled wave')}: {((scheduleDebugByTxId.get(tx.id)?.placedWave ?? 0) + 1).toString()}
+                        </span>
+                        <EduTooltip
+                          widthClassName="w-[520px]"
+                          text={(() => {
+                            const dbg = scheduleDebugByTxId.get(tx.id);
+                            if (!dbg) return tr('No scheduling debug available.');
+                            if (dbg.attempts.length === 0) return tr('Placed in the first wave.');
+                            const lines = dbg.attempts.map((a) => `Wave ${a.wave + 1}: ${a.reason}`);
+                            return `${tr('Why not earlier waves?')}\n` + lines.join('\n');
+                          })()}
+                        />
                       </div>
                     </div>
                   </div>
@@ -642,9 +820,9 @@ export default function EvmVsSvmDemo() {
                           <button
                             key={a}
                             type="button"
-                            onClick={() => toggleDeclared(tx.id, a, 'w')}
+                            onClick={() => cycleDeclared(tx.id, a)}
                             className={`text-xs px-2 py-1 rounded border ${cls}`}
-                            title={tr('Click to toggle (none → write → none)')}
+                            title={tr('Click to cycle (none → read → write → none)')}
                           >
                             {label}
                           </button>
@@ -652,7 +830,7 @@ export default function EvmVsSvmDemo() {
                       })}
                     </div>
                     <div className="mt-2 text-[11px] text-slate-500">
-                      {tr('Simplified toggle: click sets WRITE, click again clears. (Read vs write matters for conflicts.)')}
+                      {tr('Click chips to cycle NONE → READ → WRITE → NONE. Conflicts happen when two txs touch the same account and at least one writes.')}
                     </div>
                   </div>
                 </div>

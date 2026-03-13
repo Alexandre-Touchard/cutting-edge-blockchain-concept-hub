@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import EduTooltip from '../../ui/EduTooltip';
 import LinkWithCopy from '../../ui/LinkWithCopy';
-import { define } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
 import {
   ArrowDown,
@@ -271,10 +270,24 @@ export default function EvmVsSvmDemo() {
 
   const concepts = useMemo(
     () => [
-      define('EVM (sequential execution)', tr('Executes transactions in a strict order. State access is implicit.')),
-      define('Solana-style (parallel scheduling)', tr('Transactions can run in parallel when they declare non-conflicting account read/write sets (account locks).')),
-      define('Account declarations', tr('A tx declares which accounts it will read/write. Missing declarations can cause failure.')),
-      define('Conflicts', tr('Two txs conflict if they touch the same account and at least one writes.'))
+      {
+        term: tr('EVM (sequential execution)'),
+        def: tr('Executes transactions in a strict order. State access is implicit.')
+      },
+      {
+        term: tr('Solana-style (parallel scheduling)'),
+        def: tr(
+          'Transactions can run in parallel when they declare non-conflicting account read/write sets (account locks).'
+        )
+      },
+      {
+        term: tr('Account declarations'),
+        def: tr('A tx declares which accounts it will read/write. Missing declarations can cause failure.')
+      },
+      {
+        term: tr('Conflicts'),
+        def: tr('Two txs conflict if they touch the same account and at least one writes.')
+      }
     ],
     [tr]
   );
@@ -299,6 +312,17 @@ export default function EvmVsSvmDemo() {
   const [guidedMode, setGuidedMode] = useState(true);
   const [guidedHighlight, setGuidedHighlight] = useState<null | { txId: number; account: AccountId }>(null);
   const [sectionHighlight, setSectionHighlight] = useState<null | 'waves' | 'timeline'>(null);
+
+  const [questFlags, setQuestFlags] = useState(() => ({
+    loadedOrderingPreset: false,
+    swappedOrder: false,
+    viewedLocks: false,
+    loadedDisjointPreset: false
+  }));
+
+  function markQuestFlag<K extends keyof typeof questFlags>(k: K) {
+    setQuestFlags((prev) => ({ ...prev, [k]: true }));
+  }
 
   const scheduleDebugByTxId = useMemo(() => {
     const m = new Map<number, ScheduleDebug>();
@@ -325,14 +349,42 @@ export default function EvmVsSvmDemo() {
   const quests = useMemo(() => {
     const fixedMissing = txs.every((t) => declaredCoversActual(t));
     const ranEvmToEnd = evmIndex >= txs.length;
-    const ranSvmToEnd = svmWaveIndex >= waves.length;
+    const ranSolanaToEnd = svmWaveIndex >= waves.length;
+
+    // Concepts:
+    // - Read/read can be parallel: if 2+ txs declare Oracle:r and no one writes Oracle in that wave.
+    const oracleReadTxIds = txs.filter((t) => t.declared.Oracle === 'r').map((t) => t.id);
+    const hasOracleReadParallel = waves.some((w) => {
+      const inWave = w.txs.map((t) => t.id).filter((id) => oracleReadTxIds.includes(id));
+      return inWave.length >= 2 && w.locks.Oracle === 'r';
+    });
+
+    // - Write blocks reads: if any tx declares Oracle:w, the lock should be W in the wave containing it.
+    const hasOracleWrite = txs.some((t) => t.declared.Oracle === 'w');
+    const oracleWriteCreatesWLock = !hasOracleWrite
+      ? false
+      : waves.some((w) => w.locks.Oracle === 'w' && w.txs.some((t) => t.declared.Oracle === 'w'));
+
+    // - Thread limit: when disjoint preset is loaded and threads >= 3, we should fit in 1 wave.
+    const threadLimitConcept = questFlags.loadedDisjointPreset && threads >= 3 && waves.length <= 1;
+
+    // - Ordering: user loaded ordering preset AND swapped order at least once.
+    const orderingExplored = questFlags.loadedOrderingPreset && questFlags.swappedOrder;
+
+    // - Locks viewed: user scrolled to lock timeline.
+    const locksViewed = questFlags.viewedLocks;
 
     return {
       fixedMissing,
       gotSpeedup: fixedMissing && speedup >= 1.2,
-      ranBoth: ranEvmToEnd && ranSvmToEnd
+      ranBoth: ranEvmToEnd && ranSolanaToEnd,
+      hasOracleReadParallel,
+      oracleWriteCreatesWLock,
+      threadLimitConcept,
+      orderingExplored,
+      locksViewed
     };
-  }, [txs, speedup, evmIndex, svmWaveIndex, waves.length]);
+  }, [txs, evmIndex, svmWaveIndex, waves, speedup, threads, questFlags]);
 
   function onTxListChanged(reason: string) {
     resetExecution(true);
@@ -407,6 +459,7 @@ export default function EvmVsSvmDemo() {
   }
 
   function highlightSection(id: 'waves' | 'timeline') {
+    if (id === 'timeline') markQuestFlag('viewedLocks');
     setSectionHighlight(id);
     window.setTimeout(() => setSectionHighlight(null), 1600);
     window.setTimeout(() => {
@@ -465,6 +518,8 @@ export default function EvmVsSvmDemo() {
   }
 
   function loadPresetDisjointAccounts() {
+    markQuestFlag('loadedDisjointPreset');
+
     const preset: Tx[] = [
       {
         id: 1,
@@ -492,6 +547,59 @@ export default function EvmVsSvmDemo() {
     setTxs(preset);
     setNextId(4);
     onTxListChanged(tr('Loaded preset: disjoint accounts (max parallelism)'));
+
+    if (guidedMode) highlightSection('waves');
+  }
+
+  function loadPresetMevOrdering() {
+    markQuestFlag('loadedOrderingPreset');
+
+    // Two swaps on the same pool + a read-only oracle tx.
+    // Swaps conflict on DexPool:w, so ordering is relevant.
+    const preset: Tx[] = [
+      {
+        id: 1,
+        label: 'Alice swap (writes DexPool) — goes first',
+        computeUnits: 60,
+        actual: { Alice: 'w', DexPool: 'w' },
+        declared: { Alice: 'w', DexPool: 'w' }
+      },
+      {
+        id: 2,
+        label: 'Bob swap (writes DexPool) — goes second',
+        computeUnits: 60,
+        actual: { Bob: 'w', DexPool: 'w' },
+        declared: { Bob: 'w', DexPool: 'w' }
+      },
+      {
+        id: 3,
+        label: 'Oracle read (read-only)',
+        computeUnits: 15,
+        actual: { Oracle: 'r' },
+        declared: { Oracle: 'r' }
+      }
+    ];
+
+    setTxs(preset);
+    setNextId(4);
+    onTxListChanged(tr('Loaded preset: ordering matters (two swaps on same pool)'));
+
+    if (guidedMode) highlightSection('waves');
+  }
+
+  function swapOrderOfFirstTwoTxs() {
+    markQuestFlag('swappedOrder');
+
+    setTxs((prev) => {
+      if (prev.length < 2) return prev;
+      const next = [...prev];
+      const a = next[0];
+      const b = next[1];
+      next[0] = { ...b, id: a.id, label: b.label.replace('goes second', 'goes first') };
+      next[1] = { ...a, id: b.id, label: a.label.replace('goes first', 'goes second') };
+      return next;
+    });
+    onTxListChanged(tr('Swapped the order of the first two transactions'));
 
     if (guidedMode) highlightSection('waves');
   }
@@ -801,10 +909,32 @@ export default function EvmVsSvmDemo() {
               <Shield size={18} className="text-emerald-300" />
               {tr('Learning quests')}
             </div>
-            <div className="mt-3 space-y-2 text-sm">
-              <QuestRow done={quests.fixedMissing} text={tr('Fix TX #2 by declaring FeeVault as write')} />
-              <QuestRow done={quests.gotSpeedup} text={tr('Reach speedup ≥ 1.2× (increase threads + reduce conflicts)')} />
-              <QuestRow done={quests.ranBoth} text={tr('Run both EVM and Solana-style to completion')} />
+            <div className="mt-3 space-y-4 text-sm">
+              <div>
+                <div className="text-xs text-slate-400 mb-2">{tr('Basics')}</div>
+                <div className="space-y-2">
+                  <QuestRow done={quests.fixedMissing} text={tr('Fix TX #2 by declaring FeeVault as write')} />
+                  <QuestRow done={quests.ranBoth} text={tr('Run both EVM and Solana-style to completion')} />
+                  <QuestRow done={quests.locksViewed} text={tr('Open the lock timeline (Show locks)')} />
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs text-slate-400 mb-2">{tr('Parallelism & conflicts')}</div>
+                <div className="space-y-2">
+                  <QuestRow done={quests.gotSpeedup} text={tr('Reach speedup ≥ 1.2× (increase threads + reduce conflicts)')} />
+                  <QuestRow done={quests.hasOracleReadParallel} text={tr('Make two Oracle READ txs run in the same wave (R/R)')} />
+                  <QuestRow done={quests.oracleWriteCreatesWLock} text={tr('Add an Oracle WRITE and observe it creates a W lock (blocks reads)')} />
+                  <QuestRow done={quests.threadLimitConcept} text={tr('Increase threads so a disjoint preset fits in 1 wave')} />
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs text-slate-400 mb-2">{tr('Ordering (MEV)')}</div>
+                <div className="space-y-2">
+                  <QuestRow done={quests.orderingExplored} text={tr('Load ordering preset and swap TX1 ↔ TX2')} />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1110,6 +1240,135 @@ export default function EvmVsSvmDemo() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Extension: MEV & ordering */}
+        <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+          <div className="text-sm font-semibold text-slate-200">{tr('Ordering still matters (MEV)')}</div>
+          <div className="mt-2 text-sm text-slate-300">
+            {tr('Parallel execution changes what can run at the same time, but it does not remove ordering. Block builders/validators still choose an order for transactions, and that order can create value (MEV).')}
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4">
+              <div className="font-semibold text-slate-200">{tr('Example: two swaps on the same pool')}</div>
+              <div className="mt-2 text-sm text-slate-300">
+                {tr('If two swaps both write the same pool state (DexPool:w), they conflict and must be serialized. The one that goes first can change the price for the next one.')}
+              </div>
+              <div className="mt-2 text-[11px] text-slate-500">
+                {tr('This is one reason ordering is valuable: different ordering can lead to different outcomes and opportunities (MEV).')}
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={loadPresetMevOrdering}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold"
+                >
+                  {tr('Load ordering preset')}
+                </button>
+                <button
+                  type="button"
+                  onClick={swapOrderOfFirstTwoTxs}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
+                >
+                  {tr('Swap order (TX1 ↔ TX2)')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => guidedMode && highlightSection('timeline')}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
+                >
+                  {tr('Show locks')}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4">
+              <div className="font-semibold text-slate-200">{tr('Example: independent txs can be parallel')}</div>
+              <div className="mt-2 text-sm text-slate-300">
+                {tr('If transactions touch disjoint state (no shared write locks), they can run in the same wave. But a final block still commits an order for replay and determinism.')}
+              </div>
+              <div className="mt-2 text-[11px] text-slate-500">
+                {tr('Takeaway: parallelism increases throughput when possible; MEV/ordering concerns remain for conflicting state.')}
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={loadPresetDisjointAccounts}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold"
+                >
+                  {tr('Load parallel preset')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => guidedMode && highlightSection('waves')}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
+                >
+                  {tr('Show waves')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Extension: real-world constraints */}
+        <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+          <div className="text-sm font-semibold text-slate-200">{tr('Real-world constraints')}</div>
+          <div className="mt-2 text-sm text-slate-300">
+            {tr('This demo focuses on execution and conflicts, but real blockchains also have system constraints that shape performance and UX:')}
+          </div>
+
+          <ul className="mt-3 text-sm text-slate-300 list-disc pl-5 space-y-1">
+            <li>
+              <span className="font-semibold text-slate-200">{tr('Network propagation')}:</span> {tr('nodes see transactions at different times; mempools are not perfectly synchronized.')}
+            </li>
+            <li>
+              <span className="font-semibold text-slate-200">{tr('Block producers / builders')}:</span> {tr('a proposer decides what to include and in what order (sometimes via builder markets).')}
+            </li>
+            <li>
+              <span className="font-semibold text-slate-200">{tr('Fee markets')}:</span> {tr('fees influence inclusion and ordering (EIP-1559 base fee + tips, priority fees, etc.).')}
+            </li>
+            <li>
+              <span className="font-semibold text-slate-200">{tr('Deterministic replay')}:</span> {tr('finalized blocks must be replayable by every node, so concurrency still needs a deterministic outcome.')}
+            </li>
+          </ul>
+
+          <div className="mt-3 text-[11px] text-slate-500">
+            {tr('Takeaway: parallel scheduling is one lever. Real-world performance depends on networking, fee markets, and block production rules too.')}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={loadPresetMevOrdering}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold"
+            >
+              {tr('Load high-conflict mempool')}
+            </button>
+            <button
+              type="button"
+              onClick={loadPresetDisjointAccounts}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold"
+            >
+              {tr('Load disjoint mempool')}
+            </button>
+            <button
+              type="button"
+              onClick={() => guidedMode && highlightSection('waves')}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
+            >
+              {tr('Show waves')}
+            </button>
+            <button
+              type="button"
+              onClick={() => guidedMode && highlightSection('timeline')}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
+            >
+              {tr('Show locks')}
+            </button>
           </div>
         </div>
 

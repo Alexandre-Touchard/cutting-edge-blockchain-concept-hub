@@ -45,6 +45,15 @@
     "showFilters": "Show filters"
   },
   "demos": {
+    "stablecoin-depeg": {
+      "title": "Stablecoin Depeg Cascade",
+      "description": "Simulate two depeg cascades: (1) collateralized stablecoin liquidations and liquidity drains, and (2) Terra-style algorithmic reflexive collapse.",
+      "keyTakeaways": {
+        "0": "Low liquidity amplifies price moves: the same sell pressure causes more slippage and faster depegs",
+        "1": "Collateral crashes can trigger liquidations that sell collateral into markets, worsening the cascade",
+        "2": "Algorithmic pegs can fail reflexively: redemptions mint supply, collapsing the backstop token and the stablecoin"
+      }
+    },
     "evm-vs-svm": {
       "title": "EVM vs Solana-style",
       "description": "Coming soon: a more realistic, beginner-friendly and developer-accurate simulation of sequential (EVM-style) execution vs parallel (Solana-style) scheduling."

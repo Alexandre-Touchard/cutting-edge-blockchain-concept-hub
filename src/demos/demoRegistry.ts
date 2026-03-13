@@ -201,6 +201,23 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
     ],
     tags: ['Lightning', 'Raiden', 'Micropayments', 'Scaling']
   },
+  'stablecoin-depeg-simulation': {
+    id: 'stablecoin-depeg',
+    title: 'Stablecoin Depeg Cascade',
+    category: 'defi',
+    difficulty: 'Intermediate',
+    thumbnail: new URL('../public/photo/Demo14.png', import.meta.url).href,
+    description:
+      'Simulate two depeg cascades: (1) collateralized stablecoin liquidations and liquidity drains, and (2) Terra-style algorithmic reflexive collapse.',
+    concepts: ['Slippage', 'Price Impact', 'Oracle Networks', 'Stablecoin', 'Liquidation'],
+    keyTakeaways: [
+      'Low liquidity amplifies price moves: the same sell pressure causes more slippage and faster depegs',
+      'Collateral crashes can trigger liquidations that sell collateral into markets, worsening the cascade',
+      'Algorithmic pegs can fail reflexively: redemptions mint supply, collapsing the backstop token and the stablecoin'
+    ],
+    tags: ['Stablecoins', 'Depeg', 'Systemic risk', 'Cascades']
+  },
+
   'evm-vs-svm': {
     id: 'evm-vs-svm',
     title: 'EVM vs SVM',

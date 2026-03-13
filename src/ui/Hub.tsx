@@ -164,12 +164,23 @@ export default function Hub({
     []
   );
 
+  function normalizeForSearch(s: string): string {
+    // Lowercase + strip diacritics + remove non-alphanumerics for forgiving matching.
+    return s
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '');
+  }
+
   const normalizedQuery = searchTerm.trim().toLowerCase();
+  const normalizedQueryCompact = normalizeForSearch(searchTerm.trim());
 
   const suggestions = useMemo(() => {
-    if (!normalizedQuery) return [] as Array<{ type: 'demo' | 'concept'; value: string; demoId?: string }>;
+    if (!normalizedQuery)
+      return [] as Array<{ type: 'demo' | 'concept' | 'tag'; value: string; demoId?: string }>;
 
-    const items: Array<{ type: 'demo' | 'concept'; value: string; demoId?: string; score: number }> = [];
+    const items: Array<{ type: 'demo' | 'concept' | 'tag'; value: string; demoId?: string; score: number }> = [];
 
     for (const d of demos) {
       const title = d.title;
@@ -181,9 +192,19 @@ export default function Hub({
 
       for (const c of d.concepts) {
         const cLc = c.toLowerCase();
-        if (cLc.includes(normalizedQuery)) {
-          const score = cLc.startsWith(normalizedQuery) ? 80 : 50;
+        const cCompact = normalizeForSearch(c);
+        if (cLc.includes(normalizedQuery) || (normalizedQueryCompact && cCompact.includes(normalizedQueryCompact))) {
+          const score = cLc.startsWith(normalizedQuery) || cCompact.startsWith(normalizedQueryCompact) ? 80 : 50;
           items.push({ type: 'concept', value: c, demoId: d.id, score });
+        }
+      }
+
+      for (const tag of d.tags) {
+        const tLc = tag.toLowerCase();
+        const tCompact = normalizeForSearch(tag);
+        if (tLc.includes(normalizedQuery) || (normalizedQueryCompact && tCompact.includes(normalizedQueryCompact))) {
+          const score = tLc.startsWith(normalizedQuery) || tCompact.startsWith(normalizedQueryCompact) ? 70 : 45;
+          items.push({ type: 'tag', value: tag, demoId: d.id, score });
         }
       }
     }
@@ -222,12 +243,19 @@ export default function Hub({
   const filteredDemos = demos.filter((demo) => {
     const matchesCategory = selectedCategory === 'all' || demo.category === selectedCategory;
     const q = normalizedQuery;
+    const qCompact = normalizedQueryCompact;
+
     const matchesSearch =
       !q ||
       demo.title.toLowerCase().includes(q) ||
       demo.description.toLowerCase().includes(q) ||
       demo.concepts.some((c) => c.toLowerCase().includes(q)) ||
-      demo.tags.some((tag) => tag.toLowerCase().includes(q));
+      demo.tags.some((tag) => tag.toLowerCase().includes(q)) ||
+      (qCompact.length > 0 &&
+        (normalizeForSearch(demo.title).includes(qCompact) ||
+          normalizeForSearch(demo.description).includes(qCompact) ||
+          demo.concepts.some((c) => normalizeForSearch(c).includes(qCompact)) ||
+          demo.tags.some((tag) => normalizeForSearch(tag).includes(qCompact))));
     return matchesCategory && matchesSearch;
   });
 
@@ -431,7 +459,8 @@ export default function Hub({
             </button>
           </div>
 
-          <div className="flex flex-wrap gap-2 sm:gap-3">
+          {/* Mobile: compact categories (toggle More/Less) */}
+          <div className="flex flex-wrap gap-2 sm:gap-3 md:hidden">
             {(Object.entries(categories) as Array<[string, (typeof categories)[keyof typeof categories]]>)
               .filter(([key]) => {
                 if (showAllCategories) return true;
@@ -439,6 +468,37 @@ export default function Hub({
                 return ['all', 'execution', 'defi', 'scaling', 'security'].includes(key);
               })
               .map(([key, category]) => {
+              const Icon = category.icon;
+              const isSelected = selectedCategory === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSelectedCategory(key as CategoryId)}
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${
+                    isSelected
+                      ? colorStyles[category.colorKey].selected
+                      : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'
+                  }`}
+                >
+                  <Icon size={16} />
+                  <span className="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 max-w-[36vw] sm:max-w-none">
+                    {category.name}
+                  </span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      isSelected ? colorStyles[category.colorKey].countSelected : 'bg-slate-700'
+                    }`}
+                  >
+                    {liveDemos.filter((d) => key === 'all' || d.category === key).length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop: show all categories */}
+          <div className="hidden md:flex flex-wrap gap-2 sm:gap-3">
+            {(Object.entries(categories) as Array<[string, (typeof categories)[keyof typeof categories]]>).map(([key, category]) => {
               const Icon = category.icon;
               const isSelected = selectedCategory === key;
               return (

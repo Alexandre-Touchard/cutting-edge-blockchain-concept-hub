@@ -37,6 +37,15 @@ export type GlossaryKey =
   | 'Transaction Pool'
   | 'Light Clients'
   | 'Oracle Networks'
+  | 'Stablecoin'
+  | 'Depeg'
+  | 'Liquidity'
+  | 'Liquidation'
+  | 'Oracle'
+  | 'Arbitrage'
+  | 'Reflexivity'
+  | 'Stablecoin Price'
+  | 'Confidence'
   | 'Cross-Chain Messaging'
   | 'Trust Models'
   // State channels
@@ -205,6 +214,24 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
     'Clients that verify chain correctness using only headers and cryptographic proofs, without downloading full blocks/state.',
   'Oracle Networks':
     'Decentralized networks that fetch/verify off-chain data and deliver it on-chain with security assumptions (e.g., quorum, staking, slashing).',
+  Stablecoin:
+    'A token designed to track a target value (usually $1). The key question is: what mechanism makes it stable (collateral, redemptions, market incentives, or trust in an issuer)?',
+  Depeg:
+    'When a stablecoin trades away from its intended peg (e.g., $1). Depegs can be temporary (arbitrage restores the peg) or persistent (loss of confidence / insolvency).',
+  Liquidity:
+    'How much you can buy/sell without moving the price too much. In AMMs, low liquidity means larger slippage and faster price dislocations under stress.',
+  Liquidation:
+    'Forced selling of collateral when a position falls below a required collateral ratio. Liquidations are meant to protect solvency but can worsen a crash by selling into falling markets.',
+  Oracle:
+    'A system that provides price/data to smart contracts. Delayed or incorrect oracle prices can trigger wrong liquidations or distort protocol behavior.',
+  Arbitrage:
+    'Trading that profits from price differences across markets. Arbitrageurs often keep stablecoins near $1 by buying below peg and selling/redeeming near peg.',
+  Reflexivity:
+    'Feedback loops where price moves change behavior in ways that amplify the original move. In algorithmic stablecoins, redemptions can inflate supply and collapse the backstop token, worsening the depeg.',
+  'Stablecoin Price':
+    'The market price of the stablecoin. If it is below $1, it signals selling pressure and/or doubt about the peg mechanism.',
+  Confidence:
+    'A simplified measure of market trust in the peg mechanism. Lower confidence can reduce liquidity, increase selling pressure, and make depegs more persistent.',
   'Cross-Chain Messaging':
     'Sending authenticated messages between blockchains (not necessarily tokens). The core question is how the destination chain verifies the source event.',
   'Trust Models':

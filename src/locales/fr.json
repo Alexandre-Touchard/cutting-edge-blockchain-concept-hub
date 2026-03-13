@@ -1244,6 +1244,10 @@
         "_oracle_consensus_achieved_1215_node_ycslpw": "🤝 Consensus des oracles atteint (12/15 nœuds)"
       }
     },
+    "evm-vs-svm": {
+      "title": "EVM vs Solana (style)",
+      "description": "Bientôt disponible : une simulation plus réaliste, accessible aux débutants et précise pour les développeurs de l’exécution séquentielle (EVM) vs la planification parallèle (style Solana)."
+    },
     "wallet-tx-lifecycle": {
       "title": "UX de wallet & cycle de vie d’une transaction",
       "description": "Simulez ce qui se passe lorsque vous cliquez sur « confirmer » : nonces, frais EIP-1559, mempool, remplacement (accélérer/annuler) et causes courantes de revert.",
@@ -1534,6 +1538,7 @@
   },
   "common": {
     "definitionComingSoon": "Définition bientôt disponible.",
+    "comingSoon": "Bientôt disponible",
     "copiedLink": "Lien copié",
     "copyLink": "Copier le lien",
     "copied": "Copié !"

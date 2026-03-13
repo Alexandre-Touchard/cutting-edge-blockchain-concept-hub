@@ -19,7 +19,7 @@ export default function DemoDetailsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label={t('modal.demoDetails')}
@@ -29,8 +29,8 @@ export default function DemoDetailsModal({
     >
       <div className="absolute inset-0 bg-black/70" />
 
-      <div className="relative w-full max-w-3xl rounded-2xl border border-slate-700 bg-slate-900 text-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 p-6 border-b border-slate-800">
+      <div className="relative w-full max-w-3xl max-h-[92vh] overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 text-white shadow-2xl flex flex-col">
+        <div className="flex items-start justify-between gap-4 p-4 sm:p-6 border-b border-slate-800">
           <div className="min-w-0">
             <div className="text-sm text-slate-400">{t('modal.demoDetails')}</div>
             <h2 className="text-2xl font-bold truncate">{demo.title}</h2>
@@ -45,7 +45,7 @@ export default function DemoDetailsModal({
           </button>
         </div>
 
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 overflow-auto">
           <div>
             <div className="text-xs font-semibold text-slate-400 mb-2">{t('modal.keyConcepts')}</div>
             <ul className="space-y-2">
@@ -78,17 +78,17 @@ export default function DemoDetailsModal({
           </div>
         </div>
 
-        <div className="p-6 border-t border-slate-800 flex flex-col md:flex-row gap-3 justify-end">
+        <div className="p-4 sm:p-6 border-t border-slate-800 flex flex-col md:flex-row gap-3 justify-end bg-slate-900">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700"
+            className="w-full md:w-auto px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700"
           >
             {t('modal.cancel')}
           </button>
           <button
             onClick={() => onStart(demo.id)}
             disabled={demo.status === 'coming_soon'}
-            className={`px-4 py-2 rounded-lg border font-semibold ${
+            className={`w-full md:w-auto px-4 py-2 rounded-lg border font-semibold ${
               demo.status === 'coming_soon'
                 ? 'bg-slate-700 border-slate-600 text-slate-200 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700 border-blue-500'

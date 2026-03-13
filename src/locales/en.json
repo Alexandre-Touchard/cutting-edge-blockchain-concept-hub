@@ -22,6 +22,7 @@
   },
   "common": {
     "definitionComingSoon": "Definition coming soon.",
+    "comingSoon": "Coming soon",
     "copiedLink": "Copied link",
     "copyLink": "Copy link",
     "copied": "Copied!"
@@ -44,6 +45,10 @@
     "showFilters": "Show filters"
   },
   "demos": {
+    "evm-vs-svm": {
+      "title": "EVM vs Solana-style",
+      "description": "Coming soon: a more realistic, beginner-friendly and developer-accurate simulation of sequential (EVM-style) execution vs parallel (Solana-style) scheduling."
+    },
     "wallet-tx-lifecycle": {
       "title": "Wallet UX & Transaction lifecycle",
       "description": "Simulate what happens when you click “confirm” in a wallet: nonces, EIP-1559 fees, mempool inclusion, replacement (speed up / cancel), and common revert reasons.",

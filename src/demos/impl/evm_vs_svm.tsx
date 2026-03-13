@@ -29,10 +29,41 @@ type Tx = {
   declared: Partial<Record<AccountId, AccessMode>>;
 };
 
+function MissingDeclBox({ out }: { out: Outcome | undefined }) {
+  if (!out || out.status !== 'failed' || out.reason !== 'MissingAccountDeclaration') return null;
+  const missing = out.missing ?? [];
+  if (missing.length === 0) return null;
+
+  return (
+    <div className="mt-2 rounded-lg border border-red-800 bg-red-950/20 p-3">
+      <div className="text-xs font-semibold text-red-200">Missing declarations</div>
+      <ul className="mt-2 text-xs text-red-100 list-disc pl-5 space-y-1">
+        {missing.map((m) => (
+          <li key={`${m.account}-${m.needed}`}
+            className="font-mono"
+          >
+            {m.account}
+            {m.needed === 'w' ? ':w' : ''}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2 text-[11px] text-red-200/80">
+        Tip: declared accounts are like Solana account locks (READ/WRITE). If you touch an account at runtime but didn’t declare it, the tx can fail.
+      </div>
+    </div>
+  );
+}
+
+
 type Outcome =
   | { status: 'pending' }
   | { status: 'ok'; summary: string }
-  | { status: 'failed'; reason: 'MissingAccountDeclaration'; summary: string };
+  | {
+      status: 'failed';
+      reason: 'MissingAccountDeclaration';
+      summary: string;
+      missing?: Array<{ account: AccountId; needed: AccessMode | 'present' }>;
+    };
 
 type Wave = {
   txs: Tx[];
@@ -57,6 +88,23 @@ type LogEntry = {
   kind: 'info' | 'success' | 'error' | 'phase';
   message: string;
 };
+
+function missingDeclarations(tx: Tx): Array<{ account: AccountId; needed: AccessMode | 'present' }> {
+  const missing: Array<{ account: AccountId; needed: AccessMode | 'present' }> = [];
+
+  for (const [acct, mode] of Object.entries(tx.actual) as Array<[AccountId, AccessMode]>) {
+    const d = tx.declared[acct];
+    if (!d) {
+      missing.push({ account: acct, needed: 'present' });
+      continue;
+    }
+    if (mode === 'w' && d !== 'w') {
+      missing.push({ account: acct, needed: 'w' });
+    }
+  }
+
+  return missing;
+}
 
 function declaredCoversActual(tx: Tx): boolean {
   for (const [acct, mode] of Object.entries(tx.actual) as Array<[AccountId, AccessMode]>) {
@@ -248,6 +296,9 @@ export default function EvmVsSvmDemo() {
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showDebug, setShowDebug] = useState(false);
+  const [guidedMode, setGuidedMode] = useState(true);
+  const [guidedHighlight, setGuidedHighlight] = useState<null | { txId: number; account: AccountId }>(null);
+  const [sectionHighlight, setSectionHighlight] = useState<null | 'waves' | 'timeline'>(null);
 
   const scheduleDebugByTxId = useMemo(() => {
     const m = new Map<number, ScheduleDebug>();
@@ -327,7 +378,125 @@ export default function EvmVsSvmDemo() {
     onTxListChanged(tr('Removed a transaction'));
   }
 
-  function addTxPreset() {
+  function autoFixTx2() {
+    setTxs((prev) =>
+      prev.map((t) => {
+        if (t.id !== 2) return t;
+        return {
+          ...t,
+          declared: {
+            ...t.declared,
+            FeeVault: 'w'
+          }
+        };
+      })
+    );
+
+    onTxListChanged(tr('Auto-fixed TX #2 (FeeVault:w)'));
+
+    if (guidedMode) {
+      setGuidedHighlight({ txId: 2, account: 'FeeVault' });
+      // Clear highlight after a short time
+      window.setTimeout(() => setGuidedHighlight(null), 1800);
+      // Scroll to TX #2
+      window.setTimeout(() => {
+        const el = document.getElementById('tx-2');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    }
+  }
+
+  function highlightSection(id: 'waves' | 'timeline') {
+    setSectionHighlight(id);
+    window.setTimeout(() => setSectionHighlight(null), 1600);
+    window.setTimeout(() => {
+      const el = document.getElementById(id);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
+
+  function loadPresetSolanaConflicts() {
+    // A minimal hands-on preset:
+    // - two swaps writing DexPool (conflict)
+    // - two transfers writing different accounts (parallel)
+    const preset: Tx[] = [
+      {
+        id: 1,
+        label: 'Alice swap (writes DexPool)',
+        computeUnits: 60,
+        actual: { Alice: 'w', DexPool: 'w' },
+        declared: { Alice: 'w', DexPool: 'w' }
+      },
+      {
+        id: 2,
+        label: 'Bob swap (writes DexPool)',
+        computeUnits: 60,
+        actual: { Bob: 'w', DexPool: 'w' },
+        declared: { Bob: 'w', DexPool: 'w' }
+      },
+      {
+        id: 3,
+        label: 'Oracle read (read-only)',
+        computeUnits: 15,
+        actual: { Oracle: 'r' },
+        declared: { Oracle: 'r' }
+      },
+      {
+        id: 4,
+        label: 'Alice transfer (writes Alice only)',
+        computeUnits: 10,
+        actual: { Alice: 'w' },
+        declared: { Alice: 'w' }
+      },
+      {
+        id: 5,
+        label: 'Bob transfer (writes Bob only)',
+        computeUnits: 10,
+        actual: { Bob: 'w' },
+        declared: { Bob: 'w' }
+      }
+    ];
+
+    setTxs(preset);
+    setNextId(6);
+    onTxListChanged(tr('Loaded preset: Solana-style conflicts vs parallel transfers'));
+
+    if (guidedMode) highlightSection('waves');
+  }
+
+  function loadPresetDisjointAccounts() {
+    const preset: Tx[] = [
+      {
+        id: 1,
+        label: 'Alice transfer (writes Alice only)',
+        computeUnits: 10,
+        actual: { Alice: 'w' },
+        declared: { Alice: 'w' }
+      },
+      {
+        id: 2,
+        label: 'Bob transfer (writes Bob only)',
+        computeUnits: 10,
+        actual: { Bob: 'w' },
+        declared: { Bob: 'w' }
+      },
+      {
+        id: 3,
+        label: 'Oracle read',
+        computeUnits: 10,
+        actual: { Oracle: 'r' },
+        declared: { Oracle: 'r' }
+      }
+    ];
+
+    setTxs(preset);
+    setNextId(4);
+    onTxListChanged(tr('Loaded preset: disjoint accounts (max parallelism)'));
+
+    if (guidedMode) highlightSection('waves');
+  }
+
+  function addTxPreset() {  
     const id = nextId;
     setNextId((v) => v + 1);
     const newTx: Tx = {
@@ -361,12 +530,21 @@ export default function EvmVsSvmDemo() {
     const patch: Record<number, Outcome> = {};
     for (const t of wave.txs) {
       if (!declaredCoversActual(t)) {
+        const missing = missingDeclarations(t);
         patch[t.id] = {
           status: 'failed',
           reason: 'MissingAccountDeclaration',
-          summary: tr('Missing declaration for at least one actual account')
+          summary:
+            missing.length > 0
+              ? `${tr('Missing declarations')}: ${missing.map((m) => `${m.account}${m.needed === 'w' ? ':w' : ''}`).join(', ')}`
+              : tr('Missing declaration for at least one actual account'),
+          missing
         };
-        appendLog('SOLANA', 'error', `${tr('FAILED')} — #${t.id}: ${tr('Missing declaration')}`);
+        appendLog(
+          'SOLANA',
+          'error',
+          `${tr('FAILED')} — #${t.id}: ${patch[t.id].summary}`
+        );
       } else {
         patch[t.id] = { status: 'ok', summary: tr('Executed') };
         appendLog('SOLANA', 'success', `${tr('OK')} — #${t.id}: ${tr(t.label)}`);
@@ -396,10 +574,15 @@ export default function EvmVsSvmDemo() {
     const out: Record<number, Outcome> = {};
     for (const t of txs) {
       if (!declaredCoversActual(t)) {
+        const missing = missingDeclarations(t);
         out[t.id] = {
           status: 'failed',
           reason: 'MissingAccountDeclaration',
-          summary: tr('Missing declaration for at least one actual account')
+          summary:
+            missing.length > 0
+              ? `${tr('Missing declarations')}: ${missing.map((m) => `${m.account}${m.needed === 'w' ? ':w' : ''}`).join(', ')}`
+              : tr('Missing declaration for at least one actual account'),
+          missing
         };
       } else {
         out[t.id] = { status: 'ok', summary: tr('Executed') };
@@ -435,7 +618,44 @@ export default function EvmVsSvmDemo() {
               <Cpu className="text-blue-300" />
               {tr('EVM vs Solana-style: Sequential vs Parallel execution')}
             </h1>
-            <p className="text-slate-300 mt-2 max-w-3xl">
+            <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-4 max-w-3xl">
+              <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                {tr('60-second tour')}
+                <EduTooltip
+                  widthClassName="w-[520px]"
+                  text={tr('A quick guided path to understand the key idea: EVM executes sequentially, while Solana-style schedulers can run non-conflicting transactions in parallel using account locks (read/write).')}
+                />
+              </div>
+              <ol className="mt-2 text-sm text-slate-300 space-y-2 list-decimal pl-5">
+                <li>
+                  {tr('Click')} <span className="font-semibold text-purple-200">{tr('Step')}</span> {tr('on EVM to execute transactions one-by-one.')}
+                  <span className="ml-2">
+                    <EduTooltip widthClassName="w-96" text={tr('Sequential execution: transactions run in a strict order, one after another.')} />
+                  </span>
+                </li>
+                <li>
+                  {tr('Click')} <span className="font-semibold text-emerald-200">{tr('Step')}</span> {tr('on Solana-style to execute a whole wave in parallel.')}
+                  <span className="ml-2">
+                    <EduTooltip widthClassName="w-96" text={tr('A wave is a batch of transactions that can run concurrently because their declared account locks do not conflict.')} />
+                  </span>
+                </li>
+                <li>
+                  {tr('Fix TX #2 by adding')} <span className="font-mono text-slate-200">FeeVault:w</span> {tr('in declared accounts, then run again.')}
+                  <button
+                    type="button"
+                    onClick={autoFixTx2}
+                    className="ml-2 inline-flex items-center px-2 py-1 rounded border border-amber-700 bg-amber-900/20 text-amber-100 text-xs hover:bg-amber-900/30"
+                  >
+                    {tr('Auto-fix')}
+                  </button>
+                </li>
+                <li>
+                  {tr('Increase threads to see speedup, but notice conflicts still force serialization.')}
+                </li>
+              </ol>
+            </div>
+
+            <p className="text-slate-300 mt-3 max-w-3xl">
               {tr(
                 'This simulation compares a sequential EVM-style pipeline with a Solana-style scheduler that can run non-conflicting transactions in parallel when accounts are declared upfront (account locks).'
               )}
@@ -457,6 +677,19 @@ export default function EvmVsSvmDemo() {
           </div>
 
           <div className="shrink-0 flex items-center gap-2">
+            <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-sm text-slate-200">
+              <input
+                type="checkbox"
+                checked={guidedMode}
+                onChange={(e) => setGuidedMode(e.target.checked)}
+              />
+              {tr('Guided mode')}
+              <EduTooltip
+                widthClassName="w-80"
+                text={tr('When enabled, helper actions (like Auto-fix) will highlight what changed and scroll you to the relevant transaction.')}
+              />
+            </label>
+
             <button
               type="button"
               onClick={() => setShowDebug((v) => !v)}
@@ -473,7 +706,7 @@ export default function EvmVsSvmDemo() {
               <RefreshCw size={16} />
               {tr('Reset')}
             </button>
-            <LinkWithCopy text="EVM vs SVM demo" copyText={typeof window !== 'undefined' ? window.location.href : ''} />
+            <LinkWithCopy text="EVM vs Solana-style demo" copyText={typeof window !== 'undefined' ? window.location.href : ''} />
           </div>
         </div>
 
@@ -485,7 +718,7 @@ export default function EvmVsSvmDemo() {
               {tr('Parallel threads')}
             </div>
             <div className="mt-2 text-sm text-slate-300">
-              {tr('SVM can schedule up to N non-conflicting txs in parallel (per wave).')}
+              {tr('Solana-style can schedule up to N non-conflicting txs in parallel (per wave).')}
             </div>
             <div className="mt-3 flex items-center gap-3">
               <input
@@ -571,12 +804,17 @@ export default function EvmVsSvmDemo() {
             <div className="mt-3 space-y-2 text-sm">
               <QuestRow done={quests.fixedMissing} text={tr('Fix TX #2 by declaring FeeVault as write')} />
               <QuestRow done={quests.gotSpeedup} text={tr('Reach speedup ≥ 1.2× (increase threads + reduce conflicts)')} />
-              <QuestRow done={quests.ranBoth} text={tr('Run both EVM and SVM to completion')} />
+              <QuestRow done={quests.ranBoth} text={tr('Run both EVM and Solana-style to completion')} />
             </div>
           </div>
 
           {/* Waves */}
-          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+          <div
+            id="waves"
+            className={`rounded-xl border bg-slate-950/40 p-4 transition-shadow ${
+              sectionHighlight === 'waves' ? 'border-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]' : 'border-slate-800'
+            }`}
+          >
             <div className="text-sm font-semibold text-slate-200">{tr('Solana-style waves (from declarations)')}</div>
             <div className="mt-3 space-y-2">
               {waves.map((w, idx) => (
@@ -617,7 +855,7 @@ export default function EvmVsSvmDemo() {
 
                 {/* Account lock timeline (accounts × waves) */}
                 <div className="mt-2">
-                  <div className="text-slate-300 font-semibold mb-2">{tr('Account lock timeline')}</div>
+                  <div id="timeline" className={`text-slate-300 font-semibold mb-2 ${sectionHighlight === 'timeline' ? 'text-amber-200' : ''}`}>{tr('Account lock timeline')}</div>
                   <div className="overflow-auto">
                     <div
                       className="grid"
@@ -677,7 +915,7 @@ export default function EvmVsSvmDemo() {
             </div>
             <div className="mt-3 max-h-56 overflow-auto space-y-1 text-xs">
               {logs.length === 0 ? (
-                <div className="text-slate-500">{tr('No logs yet. Run EVM or SVM to see what happens.')}</div>
+                <div className="text-slate-500">{tr('No logs yet. Run EVM or Solana-style to see what happens.')}</div>
               ) : (
                 logs
                   .slice()
@@ -729,7 +967,13 @@ export default function EvmVsSvmDemo() {
             {txs.map((tx, idx) => {
               const missing = !declaredCoversActual(tx);
               return (
-                <div key={tx.id} className="rounded-xl border border-slate-700 bg-slate-900/30 p-3">
+                <div
+                  id={`tx-${tx.id}`}
+                  key={tx.id}
+                  className={`rounded-xl border bg-slate-900/30 p-3 transition-shadow ${
+                    guidedHighlight?.txId === tx.id ? 'border-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]' : 'border-slate-700'
+                  }`}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -752,11 +996,36 @@ export default function EvmVsSvmDemo() {
                         {tr('EVM')}: <OutcomePill out={evmOut[tx.id]} /> &nbsp;|&nbsp; {tr('Solana-style')}: <OutcomePill out={svmOut[tx.id]} />
                       </div>
 
+                      <MissingDeclBox out={svmOut[tx.id]} />
+
+                      {tx.id === 2 && missing ? (
+                        <div className="mt-2 text-xs text-amber-300">
+                          {tr('Hint')}: {tr('Declare')} <span className="font-mono">FeeVault:w</span> {tr('to fix TX #2.')}
+                      <button
+                        type="button"
+                        onClick={autoFixTx2}
+                        className="ml-2 inline-flex items-center px-2 py-1 rounded border border-amber-700 bg-amber-900/20 text-amber-100 text-[11px] hover:bg-amber-900/30"
+                      >
+                        {tr('Auto-fix')}
+                      </button>
+                        </div>
+                      ) : null}
+
                       <div className="mt-2 text-xs text-slate-300">
                         {tr('Actual access')}: {Object.entries(tx.actual).map(([a, m]) => `${a}:${m}`).join(', ')}
                       </div>
 
-                      <div className="mt-2 text-xs text-slate-400 flex items-center gap-2">
+                      <div className="mt-2 text-xs text-slate-400">
+                        {tr('Why this wave')}: {(() => {
+                          const dbg = scheduleDebugByTxId.get(tx.id);
+                          if (!dbg) return tr('No scheduling info');
+                          if (dbg.attempts.length === 0) return tr('No earlier wave existed');
+                          const firstReason = dbg.attempts[dbg.attempts.length - 1]?.reason;
+                          return firstReason ? firstReason : tr('Conflicts or wave full');
+                        })()}
+                      </div>
+
+                      <div className="mt-1 text-xs text-slate-400 flex items-center gap-2">
                         <span>
                           {tr('Scheduled wave')}: {((scheduleDebugByTxId.get(tx.id)?.placedWave ?? 0) + 1).toString()}
                         </span>
@@ -809,12 +1078,17 @@ export default function EvmVsSvmDemo() {
                       {allAccounts.map((a) => {
                         const cur = tx.declared[a];
                         const label = cur ? `${a}:${cur}` : `${a}:—`;
-                        const cls =
+                        const clsBase =
                           cur === 'w'
                             ? 'border-emerald-700 bg-emerald-900/20 text-emerald-100'
                             : cur === 'r'
                               ? 'border-blue-700 bg-blue-900/20 text-blue-100'
                               : 'border-slate-700 bg-slate-950/30 text-slate-200';
+
+                        const cls =
+                          guidedHighlight?.txId === tx.id && guidedHighlight.account === a
+                            ? `${clsBase} ring-2 ring-amber-400`
+                            : clsBase;
 
                         return (
                           <button
@@ -836,6 +1110,96 @@ export default function EvmVsSvmDemo() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Extension: parallelism models */}
+        <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+          <div className="text-sm font-semibold text-slate-200">{tr('Parallelism models (beyond this demo)')}</div>
+          <div className="mt-2 text-sm text-slate-300">
+            {tr('Different ecosystems unlock parallel execution in different ways. Two common models are:')}
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4">
+              <div className="font-semibold text-slate-200">{tr('Solana-style: account locks')}</div>
+              <ul className="mt-2 text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>{tr('A transaction declares which accounts it will read/write.')}</li>
+                <li>{tr('The runtime takes read/write locks; conflicts (same account + a write) must be serialized.')}</li>
+                <li>{tr('Great for parallelism when transactions touch disjoint sets of accounts.')}</li>
+              </ul>
+
+              <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+                <div className="text-xs font-semibold text-slate-300">{tr('Concrete example')}</div>
+                <div className="mt-1 text-xs text-slate-400">
+                  {tr('Two swaps that both write the same pool account (DexPool:w) conflict, so they cannot run in the same wave. But two transfers that write different user accounts can run in parallel.')}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={loadPresetSolanaConflicts}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold"
+                  >
+                    {tr('Load hands-on preset')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={loadPresetDisjointAccounts}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold"
+                  >
+                    {tr('Load disjoint accounts preset')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => guidedMode && highlightSection('timeline')}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
+                  >
+                    {tr('Show locks')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4">
+              <div className="font-semibold text-slate-200">{tr('Move/Aptos-style: resource (object) access')}</div>
+              <ul className="mt-2 text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>{tr('State is organized as resources/objects (e.g., per-account resources).')}</li>
+                <li>{tr('The system can sometimes infer read/write sets more directly from the program or resource paths.')}</li>
+                <li>{tr('Parallelism is enabled when transactions access different resources/objects.')}</li>
+              </ul>
+
+              <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+                <div className="text-xs font-semibold text-slate-300">{tr('Concrete example')}</div>
+                <div className="mt-1 text-xs text-slate-400">
+                  {tr('If TX A updates Alice’s Coin resource and TX B updates Bob’s Coin resource, they may run in parallel because the resources are different. If both update the same shared resource, they must be serialized.')}
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={loadPresetDisjointAccounts}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold"
+                  >
+                    {tr('Load resource-style analogue')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => guidedMode && highlightSection('timeline')}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
+                  >
+                    {tr('Show locks')}
+                  </button>
+                </div>
+
+                <div className="mt-2 text-[11px] text-slate-500">
+                  {tr('Analogy: we use different accounts here as “different resources”, to illustrate the idea of finer-grained state access.')}
+                </div>
+              </div>
+
+              <div className="mt-2 text-[11px] text-slate-500">
+                {tr('This demo does not model Move; it highlights the idea that “what is locked” can be accounts or finer-grained objects/resources.')}
+              </div>
+            </div>
           </div>
         </div>
 

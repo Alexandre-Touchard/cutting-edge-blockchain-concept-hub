@@ -118,6 +118,19 @@ The hub is not just a gallery - each demo should help users prove they understoo
 
 Recommended additions (especially for complex demos):
 
+### 9.0 60-second tour (beginner onboarding)
+- Add a short onboarding box near the top of the demo: "60-second tour".
+- It should contain 3–5 steps that a beginner can follow to get value quickly.
+- Add 1–2 `EduTooltip`s inside the tour to define key terms (e.g. "wave", "account locks", "nonce").
+- Keep wording action-oriented and avoid jargon.
+
+### 9.0b Guided mode (optional but recommended)
+- Add an optional "Guided mode" toggle for complex demos.
+- When enabled, helper actions (e.g. "Auto-fix", "Load scenario") should:
+  - scroll the relevant UI section into view
+  - briefly highlight the changed control/state (e.g. ring/glow around the updated chip/row)
+- Purpose: make cause/effect obvious for beginners.
+
 ### 9.1 In-demo quests / checkpoints
 - Add a small in-demo checklist panel (collapsible on small screens).
 - Include 3-6 tasks that map directly to the learning objectives (e.g. "make a tx become Ignored", "replace a tx via Speed up", "cause an out-of-gas revert").

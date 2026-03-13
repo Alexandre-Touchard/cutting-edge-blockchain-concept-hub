@@ -84,6 +84,7 @@ export default function Hub({
 
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('all');
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [hoveredThumbnailDemoId, setHoveredThumbnailDemoId] = useState<string | null>(null);
   const [areFiltersVisible, setAreFiltersVisible] = useState(true);
@@ -268,10 +269,19 @@ export default function Hub({
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             {/* Right: language (stays top-right on small screens) */}
             <div className="order-1 md:order-3 self-end md:self-auto shrink-0 flex flex-col items-end gap-3">
-              <LanguageSwitcher />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAreFiltersVisible((v) => !v)}
+                  className="md:hidden px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold whitespace-nowrap"
+                >
+                  {areFiltersVisible ? t('hub.hideFilters') : t('hub.showFilters')}
+                </button>
+                <LanguageSwitcher />
+              </div>
 
               {areFiltersVisible && (
-                <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                <div className="hidden md:flex items-center justify-end gap-2 whitespace-nowrap">
                   <div className="px-4 py-2 bg-slate-800 rounded-full text-sm inline-flex items-center gap-1 whitespace-nowrap">
                     <span className="text-slate-400">{t('app.totalDemos')}</span>
                     <span className="font-bold text-blue-400">{liveDemos.length}</span>
@@ -289,19 +299,9 @@ export default function Hub({
               <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 {t('app.title')}
               </h1>
-              <p className="text-xl text-slate-300 max-w-3xl mx-auto whitespace-nowrap">
+              <p className="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto">
                 {t('app.subtitle')}
               </p>
-              {/* Small screens: button below title */}
-              <div className="mt-4 flex justify-center md:hidden">
-                <button
-                  type="button"
-                  onClick={() => setAreFiltersVisible((v) => !v)}
-                  className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold"
-                >
-                  {areFiltersVisible ? t('hub.hideFilters') : t('hub.showFilters')}
-                </button>
-              </div>
             </div>
 
             {/* Left: button (md+) */}
@@ -319,8 +319,8 @@ export default function Hub({
 
         {/* Filters */}
         {areFiltersVisible && (
-          <div className="mb-8">
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="mb-5 sm:mb-8">
+          <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-3 sm:mb-6">
             <div ref={searchWrapRef} className="flex-1 md:flex-none md:w-[820px] relative">
               <Search
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
@@ -420,22 +420,41 @@ export default function Hub({
           </div>
 
           {/* Category Filters */}
-          <div className="flex flex-wrap gap-3">
-            {Object.entries(categories).map(([key, category]) => {
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="text-xs text-slate-400">{t('hub.filterByCategory', { defaultValue: 'Filter by category' })}</div>
+            <button
+              type="button"
+              onClick={() => setShowAllCategories((v) => !v)}
+              className="md:hidden text-xs px-2 py-1 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 whitespace-nowrap"
+            >
+              {showAllCategories ? t('common.less', { defaultValue: 'Less' }) : t('common.more', { defaultValue: 'More' })}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            {(Object.entries(categories) as Array<[string, (typeof categories)[keyof typeof categories]]>)
+              .filter(([key]) => {
+                if (showAllCategories) return true;
+                // On small screens, show a compact set by default.
+                return ['all', 'execution', 'defi', 'scaling', 'security'].includes(key);
+              })
+              .map(([key, category]) => {
               const Icon = category.icon;
               const isSelected = selectedCategory === key;
               return (
                 <button
                   key={key}
                   onClick={() => setSelectedCategory(key as CategoryId)}
-                  className={`px-4 py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${
                     isSelected
                       ? colorStyles[category.colorKey].selected
                       : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'
                   }`}
                 >
                   <Icon size={16} />
-                  <span className="text-sm font-semibold">{category.name}</span>
+                  <span className="text-xs sm:text-sm font-semibold leading-snug line-clamp-2 max-w-[36vw] sm:max-w-none">
+                    {category.name}
+                  </span>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full ${
                       isSelected ? colorStyles[category.colorKey].countSelected : 'bg-slate-700'

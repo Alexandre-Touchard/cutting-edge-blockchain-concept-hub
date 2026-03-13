@@ -2126,25 +2126,25 @@ export default function WalletTransactionLifecycleImpl() {
         </div>
 
         {/* Real-World Applications */}
-        <div className="mt-6 bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-30 rounded-lg p-6 border border-blue-700">
-          <h2 className="text-2xl font-bold mb-4 text-blue-300">🌐 {tr('Real-World Applications')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-slate-800 bg-opacity-50 rounded-lg p-4">
-              <h3 className="font-semibold text-lg mb-3 text-emerald-400">{tr('Where you see this in production')}</h3>
-              <div className="space-y-3 text-sm">
-                <div className="bg-slate-700 rounded p-3">
+        <div className="mt-4 sm:mt-6 bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-30 rounded-lg p-4 sm:p-6 border border-blue-700">
+          <h2 className="text-lg sm:text-2xl font-bold mb-3 sm:mb-4 text-blue-300">🌐 {tr('Real-World Applications')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
+            <div className="bg-slate-800 bg-opacity-50 rounded-lg p-3 sm:p-4">
+              <h3 className="font-semibold text-base sm:text-lg mb-2 sm:mb-3 text-emerald-400">{tr('Where you see this in production')}</h3>
+              <div className="space-y-2 text-sm">
+                <div className="bg-slate-700 rounded p-2 sm:p-3">
                   <div className="font-bold text-blue-300">{tr('Wallets')}</div>
                   <p className="text-xs text-slate-300">
                     {tr('MetaMask, Rabby, Coinbase Wallet, and others all expose the same core lifecycle: sign → broadcast → pending (mempool) → included → success/revert.')}
                   </p>
                 </div>
-                <div className="bg-slate-700 rounded p-3">
+                <div className="bg-slate-700 rounded p-2 sm:p-3">
                   <div className="font-bold text-purple-300">{tr('Ethereum execution clients')}</div>
                   <p className="text-xs text-slate-300">
                     {tr('Geth, Nethermind, Erigon, and Besu maintain a mempool and enforce nonce ordering. They also implement replacement policies (fee bump rules).')}
                   </p>
                 </div>
-                <div className="bg-slate-700 rounded p-3">
+                <div className="bg-slate-700 rounded p-2 sm:p-3 hidden sm:block">
                   <div className="font-bold text-pink-300">{tr('Rollups and L2s')}</div>
                   <p className="text-xs text-slate-300">
                     {tr('Most rollups keep an L2 mempool with the same user-facing ideas: pending txs, nonces, fees, and occasional reverts.')}
@@ -2153,10 +2153,10 @@ export default function WalletTransactionLifecycleImpl() {
               </div>
             </div>
 
-            <div className="bg-slate-800 bg-opacity-50 rounded-lg p-4">
-              <h3 className="font-semibold text-lg mb-3 text-yellow-400">{tr('Common real user scenarios')}</h3>
-              <div className="space-y-3 text-sm">
-                <div className="bg-slate-700 rounded p-3">
+            <div className="bg-slate-800 bg-opacity-50 rounded-lg p-3 sm:p-4">
+              <h3 className="font-semibold text-base sm:text-lg mb-2 sm:mb-3 text-yellow-400">{tr('Common real user scenarios')}</h3>
+              <div className="space-y-2 text-sm">
+                <div className="bg-slate-700 rounded p-2 sm:p-3">
                   <div className="font-semibold text-blue-300 mb-1">⚡ {tr('Stuck transaction')}</div>
                   <p className="text-xs text-slate-300">
                     <strong>{tr('Cause')}:</strong> {tr('Base fee spikes above your max fee, so the tx is ignored.')}
@@ -2165,7 +2165,7 @@ export default function WalletTransactionLifecycleImpl() {
                   </p>
                 </div>
 
-                <div className="bg-slate-700 rounded p-3">
+                <div className="bg-slate-700 rounded p-2 sm:p-3">
                   <div className="font-semibold text-purple-300 mb-1">🧾 {tr('Approval before swap')}</div>
                   <p className="text-xs text-slate-300">
                     <strong>{tr('Cause')}:</strong> {tr('ERC-20 swaps often revert without allowance.')}
@@ -2174,7 +2174,7 @@ export default function WalletTransactionLifecycleImpl() {
                   </p>
                 </div>
 
-                <div className="bg-slate-700 rounded p-3">
+                <div className="bg-slate-700 rounded p-2 sm:p-3 hidden sm:block">
                   <div className="font-semibold text-emerald-300 mb-1">⛽ {tr('Reverted but still paid gas')}</div>
                   <p className="text-xs text-slate-300">
                     <strong>{tr('Cause')}:</strong> {tr('Out-of-gas or a contract revert.')}

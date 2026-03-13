@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from './toast';
 import { useTranslation } from 'react-i18next';
 import EduTooltip from './EduTooltip';
+import { trackEvent } from '../analytics/client';
 import { getConceptChip } from './concepts';
 import LanguageSwitcher from './LanguageSwitcher';
 import {
@@ -52,6 +53,7 @@ export default function Hub({
   const [showDonate, setShowDonate] = useState(false);
 
   const copyDonateAddress = async () => {
+    trackEvent('donations_copy_address', { path: typeof window !== 'undefined' ? window.location.pathname : '/' });
     try {
       await navigator.clipboard.writeText(SUPPORT_ADDRESS);
       toast('Address copied');
@@ -730,7 +732,10 @@ export default function Hub({
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowDonate(true)}
+                  onClick={() => {
+                    trackEvent('donations_open', { path: typeof window !== 'undefined' ? window.location.pathname : '/' });
+                    setShowDonate(true);
+                  }}
                   className="inline-flex items-center justify-center md:justify-start gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm text-slate-200"
                 >
                   <Wallet size={16} className="text-slate-300" />

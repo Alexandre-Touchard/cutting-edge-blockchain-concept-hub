@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -49,10 +49,15 @@ type CollateralizedState = {
   liquidationPressure: number; // 0..1
   lastTick: {
     cr: number;
-    stableDelta: number;
-    collateralDelta: number;
+    equity: number;
+    liquidationTrigger: number;
+    liquidationPressure: number;
+    collateralSellUsd: number;
+    collateralImpact: number;
     panicSell: number;
     arbPressure: number;
+    stableDelta: number;
+    collateralDelta: number;
   };
 };
 
@@ -67,12 +72,19 @@ type AlgorithmicState = {
   confidence: number; // 0..1
   whaleSell: number;
   lastTick: {
+    sentiment: number;
+    sellPressure: number;
+    sellDelta: number;
+    priceStress: number;
     redemption: number;
+    redemptionCap: number;
     lunaMinted: number;
     supplyInflation: number;
-    stableDelta: number;
     lunaDeltaPct: number;
+    lunaPriceNext: number;
     backstopStrength: number;
+    redeemSupport: number;
+    stableDelta: number;
   };
 };
 
@@ -110,10 +122,15 @@ function initialCollateralized(): CollateralizedState {
     liquidationPressure: 0,
     lastTick: {
       cr: collateralValue / debt,
-      stableDelta: 0,
-      collateralDelta: 0,
+      equity: collateralValue - debt,
+      liquidationTrigger: 1.5,
+      liquidationPressure: 0,
+      collateralSellUsd: 0,
+      collateralImpact: 0,
       panicSell: 0,
-      arbPressure: 0
+      arbPressure: 0,
+      stableDelta: 0,
+      collateralDelta: 0
     }
   };
 }
@@ -132,12 +149,19 @@ function initialAlgorithmic(): AlgorithmicState {
     confidence: 0.85,
     whaleSell: 0,
     lastTick: {
+      sentiment: 0,
+      sellPressure: 0,
+      sellDelta: 0,
+      priceStress: 0,
       redemption: 0,
+      redemptionCap: 0,
       lunaMinted: 0,
       supplyInflation: 0,
-      stableDelta: 0,
       lunaDeltaPct: 0,
-      backstopStrength: 1
+      lunaPriceNext: 80,
+      backstopStrength: 1,
+      redeemSupport: 0,
+      stableDelta: 0
     }
   };
 }
@@ -205,7 +229,9 @@ function SimpleLineChart({
   points,
   stableLabel,
   refLabel,
-  refIsIndex
+  refIsIndex,
+  refValueLabel,
+  refValueFormatter
 }: {
   tr: (s: string, opts?: Record<string, unknown>) => string;
   title: string;
@@ -213,6 +239,8 @@ function SimpleLineChart({
   stableLabel: string;
   refLabel: string;
   refIsIndex?: boolean;
+  refValueLabel?: string;
+  refValueFormatter?: (x: number) => string;
 }) {
   const w = 560;
   const h = 180;
@@ -314,7 +342,23 @@ export default function StablecoinDepegSimulation() {
   const [scenario, setScenario] = useState<ScenarioId>('collateralized');
   const [guidedMode, setGuidedMode] = useState(true);
   const [showDebug, setShowDebug] = useState(false);
+  const [showFormulas, setShowFormulas] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [sectionHighlight, setSectionHighlight] = useState<'controls' | 'chart' | 'log' | 'quests' | null>(null);
+
+  const [params, setParams] = useState(() => ({
+    // Collateralized
+    liquidationTrigger: 1.5, // 150%
+    arbEfficiency: 10, // higher -> faster return to peg
+    liquidationSeverity: 0.06, // fraction of collateral value sold per tick under full pressure
+    collateralImpactK: 0.08,
+
+    // Algorithmic
+    redemptionIntensity: 0.08, // fraction of supply per unit of stress
+    redemptionCap: 0.12, // cap as fraction of supply per tick
+    reflexivityK: 2.8, // how strongly inflation hits price
+    ammDepth: 1.0
+  }));
 
   const controlsRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
@@ -368,6 +412,10 @@ export default function StablecoinDepegSimulation() {
     const sc = nextScenario ?? scenario;
     const c = initialCollateralized();
     const a = initialAlgorithmic();
+
+    // Initialize state using current advanced parameters.
+    c.lastTick.liquidationTrigger = params.liquidationTrigger;
+    a.ammDepth = params.ammDepth;
 
     setScenario(sc);
     setCollat(c);
@@ -506,15 +554,16 @@ export default function StablecoinDepegSimulation() {
   function stepOnce() {
     if (scenario === 'collateralized') {
       setCollat((s) => {
-        const liquidationTrigger = 1.5; // 150%
+        const liquidationTrigger = params.liquidationTrigger;
         const cr = computeCR(s);
 
         // How deep are we under the trigger?
         const liquidationPressure = clamp((liquidationTrigger - cr) * 1.2, 0, 1);
 
         // Liquidations sell collateral into the market.
-        const collateralSellUsd = liquidationPressure * 0.06 * s.collateralValue;
-        const collateralImpact = (collateralSellUsd / (1 + 12 * s.liquidityDepth)) * 0.08;
+        const collateralSellUsd = liquidationPressure * params.liquidationSeverity * s.collateralValue;
+        const collateralImpact =
+          (collateralSellUsd / (1 + 12 * s.liquidityDepth)) * params.collateralImpactK;
 
         const collateralIndexNext = clamp(s.collateralIndex * (1 - collateralImpact), 0.05, 2);
         const collateralValueNext = s.collateralValue * (collateralIndexNext / s.collateralIndex);
@@ -522,7 +571,8 @@ export default function StablecoinDepegSimulation() {
         // Confidence reacts to CR, price deviation, and oracle quality.
         const priceStress = Math.abs(s.stablePrice - 1);
         const oracleStress = 1 - s.oracleQuality;
-        const confidenceDelta = 0.01 * (0.45 - priceStress * 6 - oracleStress * 0.4 - clamp(1.5 - cr, 0, 1));
+        const confidenceDelta =
+          0.01 * (0.45 - priceStress * 6 - oracleStress * 0.4 - clamp(liquidationTrigger - cr, 0, 1));
         const confidenceNext = clamp(s.confidence + confidenceDelta, 0, 1);
 
         // Liquidity can drain when confidence is low.
@@ -532,7 +582,7 @@ export default function StablecoinDepegSimulation() {
         // Selling pressure combines whale exit + panic. Arbitrage pushes toward $1.
         const panicSell = (1 - confidenceNext) * 1.2 + oracleStress * 0.4;
         const sellPressure = s.whaleSell + panicSell;
-        const arbPressure = (1 - s.stablePrice) * 10 * confidenceNext;
+        const arbPressure = (1 - s.stablePrice) * params.arbEfficiency * confidenceNext;
 
         const stableDelta = clamp((-sellPressure + arbPressure) / (10 + 18 * liquidityDepthNext), -0.08, 0.08);
         const stablePriceNext = clamp(s.stablePrice + stableDelta, 0.05, 1.2);
@@ -554,10 +604,15 @@ export default function StablecoinDepegSimulation() {
           liquidationPressure,
           lastTick: {
             cr,
-            stableDelta,
-            collateralDelta: collateralIndexNext / s.collateralIndex - 1,
+            equity: collateralValueNext - s.debt,
+            liquidationTrigger,
+            liquidationPressure,
+            collateralSellUsd,
+            collateralImpact,
             panicSell,
-            arbPressure
+            arbPressure,
+            stableDelta,
+            collateralDelta: collateralIndexNext / s.collateralIndex - 1
           }
         };
 
@@ -580,6 +635,14 @@ export default function StablecoinDepegSimulation() {
           addEvent('success', tr('Peg recovers near $1.'), next.t);
         }
 
+        // Solvency threshold: equity < 0 means the system is fundamentally undercollateralized.
+        const equityNext = collateralValueNext - s.debt;
+        if (equityNext < 0 && s.lastTick.equity >= 0) {
+          addEvent('error', tr('Insolvency: collateral value falls below total debt (equity < 0).'), next.t);
+        } else if (equityNext < s.debt * 0.1 && s.lastTick.equity >= s.debt * 0.1) {
+          addEvent('warn', tr('Thin buffer: equity is low, so small shocks can threaten solvency.'), next.t);
+        }
+
         setSeries((prev) => [...prev, { t: next.t, stable: stablePriceNext, ref: collateralIndexNext }].slice(-60));
         return next;
       });
@@ -598,14 +661,18 @@ export default function StablecoinDepegSimulation() {
       // Whale sells stable into AMMs.
       const sellPressure = s.whaleSell + (1 - sentiment) * 180;
 
+      // Keep AMM depth in sync with advanced params for algorithmic mode.
+      const ammDepth = params.ammDepth;
+
       // Price impact is stronger when AMM depth is low.
-      const sellDelta = -sellPressure / (1400 + 2000 * s.ammDepth);
+      const sellDelta = -sellPressure / (1400 + 2000 * ammDepth);
 
       // Redemption arbitrage: burn stable for $1 of LUNA.
+      const redemptionCap = s.stableSupply * params.redemptionCap;
       const redemption = clamp(
-        priceStress * 0.08 * s.stableSupply * (0.4 + 0.6 * s.confidence),
+        priceStress * params.redemptionIntensity * s.stableSupply * (0.4 + 0.6 * s.confidence),
         0,
-        s.stableSupply * 0.12
+        redemptionCap
       );
       const lunaMinted = redemption / Math.max(0.5, s.lunaPrice);
 
@@ -614,7 +681,7 @@ export default function StablecoinDepegSimulation() {
 
       // LUNA price becomes reflexive: minting + low confidence crushes it.
       const supplyInflation = lunaMinted / Math.max(1e-6, s.lunaSupply);
-      const lunaDeltaPct = clamp(-(supplyInflation * 2.8 + (1 - s.confidence) * 0.06), -0.9, 0.05);
+      const lunaDeltaPct = clamp(-(supplyInflation * params.reflexivityK + (1 - s.confidence) * 0.06), -0.9, 0.05);
       const lunaPriceNext = clamp(s.lunaPrice * (1 + lunaDeltaPct), 0.02, 200);
 
       // Stable price depends on selling + (weakening) redemption backstop.
@@ -641,16 +708,24 @@ export default function StablecoinDepegSimulation() {
         lunaPrice: lunaPriceNext,
         stableSupply: stableSupplyNext,
         lunaSupply: lunaSupplyNext,
+        ammDepth,
         confidence: confidenceNext,
         yieldSupport: yieldSupportNext,
         whaleSell: whaleSellNext,
         lastTick: {
+          sentiment,
+          sellPressure,
+          sellDelta,
+          priceStress,
           redemption,
+          redemptionCap,
           lunaMinted,
           supplyInflation,
-          stableDelta,
           lunaDeltaPct,
-          backstopStrength
+          lunaPriceNext,
+          backstopStrength,
+          redeemSupport,
+          stableDelta
         }
       };
 
@@ -664,6 +739,13 @@ export default function StablecoinDepegSimulation() {
       }
       if (stablePriceNext < 0.05 && s.stablePrice >= 0.05) {
         addEvent('error', tr('Failure: stablecoin collapses (< $0.05).'), next.t);
+      }
+
+      // Backstop credibility thresholds (teaching): when redemptions become less meaningful.
+      if (backstopStrength < 0.3 && s.lastTick.backstopStrength >= 0.3) {
+        addEvent('error', tr('Backstop failure: redemptions lose credibility as the backstop token collapses.'), next.t);
+      } else if (backstopStrength < 0.6 && s.lastTick.backstopStrength >= 0.6) {
+        addEvent('warn', tr('Backstop weakening: redemptions still work mechanically, but market confidence deteriorates.'), next.t);
       }
 
       setSeries((prev) => [...prev, { t: next.t, stable: stablePriceNext, ref: lunaPriceNext }].slice(-60));
@@ -772,6 +854,24 @@ export default function StablecoinDepegSimulation() {
 
             <button
               type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800"
+            >
+              <Gauge size={16} />
+              {showAdvanced ? tr('Hide advanced') : tr('Show advanced')}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowFormulas((v) => !v)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800"
+            >
+              <BarChart3 size={16} />
+              {showFormulas ? tr('Hide formulas') : tr('Show formulas')}
+            </button>
+
+            <button
+              type="button"
               onClick={() => setShowDebug((v) => !v)}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800"
             >
@@ -826,14 +926,18 @@ export default function StablecoinDepegSimulation() {
             <div className="flex items-center gap-2 mb-1">
               <TrendingDown size={18} className="text-purple-300" />
               <span className="text-xs text-slate-400">
-                {scenario === 'collateralized' ? tr('Collateral index') : tr('LUNA price')}
+                {scenario === 'collateralized' ? tr('Solvency (equity)') : tr('Backstop strength')}
               </span>
             </div>
             <div className="text-2xl font-bold">
-              {scenario === 'collateralized' ? fmt(collat.collateralIndex, 2) : `$${fmt(algo.lunaPrice, 2)}`}
+              {scenario === 'collateralized'
+                ? `$${fmt(collat.lastTick.equity, 2)}`
+                : pct(algo.lastTick.backstopStrength, 0)}
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              {scenario === 'collateralized' ? tr('1.00 = start') : tr('Ref token price')}
+              {scenario === 'collateralized'
+                ? tr('Equity = collateral value − debt')
+                : tr('Proxy for how credible $1 redemptions are')}
             </div>
           </div>
 
@@ -999,6 +1103,161 @@ export default function StablecoinDepegSimulation() {
               </div>
             )}
 
+            {showAdvanced ? (
+              <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/30 p-3">
+                <div className="text-sm font-semibold text-slate-200 flex items-center justify-between">
+                  <span className="inline-flex items-center gap-2">
+                    <Gauge size={16} className="text-blue-300" />
+                    {tr('Advanced settings')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setParams({
+                        liquidationTrigger: 1.5,
+                        arbEfficiency: 10,
+                        liquidationSeverity: 0.06,
+                        collateralImpactK: 0.08,
+                        redemptionIntensity: 0.08,
+                        redemptionCap: 0.12,
+                        reflexivityK: 2.8,
+                        ammDepth: 1.0
+                      })
+                    }
+                    className="text-xs text-slate-300 underline hover:text-slate-100"
+                  >
+                    {tr('Reset params')}
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-3 text-xs text-slate-200">
+                  {scenario === 'collateralized' ? (
+                    <>
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span>
+                            {tr('Liquidation threshold')}
+                            <Tooltip text={tr('The CR level below which liquidations begin (e.g., 150%).')} />
+                          </span>
+                          <span className="font-mono">{pct(params.liquidationTrigger, 0)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={1.2}
+                          max={2.0}
+                          step={0.01}
+                          value={params.liquidationTrigger}
+                          onChange={(e) => setParams((p) => ({ ...p, liquidationTrigger: Number(e.target.value) }))}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span>
+                            {tr('Arbitrage efficiency')}
+                            <Tooltip text={tr('Higher means faster pull back toward $1 when confidence is high.')} />
+                          </span>
+                          <span className="font-mono">{fmt(params.arbEfficiency, 1)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={2}
+                          max={18}
+                          step={0.5}
+                          value={params.arbEfficiency}
+                          onChange={(e) => setParams((p) => ({ ...p, arbEfficiency: Number(e.target.value) }))}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span>
+                            {tr('Liquidation severity')}
+                            <Tooltip text={tr('How much collateral is sold per tick under full liquidation pressure.')} />
+                          </span>
+                          <span className="font-mono">{pct(params.liquidationSeverity, 1)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.01}
+                          max={0.15}
+                          step={0.005}
+                          value={params.liquidationSeverity}
+                          onChange={(e) => setParams((p) => ({ ...p, liquidationSeverity: Number(e.target.value) }))}
+                          className="w-full"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span>
+                            {tr('AMM depth')}
+                            <Tooltip text={tr('Lower depth increases price impact of sells.')} />
+                          </span>
+                          <span className="font-mono">{fmt(params.ammDepth, 2)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.1}
+                          max={2.0}
+                          step={0.05}
+                          value={params.ammDepth}
+                          onChange={(e) => setParams((p) => ({ ...p, ammDepth: Number(e.target.value) }))}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span>
+                            {tr('Redemption intensity')}
+                            <Tooltip text={tr('How aggressively users redeem stable for $1 of LUNA when below peg.')} />
+                          </span>
+                          <span className="font-mono">{fmt(params.redemptionIntensity, 3)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.02}
+                          max={0.2}
+                          step={0.005}
+                          value={params.redemptionIntensity}
+                          onChange={(e) => setParams((p) => ({ ...p, redemptionIntensity: Number(e.target.value) }))}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span>
+                            {tr('Reflexivity multiplier')}
+                            <Tooltip text={tr('How strongly supply inflation hits the backstop token price (LUNA).')} />
+                          </span>
+                          <span className="font-mono">{fmt(params.reflexivityK, 2)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.8}
+                          max={4.0}
+                          step={0.05}
+                          value={params.reflexivityK}
+                          onChange={(e) => setParams((p) => ({ ...p, reflexivityK: Number(e.target.value) }))}
+                          className="w-full"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-3 text-[11px] text-slate-400">
+                  {tr('Changing parameters affects the next Step(s). Reset simulation to return to defaults.')}
+                </div>
+              </div>
+            ) : null}
+
             <div className="mt-4 text-xs font-semibold text-slate-400">{tr('Interventions (teaching)')}</div>
             <div className="mt-2 grid grid-cols-1 gap-2">
               <button
@@ -1133,6 +1392,106 @@ export default function StablecoinDepegSimulation() {
 
           {/* Chart + log */}
           <div className="space-y-6">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+              <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                <TrendingUp size={18} className="text-emerald-300" />
+                {tr('Price vs solvency')}
+                <Tooltip text={tr('A stablecoin can depeg due to liquidity/panic even while solvent. This panel separates market price from fundamental backing capacity.')} />
+              </div>
+
+              {scenario === 'collateralized' ? (
+                <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-200">
+                  <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
+                    <div className="text-slate-400">{tr('Market price')}</div>
+                    <div className="text-lg font-semibold">${fmt(collat.stablePrice, 3)}</div>
+                    <div className="mt-1 text-slate-500">{tr('Can move quickly with slippage')}</div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
+                    <div className="text-slate-400">{tr('Equity (solvency buffer)')}</div>
+                    <div className={`text-lg font-semibold ${collat.lastTick.equity < 0 ? 'text-red-300' : 'text-emerald-200'}`}>${fmt(collat.lastTick.equity, 2)}</div>
+                    <div className="mt-1 text-slate-500">{tr('Equity = collateral value − debt')}</div>
+                    <div className="mt-2 text-slate-400">{tr('Thresholds')}</div>
+                    <div className="mt-1 text-slate-500">{tr('Thin buffer')}: &lt; 10% debt • {tr('Insolvent')}: &lt; 0</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-200">
+                  <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
+                    <div className="text-slate-400">{tr('Market price')}</div>
+                    <div className="text-lg font-semibold">${fmt(algo.stablePrice, 3)}</div>
+                    <div className="mt-1 text-slate-500">{tr('Depegs trigger redemptions')}</div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
+                    <div className="text-slate-400">{tr('Backstop capacity')}</div>
+                    <div className={`text-lg font-semibold ${algo.lastTick.backstopStrength < 0.3 ? 'text-red-300' : algo.lastTick.backstopStrength < 0.6 ? 'text-amber-200' : 'text-emerald-200'}`}>{pct(algo.lastTick.backstopStrength, 0)}</div>
+                    <div className="mt-1 text-slate-500">{tr('Proxy: (LUNA price / $80) × confidence')}</div>
+                    <div className="mt-2 text-slate-400">{tr('Thresholds')}</div>
+                    <div className="mt-1 text-slate-500">{tr('Weakening')}: &lt; 60% • {tr('Failure')}: &lt; 30%</div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-3 text-[11px] text-slate-400">
+                {tr('Key idea: price can deviate from $1 before solvency fails. In algorithmic designs, the backstop can fail reflexively even while redemptions still work mechanically.')}
+              </div>
+            </div>
+            {showFormulas ? (
+              <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <BarChart3 size={18} className="text-amber-300" />
+                  {tr('Mechanics breakdown (last step)')}
+                </div>
+
+                {scenario === 'collateralized' ? (
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-200">
+                    <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
+                      <div className="text-slate-400">{tr('Collateral ratio (CR)')}</div>
+                      <div className="font-mono text-slate-100">{fmt(collat.lastTick.cr, 3)}</div>
+                      <div className="mt-2 text-slate-400">{tr('Liquidation pressure')}</div>
+                      <div className="font-mono text-slate-100">{fmt(collat.lastTick.liquidationPressure, 3)}</div>
+                      <div className="mt-2 text-slate-400">{tr('Collateral sold (USD)')}</div>
+                      <div className="font-mono text-slate-100">{fmt(collat.lastTick.collateralSellUsd, 2)}</div>
+                    </div>
+
+                    <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
+                      <div className="text-slate-400">{tr('Panic sell')}</div>
+                      <div className="font-mono text-slate-100">{fmt(collat.lastTick.panicSell, 3)}</div>
+                      <div className="mt-2 text-slate-400">{tr('Arbitrage support')}</div>
+                      <div className="font-mono text-slate-100">{fmt(collat.lastTick.arbPressure, 3)}</div>
+                      <div className="mt-2 text-slate-400">{tr('Δprice')}</div>
+                      <div className="font-mono text-slate-100">{fmt(collat.lastTick.stableDelta, 4)}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-200">
+                    <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
+                      <div className="text-slate-400">{tr('Price stress')}</div>
+                      <div className="font-mono text-slate-100">{fmt(algo.lastTick.priceStress, 3)}</div>
+                      <div className="mt-2 text-slate-400">{tr('Redemption')}</div>
+                      <div className="font-mono text-slate-100">{fmt(algo.lastTick.redemption, 2)}</div>
+                      <div className="mt-2 text-slate-400">{tr('LUNA minted')}</div>
+                      <div className="font-mono text-slate-100">{fmt(algo.lastTick.lunaMinted, 3)}</div>
+                    </div>
+
+                    <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
+                      <div className="text-slate-400">{tr('Supply inflation')}</div>
+                      <div className="font-mono text-slate-100">{pct(algo.lastTick.supplyInflation, 2)}</div>
+                      <div className="mt-2 text-slate-400">{tr('Backstop strength')}</div>
+                      <div className="font-mono text-slate-100">{pct(algo.lastTick.backstopStrength, 0)}</div>
+                      <div className="mt-2 text-slate-400">{tr('Δprice')}</div>
+                      <div className="font-mono text-slate-100">{fmt(algo.lastTick.stableDelta, 4)}</div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-3 text-[11px] text-slate-400">
+                  {tr('Tip: This panel shows the simulator’s internal components for the last Step. It helps you connect causes to the observed chart move.')}
+                </div>
+              </div>
+            ) : null}
+
             <div
               ref={chartRef}
               className={`transition-shadow ${

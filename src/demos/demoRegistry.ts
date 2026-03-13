@@ -215,7 +215,8 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
       'Collateral crashes can trigger liquidations that sell collateral into markets, worsening the cascade',
       'Algorithmic pegs can fail reflexively: redemptions mint supply, collapsing the backstop token and the stablecoin'
     ],
-    tags: ['Stablecoins', 'Depeg', 'Systemic risk', 'Cascades']
+    tags: ['Coming soon', 'Stablecoins', 'Depeg', 'Systemic risk', 'Cascades'],
+    status: 'coming_soon'
   },
 
   'evm-vs-svm': {

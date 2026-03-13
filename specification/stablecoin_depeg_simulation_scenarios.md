@@ -1,4 +1,4 @@
-# Stablecoin Depeg Cascade Simulation
+﻿# Stablecoin Depeg Cascade Simulation
 
 ## Overview
 
@@ -29,7 +29,7 @@ liquidity pools - Arbitrage traders - Lending markets
 
 ### Collateral Price Crash
 
-Collateral asset price drops (e.g. ETH −40%).\
+Collateral asset price drops (e.g.Â ETH âˆ’40%).\
 Vault collateralization falls and liquidations begin.
 
 ### Liquidity Drain
@@ -117,3 +117,48 @@ Failure: \<\$0.05
 
 Help users visualize: - systemic risk - liquidity crises - peg
 instability - reflexive tokenomics - DeFi cascading failures
+
+---
+
+## V2 improvement plan (roadmap)
+
+This section captures a concrete set of improvements to take the demo from a
+"plausible teaching sim" to a more mechanistic, explainable simulator.
+
+### A) Make the mechanics explicit (less magic numbers)
+
+- Add a **per-tick breakdown panel**:
+  - Collateralized: show liquidation pressure, liquidation sell amount, slippage
+    multiplier, panic sell vs arbitrage support, and the final Δprice.
+  - Algorithmic: show stable redemption amount, LUNA minted, implied supply
+    inflation, backstop strength, and the final Δprice.
+- Add an optional **"Show formulas"** toggle for advanced learners.
+
+### B) Separate price vs solvency
+
+- Add a **solvency meter** for collateralized mode:
+  - equity = collateral value − debt
+  - CR (collateral ratio) displayed alongside equity.
+- Add a **backstop capacity meter** for algorithmic mode:
+  - a simplified proxy for how credible redemptions are as LUNA price falls.
+
+### C) Parameterize key assumptions (advanced sliders)
+
+Expose a few key parameters as sliders (with sensible presets):
+
+- Collateralized:
+  - liquidation threshold (e.g. 150%)
+  - arbitrage efficiency
+  - liquidation severity / impact
+- Algorithmic:
+  - redemption intensity / cap
+  - LUNA reflexivity multiplier (how supply inflation hits price)
+  - AMM depth
+
+### D) Better learning loops
+
+- Add "Why did this happen?" explanations at key regime changes:
+  - peg breaks, liquidations start, panic zone, collapse.
+- Add optimization quests (optional):
+  - "Recover peg with minimal interventions"
+  - "Keep stable above .97 for 10 steps"

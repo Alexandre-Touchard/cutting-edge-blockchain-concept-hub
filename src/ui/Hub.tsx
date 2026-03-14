@@ -38,6 +38,8 @@ export type DemoMeta = {
   concepts: string[];
   keyTakeaways: string[];
   tags: string[];
+  /** If present, enables the folded Learning Quests UI (icon + count). */
+  learningQuestsTotal?: number;
   /** Optional status for displaying disabled "Coming soon" cards. */
   status?: 'live' | 'coming_soon';
 };
@@ -627,9 +629,18 @@ export default function Hub({
 
                   <p className="text-sm text-slate-400 mb-4 line-clamp-2">{demo.description}</p>
 
-                  {/* Concepts */}
+                  {/* Concepts + folded Learning quests */}
                   <div className="mb-4">
-                    <div className="text-xs font-semibold text-slate-500 mb-2">{t('hub.keyConcepts')}:</div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="text-xs font-semibold text-slate-500">{t('hub.keyConcepts')}:</div>
+                      <div
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-700 bg-slate-800/60 text-[11px] text-slate-200"
+                          title={t('learning_quests_2at4ec', { defaultValue: 'Learning quests' })}
+                        >
+                          <span className="text-amber-300">📋</span>
+                          <span className="font-semibold">{demo.learningQuestsTotal ?? 0}</span>
+                        </div>
+                    </div>
                     <div className="flex flex-wrap gap-1">
                       {demo.concepts.slice(0, 3).map((concept) => {
                         const chip = getConceptChip(concept, demo.category);

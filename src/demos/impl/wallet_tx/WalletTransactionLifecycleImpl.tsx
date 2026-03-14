@@ -21,6 +21,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import EduTooltip from '../../../ui/EduTooltip';
+import LearningQuestsPortal from '../../../ui/LearningQuestsPortal';
 import LinkWithCopy from '../../../ui/LinkWithCopy';
 import { define } from '../../glossary';
 import { useDemoI18n } from '../../useDemoI18n';
@@ -116,6 +117,16 @@ export default function WalletTransactionLifecycleImpl() {
 
   const [autoTraffic, setAutoTraffic] = useState(false);
   const [showLearningPanel, setShowLearningPanel] = useState(true);
+  const [questsBlink, setQuestsBlink] = useState(true);
+
+  // Fold quests by default; blink the folded header for 10s.
+  React.useEffect(() => {
+    setShowLearningPanel(true);
+    setQuestsBlink(true);
+    const t = window.setTimeout(() => setQuestsBlink(false), 10_000);
+    return () => window.clearTimeout(t);
+  }, []);
+
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   // Draft
@@ -768,23 +779,27 @@ export default function WalletTransactionLifecycleImpl() {
         <div className="mt-6 grid grid-cols-1 gap-4">
           {/* Learning / Debug panels */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-slate-900/60 rounded-xl border border-slate-700 p-4">
+            <LearningQuestsPortal>
+              <div className="p-0">
               <button
                 type="button"
                 className="w-full flex items-center justify-between gap-2"
-                onClick={() => setShowLearningPanel((v) => !v)}
+                onClick={() => {
+                  setShowLearningPanel((v) => !v);
+                  setQuestsBlink(false);
+                }}
               >
                 <div className="flex items-center gap-2">
-                  <ListTodo size={18} className="text-emerald-300" />
+                  <ListTodo size={18} className={questsBlink ? 'text-amber-300' : 'text-emerald-300'} />
                   <div className="text-lg font-semibold">{tr('Learning quests')}</div>
                   <span className="text-xs text-slate-400">({questsCompletedCount}/5)</span>
                 </div>
-                <div className="text-slate-400">{showLearningPanel ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</div>
+                <div className={`text-slate-400 ${!showLearningPanel && questsBlink ? 'motion-safe:animate-pulse' : ''}`}>{showLearningPanel ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</div>
               </button>
 
               {showLearningPanel && (
                 <div className="mt-3 space-y-2 text-sm">
-                  <div className={`rounded border p-3 ${questsDone.q1 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                  <div className={`rounded border p-3 ${questsDone.q1 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-900/60'}`}>
                     <div className="font-semibold flex items-center gap-2">
                       <span className="inline-flex items-center gap-2">
                         {questsDone.q1 && <CircleCheckBig size={16} className="text-emerald-300" />}
@@ -799,7 +814,7 @@ export default function WalletTransactionLifecycleImpl() {
                     </div>
                     <div className="text-slate-300 mt-1">{tr('Broadcast a tx where maxFee < baseFee so it becomes Ignored.')}</div>
                   </div>
-                  <div className={`rounded border p-3 ${questsDone.q2 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                  <div className={`rounded border p-3 ${questsDone.q2 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-900/60'}`}>
                     <div className="font-semibold flex items-center gap-2">
                       <span className="inline-flex items-center gap-2">
                         {questsDone.q2 && <CircleCheckBig size={16} className="text-emerald-300" />}
@@ -814,7 +829,7 @@ export default function WalletTransactionLifecycleImpl() {
                     </div>
                     <div className="text-slate-300 mt-1">{tr('Replace a pending tx (same nonce) with higher fees so it gets accepted.')}</div>
                   </div>
-                  <div className={`rounded border p-3 ${questsDone.q3 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                  <div className={`rounded border p-3 ${questsDone.q3 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-900/60'}`}>
                     <div className="font-semibold flex items-center gap-2">
                       <span className="inline-flex items-center gap-2">
                         {questsDone.q3 && <CircleCheckBig size={16} className="text-emerald-300" />}
@@ -829,7 +844,7 @@ export default function WalletTransactionLifecycleImpl() {
                     </div>
                     <div className="text-slate-300 mt-1">{tr('Set gasLimit below required gas, then mine a block.')}</div>
                   </div>
-                  <div className={`rounded border p-3 ${questsDone.q4 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                  <div className={`rounded border p-3 ${questsDone.q4 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-900/60'}`}>
                     <div className="font-semibold flex items-center gap-2">
                       <span className="inline-flex items-center gap-2">
                         {questsDone.q4 && <CircleCheckBig size={16} className="text-emerald-300" />}
@@ -844,7 +859,7 @@ export default function WalletTransactionLifecycleImpl() {
                     </div>
                     <div className="text-slate-300 mt-1">{tr('Increase gasLimit and retry the same action until it succeeds.')}</div>
                   </div>
-                  <div className={`rounded border p-3 ${questsDone.q5 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-950/20'}`}>
+                  <div className={`rounded border p-3 ${questsDone.q5 ? 'border-emerald-700 bg-emerald-900/10' : 'border-slate-700 bg-slate-900/60'}`}>
                     <div className="font-semibold flex items-center gap-2">
                       <span className="inline-flex items-center gap-2">
                         {questsDone.q5 && <CircleCheckBig size={16} className="text-emerald-300" />}
@@ -865,7 +880,8 @@ export default function WalletTransactionLifecycleImpl() {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            </LearningQuestsPortal>
 
             <div className="bg-slate-900/60 rounded-xl border border-slate-700 p-4">
               <button
@@ -898,7 +914,7 @@ export default function WalletTransactionLifecycleImpl() {
 
                       return (
                         <>
-                          <div className="rounded border border-slate-700 bg-slate-950/20 p-3">
+                          <div className="rounded border border-slate-700 bg-slate-900/60 p-3">
                             <div className="font-semibold">{tr('Checks performed')}</div>
                             <ul className="list-disc pl-5 mt-2 space-y-1 text-slate-300">
                               <li>{tr('Nonce ordering')}: {tr('miners require per-sender sequential nonces; higher nonces wait for the missing nonce')}</li>
@@ -908,7 +924,7 @@ export default function WalletTransactionLifecycleImpl() {
                             </ul>
                           </div>
 
-                          <div className="rounded border border-slate-700 bg-slate-950/20 p-3">
+                          <div className="rounded border border-slate-700 bg-slate-900/60 p-3">
                             <div className="font-semibold">{tr('Formulas')}</div>
                             <div className="mt-2 text-slate-300 space-y-1">
                               <div><code>effectiveGasPrice = min(maxFee, baseFee + maxPriority)</code></div>
@@ -920,7 +936,7 @@ export default function WalletTransactionLifecycleImpl() {
                             </div>
                           </div>
 
-                          <div className="rounded border border-slate-700 bg-slate-950/20 p-3">
+                          <div className="rounded border border-slate-700 bg-slate-900/60 p-3">
                             <div className="font-semibold">{tr('Computed for this tx')}</div>
                             <div className="mt-2 grid grid-cols-2 gap-2 text-slate-300">
                               <div>{tr('baseFee')}: <span className="font-semibold">{fmtGwei(baseFee)} gwei</span></div>
@@ -1079,7 +1095,7 @@ export default function WalletTransactionLifecycleImpl() {
             </h2>
 
             {/* Builder mode indicator */}
-            <div className="mb-3 rounded-lg border border-slate-700 bg-slate-950/20 p-3 text-xs text-slate-200">
+            <div className="mb-3 rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-200">
               {builderMode === 'new' ? (
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -1253,7 +1269,7 @@ export default function WalletTransactionLifecycleImpl() {
                         const pct = classicLikely > 0 ? ((classicLikely - permitLikely) / classicLikely) * 100 : 0;
 
                         return (
-                          <div className="mt-2 rounded border border-slate-700 bg-slate-950/20 p-3 text-[11px] text-slate-200">
+                          <div className="mt-2 rounded border border-slate-700 bg-slate-900/60 p-3 text-[11px] text-slate-200">
                             <div className="font-semibold">{tr('Estimated cost (toy)')}</div>
                             <div className="mt-1 text-slate-400">
                               {tr('Likely uses the current effective gas price; worst-case uses max fee (cap).')}

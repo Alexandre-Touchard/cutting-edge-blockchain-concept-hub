@@ -40,7 +40,10 @@ function filenameToTitle(filename: string): string {
 
 function inferDefaultsFromPath(
   sourcePath: string
-): Pick<DemoMeta, 'id' | 'title' | 'thumbnail' | 'description' | 'tags' | 'concepts' | 'keyTakeaways' | 'category' | 'difficulty' | 'status'> {
+): Pick<
+  DemoMeta,
+  'id' | 'title' | 'thumbnail' | 'description' | 'tags' | 'concepts' | 'keyTakeaways' | 'category' | 'difficulty' | 'status' | 'learningQuestsTotal'
+> {
   const filename = sourcePath.split('/').pop() ?? sourcePath;
   const inferredId = filenameToId(filename);
   const inferredTitle = filenameToTitle(filename);
@@ -58,6 +61,7 @@ function inferDefaultsFromPath(
     tags: registry?.tags ?? [],
     category: (registry?.category as DemoMeta['category']) ?? 'execution',
     difficulty: (registry?.difficulty as DemoMeta['difficulty']) ?? 'Intermediate',
+    learningQuestsTotal: registry?.learningQuestsTotal,
     status: registry?.status
   };
 }

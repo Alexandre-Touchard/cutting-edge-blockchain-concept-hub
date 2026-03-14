@@ -33,6 +33,9 @@ const conceptIconMap: Record<string, ConceptChip['Icon']> = {
   'Impermanent Loss': TrendingDown,
   'Liquidity Provision': Coins,
   Liquidity: Coins,
+  Depeg: TrendingDown,
+  Stablecoin: Coins,
+  Reflexivity: TrendingDown,
 
   // L2
   Rollups: Layers,

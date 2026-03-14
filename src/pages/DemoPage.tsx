@@ -1,6 +1,6 @@
-import React, { Suspense, useEffect, useMemo } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, ListTodo, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { loadDemos } from '../demos/loadDemos';
 import EduTooltip from '../ui/EduTooltip';
@@ -20,6 +20,20 @@ export default function DemoPage() {
   const demos = useMemo(() => loadDemos(), [i18n.resolvedLanguage]);
 
   const demo = demos.find((d) => d.meta.id === demoId);
+
+  const [questsFolded, setQuestsFolded] = useState(true);
+  const [questsBlink, setQuestsBlink] = useState(false);
+
+  const questsTotal = demo?.meta.learningQuestsTotal ?? 0;
+
+  // Blink folded Learning Quests indicator for 10s after page load (per demo)
+  useEffect(() => {
+    if (!demo?.meta) return;
+    setQuestsFolded(true);
+    setQuestsBlink(true);
+    const t = window.setTimeout(() => setQuestsBlink(false), 10_000);
+    return () => window.clearTimeout(t);
+  }, [demo?.meta?.id]);
 
   useEffect(() => {
     if (demoId) trackEvent('demo_view', { demoId, path: `/demo/${demoId}` });
@@ -65,7 +79,7 @@ export default function DemoPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <div className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+      <div className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
@@ -76,6 +90,26 @@ export default function DemoPage() {
               {t('nav.backToHub')}
             </Link>
             <LanguageSwitcher className="hidden md:inline-flex" />
+
+            {/* Desktop: learning quests widget next to language switcher */}
+            <button
+              type="button"
+              onClick={() => {
+                setQuestsFolded((v) => !v);
+                setQuestsBlink(false);
+              }}
+              aria-expanded={!questsFolded}
+              className={`hidden md:inline-flex items-center gap-2 px-2 py-1 rounded-lg border text-xs text-slate-200 transition-colors ${
+                questsBlink
+                  ? 'border-amber-500 bg-amber-900/20 motion-safe:animate-pulse'
+                  : 'border-slate-700 bg-slate-800 hover:bg-slate-700'
+              }`}
+              title={t('learning_quests_2at4ec', { defaultValue: 'Learning quests' })}
+            >
+              <ListTodo size={14} className={questsBlink ? 'text-amber-300' : 'text-slate-200'} />
+              <span className="font-semibold">{questsTotal}</span>
+              <span className="text-slate-400">{questsFolded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}</span>
+            </button>
           </div>
 
           <div className="min-w-0 text-right flex items-center gap-3">
@@ -84,7 +118,51 @@ export default function DemoPage() {
               <div className="font-semibold truncate">{demo.meta.title}</div>
             </div>
             <LanguageSwitcher className="md:hidden" />
+
+            {/* Mobile: learning quests widget next to language switcher */}
+            <button
+              type="button"
+              onClick={() => {
+                setQuestsFolded((v) => !v);
+                setQuestsBlink(false);
+              }}
+              aria-expanded={!questsFolded}
+              className={`md:hidden inline-flex items-center gap-2 px-2 py-1 rounded-lg border text-xs text-slate-200 transition-colors ${
+                questsBlink
+                  ? 'border-amber-500 bg-amber-900/20 motion-safe:animate-pulse'
+                  : 'border-slate-700 bg-slate-800 hover:bg-slate-700'
+              }`}
+              title={t('learning_quests_2at4ec', { defaultValue: 'Learning quests' })}
+            >
+              <ListTodo size={14} className={questsBlink ? 'text-amber-300' : 'text-slate-200'} />
+              <span className="font-semibold">{questsTotal}</span>
+              <span className="text-slate-400">{questsFolded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}</span>
+            </button>
           </div>
+        </div>
+
+        {/* Learning Quests dropdown content (portal target). Kept mounted so demos can portal into it. */}
+        <div
+          className={`absolute right-4 sm:right-6 top-full mt-2 w-[92vw] max-w-[520px] rounded-xl border border-slate-800 bg-slate-950 p-4 shadow-2xl z-50 ${
+            questsFolded ? 'hidden' : ''
+          }`}
+          role="dialog"
+          aria-label={t('learning_quests_2at4ec', { defaultValue: 'Learning quests' })}
+        >
+          <div className="flex items-center justify-end gap-3 mb-2">
+            <button
+              type="button"
+              onClick={() => setQuestsFolded(true)}
+              className="p-1 rounded-md hover:bg-slate-800 border border-slate-800"
+              aria-label={t('modal.close', { defaultValue: 'Close' })}
+            >
+              <X size={14} />
+            </button>
+          </div>
+          {questsTotal === 0 ? (
+            <div className="text-sm text-slate-400">{t('common.comingSoon', { defaultValue: 'Coming soon' })}</div>
+          ) : null}
+          <div id="learning-quests-portal" className="mt-3 max-h-[70vh] overflow-auto pr-1" />
         </div>
       </div>
 
@@ -99,9 +177,12 @@ export default function DemoPage() {
             )}
           </div>
 
-          <div className="text-xs font-semibold text-slate-400 mb-2 flex items-center gap-2 relative z-20">
-            <span>{t('modal.keyConcepts')}</span>
+          <div className="flex items-center justify-between gap-3 relative z-20 mb-2">
+            <div className="text-xs font-semibold text-slate-400 flex items-center gap-2">
+              <span>{t('modal.keyConcepts')}</span>
+            </div>
           </div>
+
           <div className="flex flex-wrap gap-2 pr-20 relative z-20">
             {demo.meta.concepts.map((concept) => {
               const chip = getConceptChip(concept, demo.meta.category);

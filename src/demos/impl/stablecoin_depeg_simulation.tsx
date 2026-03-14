@@ -1,19 +1,33 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
+  ArrowRight,
   BarChart3,
   Bug,
+  Maximize2,
+  X,
+  ChevronDown,
+  ChevronUp,
   Droplets,
   Gauge,
+  ListTodo,
+  Plus,
   RefreshCw,
   ShieldAlert,
   TrendingDown,
-  TrendingUp
+  TrendingUp,
+  Wrench,
+  Banknote
 } from 'lucide-react';
 import EduTooltip from '../../ui/EduTooltip';
+import LearningQuestsPortal from '../../ui/LearningQuestsPortal';
 import LinkWithCopy from '../../ui/LinkWithCopy';
-import { define } from '../glossary';
+import { define as defineGlossary } from '../glossary';
+
+const collateralRatioIconUrl = new URL('../../public/icons/Icon1.png', import.meta.url).href;
+const solvencyIconUrl = new URL('../../public/icons/Icon2.png', import.meta.url).href;
+const confidenceIconUrl = new URL('../../public/icons/Icon3.png', import.meta.url).href;
 import { useDemoI18n } from '../useDemoI18n';
 
 // Backwards-compatible alias so we don't have to rewrite all usages.
@@ -90,6 +104,27 @@ type AlgorithmicState = {
 
 function clamp(x: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, x));
+}
+
+function severityColorClass(sev01: number) {
+  const s = clamp(sev01, 0, 1);
+  // green -> amber -> red
+  if (s < 0.34) return 'accent-emerald-500';
+  if (s < 0.67) return 'accent-amber-500';
+  return 'accent-red-500';
+}
+
+function severityTextClass(sev01: number) {
+  const s = clamp(sev01, 0, 1);
+  if (s < 0.34) return 'text-emerald-200';
+  if (s < 0.67) return 'text-amber-200';
+  return 'text-red-200';
+}
+
+function severityFromRange(value: number, min: number, max: number, opts?: { invert?: boolean }) {
+  const t = max === min ? 0 : (value - min) / (max - min);
+  const clamped = clamp(t, 0, 1);
+  return opts?.invert ? 1 - clamped : clamped;
 }
 
 function fmt(x: number, decimals = 2) {
@@ -223,28 +258,66 @@ function QuestRow({ done, text, tip }: { done: boolean; text: string; tip: strin
   );
 }
 
+type ChartMarker = {
+  id: string;
+  t: number;
+  stable: number;
+  kind:
+    | 'shock_collateral_crash'
+    | 'shock_liquidity_drain'
+    | 'shock_whale_exit'
+    | 'shock_oracle_failure'
+    | 'shock_confidence_shock'
+    | 'shock_yield_withdrawal'
+    | 'shock_whale_sale'
+    | 'shock_death_spiral'
+    | 'add_liquidity'
+    | 'fix_oracle'
+    | 'backstop_buy'
+    | 'restore_yield';
+  label: string;
+};
+
 function SimpleLineChart({
   tr,
   title,
+  showHeader = true,
+  colorizeNow = false,
   points,
+  markers,
+  legendExtra,
+  headerRightExtra,
+  footerRightExtra,
   stableLabel,
   refLabel,
   refIsIndex,
   refValueLabel,
-  refValueFormatter
+  refValueFormatter,
+  width,
+  height
 }: {
   tr: (s: string, opts?: Record<string, unknown>) => string;
   title: string;
+  showHeader?: boolean;
+  colorizeNow?: boolean;
   points: SeriesPoint[];
+  markers?: ChartMarker[];
+  legendExtra?: React.ReactNode;
+  headerRightExtra?: React.ReactNode;
+  footerRightExtra?: React.ReactNode;
   stableLabel: string;
   refLabel: string;
   refIsIndex?: boolean;
   refValueLabel?: string;
   refValueFormatter?: (x: number) => string;
+  width?: number;
+  height?: number;
 }) {
-  const w = 560;
-  const h = 180;
-  const pad = 20;
+  const w = width ?? 560;
+  const h = height ?? 180;
+  const padLeft = 20;
+  const padRight = 10;
+  const padY = 20;
 
   const xs = points.map((p) => p.t);
   const stableYs = points.map((p) => p.stable);
@@ -261,13 +334,13 @@ function SimpleLineChart({
   const maxRef = Math.max(...refYs);
 
   function xScale(x: number) {
-    if (maxX === minX) return pad;
-    return pad + ((x - minX) / (maxX - minX)) * (w - pad * 2);
+    if (maxX === minX) return padLeft;
+    return padLeft + ((x - minX) / (maxX - minX)) * (w - padLeft - padRight);
   }
 
   function yScale(y: number, min: number, max: number) {
     if (max === min) return h / 2;
-    return pad + (1 - (y - min) / (max - min)) * (h - pad * 2);
+    return padY + (1 - (y - min) / (max - min)) * (h - padY * 2);
   }
 
   function pathFor(series: number[], min: number, max: number) {
@@ -284,24 +357,64 @@ function SimpleLineChart({
   const stablePath = pathFor(stableYs, minStable, maxStable);
   const refPath = pathFor(refYs, minRef, maxRef);
 
+  function markerIcon(kind: ChartMarker['kind']) {
+    switch (kind) {
+      // Interventions
+      case 'add_liquidity':
+        return <Plus size={14} className="text-emerald-300" />;
+      case 'fix_oracle':
+        return <Wrench size={14} className="text-amber-300" />;
+      case 'backstop_buy':
+        return <Banknote size={14} className="text-emerald-200" />;
+      case 'restore_yield':
+        return <TrendingUp size={14} className="text-blue-200" />;
+
+      // Shocks
+      case 'shock_collateral_crash':
+        return <TrendingDown size={14} className="text-red-300" />;
+      case 'shock_liquidity_drain':
+        return <Droplets size={14} className="text-sky-200" />;
+      case 'shock_whale_exit':
+        return <ArrowRight size={14} className="text-slate-200" />;
+      case 'shock_oracle_failure':
+        return <Bug size={14} className="text-amber-200" />;
+      case 'shock_confidence_shock':
+        return <ShieldAlert size={14} className="text-amber-200" />;
+      case 'shock_yield_withdrawal':
+        return <Gauge size={14} className="text-slate-200" />;
+      case 'shock_whale_sale':
+        return <TrendingDown size={14} className="text-rose-200" />;
+      case 'shock_death_spiral':
+        return <AlertTriangle size={14} className="text-red-300" />;
+
+      default:
+        return <AlertTriangle size={14} className="text-red-300" />;
+    }
+  }
+
   const last = points[points.length - 1];
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-          <BarChart3 size={18} className="text-blue-300" />
-          <span className="truncate">{title}</span>
+      {showHeader ? (
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <BarChart3 size={18} className="text-blue-300" />
+            <span className="truncate">{title}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-xs text-slate-400 whitespace-nowrap">{tr('t={{t}}', { t: last?.t ?? 0 })}</div>
+            {headerRightExtra ? headerRightExtra : null}
+          </div>
         </div>
-        <div className="text-xs text-slate-400 whitespace-nowrap">{tr('t={{t}}', { t: last?.t ?? 0 })}</div>
-      </div>
+      ) : null}
 
       <div className="mt-3 overflow-auto">
         <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
           {/* Baseline at $1 */}
           <line
-            x1={pad}
-            x2={w - pad}
+            x1={padLeft}
+            x2={w - padRight}
             y1={yScale(1, minStable, maxStable)}
             y2={yScale(1, minStable, maxStable)}
             stroke="rgba(148,163,184,0.35)"
@@ -310,11 +423,28 @@ function SimpleLineChart({
 
           <path d={refPath} fill="none" stroke="rgba(167,139,250,0.9)" strokeWidth={2} />
           <path d={stablePath} fill="none" stroke="rgba(52,211,153,0.95)" strokeWidth={2.5} />
+
+          {(markers ?? [])
+            .filter((m) => m.t >= minX && m.t <= maxX)
+            .map((m) => {
+              const x = xScale(m.t);
+              const y = yScale(m.stable, minStable, maxStable);
+              return (
+                <g key={m.id}>
+                  <title>{m.label}</title>
+                  <foreignObject x={x - 10} y={y - 10} width={20} height={20} overflow="visible">
+                    <div className="h-5 w-5 rounded-full bg-slate-900/90 border border-slate-700 flex items-center justify-center">
+                      {markerIcon(m.kind)}
+                    </div>
+                  </foreignObject>
+                </g>
+              );
+            })}
         </svg>
       </div>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300">
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-400" />
             {stableLabel}
@@ -323,12 +453,16 @@ function SimpleLineChart({
             <span className="h-2 w-2 rounded-full bg-purple-400" />
             {refLabel}
           </span>
+          {legendExtra ? <span className="ml-2">{legendExtra}</span> : null}
         </div>
 
         {last ? (
-          <div className="text-xs text-slate-400 whitespace-nowrap">
-            {tr('Now')}: ${fmt(last.stable, 3)} •{' '}
-            {refIsIndex ? `${tr('Index')} ${fmt(last.ref, 2)}` : `${tr('Price')} $${fmt(last.ref, 2)}`}
+          <div className="text-xs text-slate-400 whitespace-nowrap flex flex-col items-end gap-0.5">
+            {footerRightExtra ? <div className="text-[11px] leading-4">{footerRightExtra}</div> : null}
+            <div>
+              {tr('Now')}: <span className={colorizeNow ? stablePriceColor(last.stable) : ''}>${fmt(last.stable, 3)}</span> •{' '}
+              {refIsIndex ? `${tr('Index')} ${fmt(last.ref, 2)}` : `${tr('Price')} $${fmt(last.ref, 2)}`}
+            </div>
           </div>
         ) : null}
       </div>
@@ -344,7 +478,36 @@ export default function StablecoinDepegSimulation() {
   const [showDebug, setShowDebug] = useState(false);
   const [showFormulas, setShowFormulas] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [sectionHighlight, setSectionHighlight] = useState<'controls' | 'chart' | 'log' | 'quests' | null>(null);
+  const [sectionHighlight, setSectionHighlight] = useState<'controls' | 'chart' | 'log' | null>(null);
+
+  const [chartMaximized, setChartMaximized] = useState(false);
+  const [maxControlsOpen, setMaxControlsOpen] = useState(true);
+
+  // When entering maximized mode, expand controls by default.
+  useEffect(() => {
+    if (chartMaximized) setMaxControlsOpen(true);
+  }, [chartMaximized]);
+
+  // Prevent the underlying page from scrolling when the maximized overlay is open.
+  useEffect(() => {
+    if (!chartMaximized) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [chartMaximized]);
+
+  const [showQuests, setShowQuests] = useState(true);
+  const [questsBlink, setQuestsBlink] = useState(true);
+
+  // Fold quests by default; blink the folded header for 10s.
+  useEffect(() => {
+    setShowQuests(true);
+    setQuestsBlink(true);
+    const t = window.setTimeout(() => setQuestsBlink(false), 10_000);
+    return () => window.clearTimeout(t);
+  }, []);
 
   const [params, setParams] = useState(() => ({
     // Collateralized
@@ -363,8 +526,6 @@ export default function StablecoinDepegSimulation() {
   const controlsRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
-  const questsRef = useRef<HTMLDivElement | null>(null);
-
   const [collat, setCollat] = useState<CollateralizedState>(() => initialCollateralized());
   const [algo, setAlgo] = useState<AlgorithmicState>(() => initialAlgorithmic());
 
@@ -373,7 +534,14 @@ export default function StablecoinDepegSimulation() {
     everLiquidated: false,
     everRedeemed: false,
     everCollapsed: false,
-    everRecovered: false
+    everRecovered: false,
+
+    // Optimization / learning loops
+    keptAbove97For10: false,
+    recoveredWithMinimalInterventions: false,
+    recoveredWithoutBackstopBuy: false,
+    regainedConfidence: false,
+    survivedCrash10StepsNoInsolvency: false
   }));
 
   const currentT = scenario === 'collateralized' ? collat.t : algo.t;
@@ -387,24 +555,66 @@ export default function StablecoinDepegSimulation() {
     }
   ]);
 
+  const [whyBanner, setWhyBanner] = useState<null | { title: string; body: string }>(null);
+
+  const [chartMarkers, setChartMarkers] = useState<ChartMarker[]>([]);
+  const chartMarkerIdRef = useRef(0);
+
+  function addChartMarker(kind: ChartMarker['kind'], label: string) {
+    // Anchor markers to the *plotted* curve (series), not the mutable state.
+    // Shocks/interventions happen between steps, so the curve only updates when you Step.
+    const last = series[series.length - 1];
+    if (!last) return;
+    const id = `m_${chartMarkerIdRef.current++}`;
+    setChartMarkers((prev) => [...prev, { id, t: last.t, stable: last.stable, kind, label }].slice(-40));
+  }
+
+  // Optimization quest helpers
+  const [interventionsUsed, setInterventionsUsed] = useState(0);
+  const interventionsUsedRef = useRef(0);
+  const usedBackstopBuyRef = useRef(false);
+
+  // Additional quest trackers
+  const everLowConfidenceRef = useRef(false);
+  const crashActiveRef = useRef(false);
+  const crashTicksRef = useRef(0);
+  const crashInsolvencyRef = useRef(false);
+
+  const [above97Streak, setAbove97Streak] = useState(0);
+  const above97StreakRef = useRef(0);
+
+  const [everDepeggedAtLeastOnce, setEverDepeggedAtLeastOnce] = useState(false);
+  const everDepeggedAtLeastOnceRef = useRef(false);
+
+  function bumpInterventions() {
+    setInterventionsUsed((n) => {
+      const next = n + 1;
+      interventionsUsedRef.current = next;
+      return next;
+    });
+  }
+
+  function markEverDepegged() {
+    setEverDepeggedAtLeastOnce(true);
+    everDepeggedAtLeastOnceRef.current = true;
+  }
+
+
   const [series, setSeries] = useState<SeriesPoint[]>(() => [{ t: 0, stable: 1.0, ref: 1.0 }]);
 
   function addEvent(type: EventType, message: string, tOverride?: number) {
     setEvents((prev) => [{ id: nowId(), t: tOverride ?? currentT, type, message }, ...prev].slice(0, 18));
   }
 
-  function highlight(which: 'controls' | 'chart' | 'log' | 'quests') {
-    setSectionHighlight(which);
-    const el =
-      which === 'controls'
-        ? controlsRef.current
-        : which === 'chart'
-          ? chartRef.current
-          : which === 'log'
-            ? logRef.current
-            : questsRef.current;
+  function setWhy(title: string, body: string) {
+    setWhyBanner({ title, body });
+  }
 
-    if (guidedMode) el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  function highlight(which: 'controls' | 'chart' | 'log') {
+    setSectionHighlight(which);
+    const el = which === 'controls' ? controlsRef.current : which === 'chart' ? chartRef.current : logRef.current;
+
+    // Auto-scroll disabled (guided mode keeps highlights only).
     window.setTimeout(() => setSectionHighlight(null), 900);
   }
 
@@ -420,20 +630,106 @@ export default function StablecoinDepegSimulation() {
     setScenario(sc);
     setCollat(c);
     setAlgo(a);
-    setQuestFlags({ everDepegged: false, everLiquidated: false, everRedeemed: false, everCollapsed: false, everRecovered: false });
+    setQuestFlags({
+      everDepegged: false,
+      everLiquidated: false,
+      everRedeemed: false,
+      everCollapsed: false,
+      everRecovered: false,
+      keptAbove97For10: false,
+      recoveredWithMinimalInterventions: false,
+      recoveredWithoutBackstopBuy: false,
+      regainedConfidence: false,
+      survivedCrash10StepsNoInsolvency: false
+    });
+
+    setWhyBanner(null);
+    setChartMarkers([]);
+    chartMarkerIdRef.current = 0;
+    setInterventionsUsed(0);
+    interventionsUsedRef.current = 0;
+    usedBackstopBuyRef.current = false;
+    everLowConfidenceRef.current = false;
+    crashActiveRef.current = false;
+    crashTicksRef.current = 0;
+    crashInsolvencyRef.current = false;
+
+    setAbove97Streak(0);
+    above97StreakRef.current = 0;
+    setEverDepeggedAtLeastOnce(false);
+    everDepeggedAtLeastOnceRef.current = false;
 
     setSeries([{ t: 0, stable: 1.0, ref: sc === 'collateralized' ? 1.0 : a.lunaPrice }]);
     setEvents([{ id: nowId(), t: 0, type: 'info', message: tr('Reset simulation') }]);
   }
 
-  function updateQuestsFromStep(nextStablePrice: number, opts: { liquidations?: boolean; redeemed?: boolean }) {
+  function updateQuestsFromStep(
+    nextStablePrice: number,
+    opts: { liquidations?: boolean; redeemed?: boolean; confidenceNext?: number; equityNext?: number }
+  ) {
+    // Optimization quest: keep stable >= 0.97 for 10 consecutive steps.
+    setAbove97Streak((prev) => {
+      const next = nextStablePrice >= 0.97 ? prev + 1 : 0;
+      above97StreakRef.current = next;
+      return next;
+    });
+
+    // Track whether we have ever depegged (for minimal-intervention recovery quest)
+    if (Math.abs(nextStablePrice - 1) > 0.02) markEverDepegged();
+
+    // Track confidence dip -> later recovery
+    if (typeof opts.confidenceNext === 'number' && opts.confidenceNext < 0.5) {
+      everLowConfidenceRef.current = true;
+    }
+
+    // Track collateral-crash survival window (collateralized only)
+    if (crashActiveRef.current && typeof opts.equityNext === 'number') {
+      crashTicksRef.current += 1;
+      if (opts.equityNext < 0) crashInsolvencyRef.current = true;
+      if (crashTicksRef.current >= 10) crashActiveRef.current = false;
+    }
+
     setQuestFlags((prev) => {
-      const everDepegged = prev.everDepegged || Math.abs(nextStablePrice - 1) > 0.02;
+      const isDepegged = Math.abs(nextStablePrice - 1) > 0.02;
+      const recoveredNow = Math.abs(nextStablePrice - 1) <= 0.01;
+
+      const everDepegged = prev.everDepegged || isDepegged;
       const everLiquidated = prev.everLiquidated || Boolean(opts.liquidations);
       const everRedeemed = prev.everRedeemed || Boolean(opts.redeemed);
       const everCollapsed = prev.everCollapsed || nextStablePrice < 0.8;
-      const everRecovered = prev.everRecovered || (everDepegged && Math.abs(nextStablePrice - 1) <= 0.01);
-      return { everDepegged, everLiquidated, everRedeemed, everCollapsed, everRecovered };
+      const everRecovered = prev.everRecovered || (everDepegged && recoveredNow);
+
+      const keptAbove97For10 =
+        prev.keptAbove97For10 || (nextStablePrice >= 0.97 && above97StreakRef.current >= 10);
+
+      const recoveredWithMinimalInterventions =
+        prev.recoveredWithMinimalInterventions ||
+        (everDepeggedAtLeastOnceRef.current && recoveredNow && interventionsUsedRef.current <= 2);
+
+      const recoveredWithoutBackstopBuy =
+        prev.recoveredWithoutBackstopBuy ||
+        (everDepeggedAtLeastOnceRef.current && recoveredNow && !usedBackstopBuyRef.current);
+
+      const regainedConfidence =
+        prev.regainedConfidence ||
+        (everLowConfidenceRef.current && typeof opts.confidenceNext === 'number' && opts.confidenceNext >= 0.75);
+
+      const survivedCrash10StepsNoInsolvency =
+        prev.survivedCrash10StepsNoInsolvency ||
+        (!crashActiveRef.current && crashTicksRef.current >= 10 && !crashInsolvencyRef.current);
+
+      return {
+        everDepegged,
+        everLiquidated,
+        everRedeemed,
+        everCollapsed,
+        everRecovered,
+        keptAbove97For10,
+        recoveredWithMinimalInterventions,
+        recoveredWithoutBackstopBuy,
+        regainedConfidence,
+        survivedCrash10StepsNoInsolvency
+      };
     });
   }
 
@@ -472,6 +768,23 @@ export default function StablecoinDepegSimulation() {
                 : tr('Confidence shock (panic)');
 
       addEvent('warn', tr('Applied shock: {{name}}', { name }));
+      const markerKind: ChartMarker['kind'] =
+        preset === 'collateral_crash'
+          ? 'shock_collateral_crash'
+          : preset === 'liquidity_drain'
+            ? 'shock_liquidity_drain'
+            : preset === 'whale_exit'
+              ? 'shock_whale_exit'
+              : preset === 'oracle_failure'
+                ? 'shock_oracle_failure'
+                : 'shock_confidence_shock';
+      addChartMarker(markerKind, tr('Shock: {{name}}', { name }));
+
+      if (preset === 'collateral_crash') {
+        crashActiveRef.current = true;
+        crashTicksRef.current = 0;
+        crashInsolvencyRef.current = false;
+      }
     } else {
       setAlgo((s) => {
         const next = { ...s };
@@ -498,12 +811,21 @@ export default function StablecoinDepegSimulation() {
             : tr('Death spiral starter');
 
       addEvent('warn', tr('Applied shock: {{name}}', { name }));
+      const markerKind: ChartMarker['kind'] =
+        preset === 'yield_withdrawal'
+          ? 'shock_yield_withdrawal'
+          : preset === 'whale_sale'
+            ? 'shock_whale_sale'
+            : 'shock_death_spiral';
+      addChartMarker(markerKind, tr('Shock: {{name}}', { name }));
     }
 
-    if (guidedMode) highlight('controls');
+    // No auto-scroll on action.
   }
 
   function applyIntervention(kind: string) {
+    bumpInterventions();
+    if (kind === 'backstop_buy') usedBackstopBuyRef.current = true;
     if (scenario === 'collateralized') {
       setCollat((s) => {
         const next = { ...s };
@@ -525,6 +847,15 @@ export default function StablecoinDepegSimulation() {
             : tr('Backstop buy (buy stable)');
 
       addEvent('success', tr('Intervention: {{name}}', { name }));
+      addChartMarker(kind as ChartMarker['kind'], tr('Intervention: {{name}}', { name }));
+      setWhy(
+        tr('Intervention effect'),
+        kind === 'add_liquidity'
+          ? tr('Adding liquidity increases pool depth, which reduces price impact (slippage) from sells and makes the peg easier to defend.')
+          : kind === 'fix_oracle'
+            ? tr('Fixing the oracle improves pricing accuracy, which prevents incorrect liquidations and stabilizes confidence-driven behavior.')
+            : tr('A backstop buy adds external buy pressure for the stablecoin, helping it move back toward $1 in the short term.')
+      );
     } else {
       setAlgo((s) => {
         const next = { ...s };
@@ -546,9 +877,18 @@ export default function StablecoinDepegSimulation() {
             : tr('Backstop buy (buy stable)');
 
       addEvent('success', tr('Intervention: {{name}}', { name }));
+      addChartMarker(kind as ChartMarker['kind'], tr('Intervention: {{name}}', { name }));
+      setWhy(
+        tr('Intervention effect'),
+        kind === 'add_liquidity'
+          ? tr('Adding liquidity increases AMM depth, which reduces price impact from sells and makes the peg harder to break.')
+          : kind === 'restore_yield'
+            ? tr('Restoring yield incentives boosts demand and confidence, reducing sell pressure and slowing the reflexive loop.')
+            : tr('A backstop buy adds external buy pressure for the stablecoin, helping it move back toward $1 in the short term.')
+      );
     }
 
-    if (guidedMode) highlight('controls');
+    // Auto-scroll disabled (guided mode keeps highlights only).
   }
 
   function stepOnce() {
@@ -616,7 +956,11 @@ export default function StablecoinDepegSimulation() {
           }
         };
 
-        updateQuestsFromStep(stablePriceNext, { liquidations: liquidationPressure > 0.2 });
+        updateQuestsFromStep(stablePriceNext, {
+          liquidations: liquidationPressure > 0.2,
+          confidenceNext,
+          equityNext: collateralValueNext - s.debt
+        });
 
         // Events
         if (liquidationPressure > 0.05 && s.liquidationPressure <= 0.05) {
@@ -625,29 +969,93 @@ export default function StablecoinDepegSimulation() {
             tr('Liquidations begin as CR falls below {{thr}}%', { thr: (liquidationTrigger * 100).toFixed(0) }),
             next.t
           );
+          setWhy(
+            tr('Liquidations started'),
+            tr(
+              'CR fell to {{cr}} (threshold {{thr}}). Liquidation pressure {{p}} sells about ${{sell}} collateral per step, which can push collateral prices down and worsen CR.',
+              {
+                cr: fmt(cr, 2),
+                thr: fmt(liquidationTrigger, 2),
+                p: pct(liquidationPressure, 0),
+                sell: fmt(collateralSellUsd, 0)
+              }
+            )
+          );
         }
 
         if (outcomeLabel(stablePriceNext) === 'collapse' && s.stablePrice >= 0.8) {
           addEvent('error', tr('Stablecoin enters collapse region (< $0.80).'), next.t);
+          setWhy(
+            tr('Collapse feedback loop'),
+            tr(
+              'Confidence dropped to {{conf}}, liquidity depth to {{depth}}. With shallow liquidity, the same sells cause larger slippage, which further hurts confidence and accelerates the depeg.',
+              {
+                conf: fmt(confidenceNext, 2),
+                depth: fmt(liquidityDepthNext, 2)
+              }
+            )
+          );
         } else if (Math.abs(stablePriceNext - 1) > 0.02 && Math.abs(s.stablePrice - 1) <= 0.02) {
           addEvent('warn', tr('Peg breaks: price moves away from $1.'), next.t);
+          setWhy(
+            tr('Why the peg broke'),
+            tr(
+              'Sell pressure hit a shallow pool (depth {{depth}}) while confidence was {{conf}}. Arbitrage is weaker when confidence is low (arb efficiency {{arb}}), so price can move away from $1 even if solvency still looks okay.',
+              {
+                depth: fmt(liquidityDepthNext, 2),
+                conf: fmt(confidenceNext, 2),
+                arb: fmt(params.arbEfficiency, 1)
+              }
+            )
+          );
         } else if (Math.abs(stablePriceNext - 1) <= 0.01 && Math.abs(s.stablePrice - 1) > 0.01) {
           addEvent('success', tr('Peg recovers near $1.'), next.t);
+          setWhy(
+            tr('Why the peg recovered'),
+            tr(
+              'Arbitrage regained strength as confidence improved ({{conf}}) and depth stabilized ({{depth}}). With arb efficiency {{arb}}, trades pull price back toward $1.',
+              {
+                conf: fmt(confidenceNext, 2),
+                depth: fmt(liquidityDepthNext, 2),
+                arb: fmt(params.arbEfficiency, 1)
+              }
+            )
+          );
         }
 
         // Solvency threshold: equity < 0 means the system is fundamentally undercollateralized.
         const equityNext = collateralValueNext - s.debt;
         if (equityNext < 0 && s.lastTick.equity >= 0) {
           addEvent('error', tr('Insolvency: collateral value falls below total debt (equity < 0).'), next.t);
+          setWhy(
+            tr('Insolvency (fundamental failure)'),
+            tr(
+              'Collateral value (${{coll}}) fell below debt (${{debt}}), so equity is negative (${{eq}}). That means there is not enough backing for $1 redemptions even if market price bounces.',
+              {
+                coll: fmt(collateralValueNext, 0),
+                debt: fmt(s.debt, 0),
+                eq: fmt(equityNext, 0)
+              }
+            )
+          );
         } else if (equityNext < s.debt * 0.1 && s.lastTick.equity >= s.debt * 0.1) {
           addEvent('warn', tr('Thin buffer: equity is low, so small shocks can threaten solvency.'), next.t);
+          setWhy(
+            tr('Thin solvency buffer'),
+            tr(
+              'Equity is low (${{eq}} vs debt ${{debt}}). The system is still solvent, but small additional shocks can flip equity negative and trigger insolvency.',
+              {
+                eq: fmt(equityNext, 0),
+                debt: fmt(s.debt, 0)
+              }
+            )
+          );
         }
 
         setSeries((prev) => [...prev, { t: next.t, stable: stablePriceNext, ref: collateralIndexNext }].slice(-60));
         return next;
       });
 
-      if (guidedMode) highlight('chart');
       return;
     }
 
@@ -729,30 +1137,87 @@ export default function StablecoinDepegSimulation() {
         }
       };
 
-      updateQuestsFromStep(stablePriceNext, { redeemed: redemption > 0.01 });
+      updateQuestsFromStep(stablePriceNext, {
+        redeemed: redemption > 0.01,
+        confidenceNext
+      });
 
       if (stablePriceNext < 0.97 && s.stablePrice >= 0.97) {
         addEvent('warn', tr('Early stress: stablecoin dips below $0.97.'), next.t);
+        setWhy(
+          tr('Early stress'),
+          tr(
+            'Price dipped below peg as sell pressure {{sell}} hit AMM depth {{depth}}. Redemptions burn {{redeem}} stable this step. Backstop strength is {{bs}} (reflexivity {{k}}).',
+            {
+              sell: fmt(sellPressure, 0),
+              depth: fmt(ammDepth, 2),
+              redeem: fmt(redemption, 0),
+              bs: fmt(backstopStrength, 2),
+              k: fmt(params.reflexivityK, 2)
+            }
+          )
+        );
       }
       if (stablePriceNext < 0.8 && s.stablePrice >= 0.8) {
         addEvent('error', tr('Panic zone: stablecoin falls below $0.80.'), next.t);
+        setWhy(
+          tr('Panic zone'),
+          tr(
+            'Redemptions accelerate ({{redeem}} stable burned), minting {{mint}} backstop tokens. Supply inflation {{infl}} + low confidence {{conf}} pushes the backstop price down, weakening the $1 redemption promise.',
+            {
+              redeem: fmt(redemption, 0),
+              mint: fmt(lunaMinted, 0),
+              infl: pct(supplyInflation, 1),
+              conf: fmt(confidenceNext, 2)
+            }
+          )
+        );
       }
       if (stablePriceNext < 0.05 && s.stablePrice >= 0.05) {
         addEvent('error', tr('Failure: stablecoin collapses (< $0.05).'), next.t);
+        setWhy(
+          tr('Reflexive collapse'),
+          tr(
+            'The backstop token price fell to ${{luna}} (Δ {{d}}). Backstop strength {{bs}} means redemptions no longer create meaningful support, so the stablecoin can spiral down even as supply is burned.',
+            {
+              luna: fmt(lunaPriceNext, 2),
+              d: pct(lunaDeltaPct, 1),
+              bs: fmt(backstopStrength, 2)
+            }
+          )
+        );
       }
 
       // Backstop credibility thresholds (teaching): when redemptions become less meaningful.
       if (backstopStrength < 0.3 && s.lastTick.backstopStrength >= 0.3) {
         addEvent('error', tr('Backstop failure: redemptions lose credibility as the backstop token collapses.'), next.t);
+        setWhy(
+          tr('Backstop failure'),
+          tr(
+            'Backstop strength fell to {{bs}}. With a weak backstop, minting more backstop tokens (supply inflation {{infl}}) does not translate into credible $1 support, so confidence breaks.',
+            {
+              bs: fmt(backstopStrength, 2),
+              infl: pct(supplyInflation, 1)
+            }
+          )
+        );
       } else if (backstopStrength < 0.6 && s.lastTick.backstopStrength >= 0.6) {
         addEvent('warn', tr('Backstop weakening: redemptions still work mechanically, but market confidence deteriorates.'), next.t);
+        setWhy(
+          tr('Backstop weakening'),
+          tr(
+            'Backstop strength fell to {{bs}}. Redemptions still function, but markets price the risk that future redemptions will be less valuable as backstop supply inflates.',
+            {
+              bs: fmt(backstopStrength, 2)
+            }
+          )
+        );
       }
 
       setSeries((prev) => [...prev, { t: next.t, stable: stablePriceNext, ref: lunaPriceNext }].slice(-60));
       return next;
     });
 
-    if (guidedMode) highlight('chart');
   }
 
   function runSteps(n: number) {
@@ -762,89 +1227,31 @@ export default function StablecoinDepegSimulation() {
   const stableNow = scenario === 'collateralized' ? collat.stablePrice : algo.stablePrice;
   const outcome = outcomeLabel(stableNow);
 
-  const concepts = useMemo(() => {
-    return [
-      { term: tr('Stablecoin'), def: define('Stablecoin') },
-      { term: tr('Depeg'), def: define('Depeg') },
-      { term: tr('Liquidity'), def: define('Liquidity') },
-      { term: tr('Slippage'), def: define('Slippage') },
-      { term: tr('Liquidation'), def: define('Liquidation') },
-      { term: tr('Oracle'), def: define('Oracle') },
-      { term: tr('Arbitrage'), def: define('Arbitrage') },
-      { term: tr('Reflexivity'), def: define('Reflexivity') }
-    ];
-  }, [tr]);
-
   return (
-    <div className="w-full max-w-7xl mx-auto p-6 text-white">
+    <>
+      <div className="w-full max-w-7xl mx-auto p-6 text-white">
       <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-950 to-slate-900 p-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div className="flex flex-col gap-4">
+          {/* Title + subtitle (force single-line each; truncate on small widths) */}
           <div className="min-w-0">
-            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-              <Droplets className="text-blue-300" />
-              {tr('Stablecoin Depeg Cascade Simulation')}
+            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 min-w-0">
+              <Droplets className="text-blue-300 shrink-0" />
+              <span className="min-w-0 truncate whitespace-nowrap" title={tr('Stablecoin Depeg Cascade Simulation')}>
+                {tr('Stablecoin Depeg Cascade Simulation')}
+              </span>
             </h1>
-            <p className="text-slate-300 mt-2 max-w-3xl">
+            <p
+              className="text-slate-300 mt-2 min-w-0 truncate whitespace-nowrap"
+              title={tr(
+                'Apply shocks and watch how liquidity, confidence, and feedback loops can break (or restore) a stablecoin peg.'
+              )}
+            >
               {tr('Apply shocks and watch how liquidity, confidence, and feedback loops can break (or restore) a stablecoin peg.')}
             </p>
-
-            {/* 60-second tour */}
-            <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-4 max-w-3xl">
-              <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                {tr('60-second tour')}
-                <Tooltip
-                  widthClassName="w-[520px]"
-                  text={tr(
-                    'Stablecoins look like “$1” in calm markets. This tour shows which hidden parts keep the peg stable — and how cascades happen when those parts fail.'
-                  )}
-                />
-              </div>
-              <ol className="mt-2 text-sm text-slate-300 space-y-2 list-decimal pl-5">
-                <li>
-                  {tr('Pick a scenario (Collateralized or Algorithmic).')}{' '}
-                  <Tooltip
-                    text={tr(
-                      'Collateralized stablecoins rely on overcollateralization and liquidations. Algorithmic stablecoins rely on tokenomics and reflexive market confidence.'
-                    )}
-                  />
-                </li>
-                <li>
-                  {tr('Apply a shock (e.g., collateral crash or whale sale).')}{' '}
-                  <Tooltip
-                    text={tr(
-                      'Shocks create selling pressure and reduce confidence, which can drain liquidity and amplify price moves.'
-                    )}
-                  />
-                </li>
-                <li>
-                  {tr('Click Step a few times and watch the chart + event log narrate the cascade.')}{' '}
-                  <Tooltip
-                    text={tr(
-                      'Try stepping 5–10 times to see whether the system recovers, temporarily depegs, or collapses.'
-                    )}
-                  />
-                </li>
-                <li>{tr('Use Guided mode to auto-scroll to the relevant panel as things change.')}</li>
-              </ol>
-            </div>
-
-            {/* Concepts */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {concepts.map((c) => (
-                <span
-                  key={c.term}
-                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-sm text-slate-200"
-                >
-                  <span>{c.term}</span>
-                  <span>
-                    <Tooltip widthClassName="w-96" text={c.def} />
-                  </span>
-                </span>
-              ))}
-            </div>
           </div>
 
+          {/* Toggles row (sits directly under subtitle) */}
           <div className="shrink-0 flex flex-wrap items-center gap-2">
             <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-sm text-slate-200">
               <input type="checkbox" checked={guidedMode} onChange={(e) => setGuidedMode(e.target.checked)} />
@@ -888,7 +1295,46 @@ export default function StablecoinDepegSimulation() {
               {tr('Reset')}
             </button>
 
-            <LinkWithCopy href={typeof window !== 'undefined' ? window.location.href : ''} label={tr('Copy link')} />
+          </div>
+
+          {/* 60-second tour */}
+          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 w-full lg:max-w-[300px] xl:max-w-[280px]">
+            <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+              {tr('60-second tour')}
+              <Tooltip
+                widthClassName="w-[520px]"
+                text={tr(
+                  'Stablecoins look like “$1” in calm markets. This tour shows which hidden parts keep the peg stable — and how cascades happen when those parts fail.'
+                )}
+              />
+            </div>
+            <ol className="mt-2 text-sm text-slate-300 space-y-2 list-decimal pl-5">
+              <li>
+                {tr('Pick a scenario (Collateralized or Algorithmic).')}{' '}
+                <Tooltip
+                  text={tr(
+                    'Collateralized stablecoins rely on overcollateralization and liquidations. Algorithmic stablecoins rely on tokenomics and reflexive market confidence.'
+                  )}
+                />
+              </li>
+              <li>
+                {tr('Apply a shock (e.g., collateral crash or whale sale).')}{' '}
+                <Tooltip
+                  text={tr(
+                    'Shocks create selling pressure and reduce confidence, which can drain liquidity and amplify price moves.'
+                  )}
+                />
+              </li>
+              <li>
+                {tr('Click Step a few times and watch the chart + event log narrate the cascade.')}{' '}
+                <Tooltip
+                  text={tr(
+                    'Try stepping 5–10 times to see whether the system recovers, temporarily depegs, or collapses.'
+                  )}
+                />
+              </li>
+              <li>{tr('Use Guided mode to auto-scroll to the relevant panel as things change.')}</li>
+            </ol>
           </div>
         </div>
 
@@ -899,7 +1345,7 @@ export default function StablecoinDepegSimulation() {
               <Gauge size={18} className="text-emerald-300" />
               <span className="text-xs text-slate-400">
                 {tr('Stablecoin price')}
-                <Tooltip text={define('Stablecoin Price')} />
+                <Tooltip text={defineGlossary('Stablecoin Price')} />
               </span>
             </div>
             <div className={`text-2xl font-bold ${stablePriceColor(stableNow)}`}>${fmt(stableNow, 3)}</div>
@@ -910,10 +1356,16 @@ export default function StablecoinDepegSimulation() {
 
           <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-1">
-              <Activity size={18} className="text-blue-300" />
+              <img
+                src={confidenceIconUrl}
+                alt={tr('Confidence')}
+                width={18}
+                height={18}
+                className="opacity-90"
+              />
               <span className="text-xs text-slate-400">
                 {tr('Confidence')}
-                <Tooltip text={define('Confidence')} />
+                <Tooltip text={defineGlossary('Confidence')} />
               </span>
             </div>
             <div className="text-2xl font-bold">
@@ -924,9 +1376,24 @@ export default function StablecoinDepegSimulation() {
 
           <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingDown size={18} className="text-purple-300" />
+              {scenario === 'collateralized' ? (
+                <img
+                  src={solvencyIconUrl}
+                  alt={tr('Solvency (equity)')}
+                  width={27}
+                  height={27}
+                  className="opacity-90"
+                />
+              ) : (
+                <TrendingDown size={18} className="text-purple-300" />
+              )}
               <span className="text-xs text-slate-400">
                 {scenario === 'collateralized' ? tr('Solvency (equity)') : tr('Backstop strength')}
+                {scenario === 'collateralized' ? (
+                  <Tooltip text={tr('Equity = collateral value − total stablecoin debt. If equity < 0, the system is insolvent (not enough backing for $1 redemptions).')} />
+                ) : (
+                  <Tooltip text={tr('A proxy for how credible $1 redemptions are. If it weakens, the reflexive backstop is less able to defend the peg.')} />
+                )}
               </span>
             </div>
             <div className="text-2xl font-bold">
@@ -943,9 +1410,24 @@ export default function StablecoinDepegSimulation() {
 
           <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp size={18} className="text-yellow-300" />
+              {scenario === 'collateralized' ? (
+                <img
+                  src={collateralRatioIconUrl}
+                  alt={tr('Collateral ratio')}
+                  width={18}
+                  height={18}
+                  className="opacity-90"
+                />
+              ) : (
+                <TrendingUp size={18} className="text-yellow-300" />
+              )}
               <span className="text-xs text-slate-400">
                 {scenario === 'collateralized' ? tr('Collateral ratio') : tr('Supply inflation')}
+                {scenario === 'collateralized' ? (
+                  <Tooltip text={tr('CR = collateral value / debt. If CR falls below the liquidation threshold, vaults are liquidated and collateral is sold into the market.')} />
+                ) : (
+                  <Tooltip text={tr('Minted backstop tokens / prior supply (per step). High inflation weakens the backstop price and can accelerate a death spiral.')} />
+                )}
               </span>
             </div>
             <div className="text-2xl font-bold">
@@ -959,7 +1441,7 @@ export default function StablecoinDepegSimulation() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[280px_1fr] gap-6">
           {/* Controls */}
           <div
             ref={controlsRef}
@@ -1139,7 +1621,13 @@ export default function StablecoinDepegSimulation() {
                             {tr('Liquidation threshold')}
                             <Tooltip text={tr('The CR level below which liquidations begin (e.g., 150%).')} />
                           </span>
-                          <span className="font-mono">{pct(params.liquidationTrigger, 0)}</span>
+                          <span
+                            className={`font-mono ${severityTextClass(
+                              severityFromRange(params.liquidationTrigger, 1.2, 2.0, { invert: true })
+                            )}`}
+                          >
+                            {pct(params.liquidationTrigger, 0)}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -1148,7 +1636,9 @@ export default function StablecoinDepegSimulation() {
                           step={0.01}
                           value={params.liquidationTrigger}
                           onChange={(e) => setParams((p) => ({ ...p, liquidationTrigger: Number(e.target.value) }))}
-                          className="w-full"
+                          className={`w-full ${severityColorClass(
+                            severityFromRange(params.liquidationTrigger, 1.2, 2.0, { invert: true })
+                          )}`}
                         />
                       </div>
 
@@ -1158,7 +1648,11 @@ export default function StablecoinDepegSimulation() {
                             {tr('Arbitrage efficiency')}
                             <Tooltip text={tr('Higher means faster pull back toward $1 when confidence is high.')} />
                           </span>
-                          <span className="font-mono">{fmt(params.arbEfficiency, 1)}</span>
+                          <span
+                            className={`font-mono ${severityTextClass(severityFromRange(params.arbEfficiency, 2, 18, { invert: true }))}`}
+                          >
+                            {fmt(params.arbEfficiency, 1)}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -1167,7 +1661,9 @@ export default function StablecoinDepegSimulation() {
                           step={0.5}
                           value={params.arbEfficiency}
                           onChange={(e) => setParams((p) => ({ ...p, arbEfficiency: Number(e.target.value) }))}
-                          className="w-full"
+                          className={`w-full ${severityColorClass(
+                            severityFromRange(params.arbEfficiency, 2, 18, { invert: true })
+                          )}`}
                         />
                       </div>
 
@@ -1177,7 +1673,11 @@ export default function StablecoinDepegSimulation() {
                             {tr('Liquidation severity')}
                             <Tooltip text={tr('How much collateral is sold per tick under full liquidation pressure.')} />
                           </span>
-                          <span className="font-mono">{pct(params.liquidationSeverity, 1)}</span>
+                          <span
+                            className={`font-mono ${severityTextClass(severityFromRange(params.liquidationSeverity, 0.01, 0.15))}`}
+                          >
+                            {pct(params.liquidationSeverity, 1)}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -1186,7 +1686,9 @@ export default function StablecoinDepegSimulation() {
                           step={0.005}
                           value={params.liquidationSeverity}
                           onChange={(e) => setParams((p) => ({ ...p, liquidationSeverity: Number(e.target.value) }))}
-                          className="w-full"
+                          className={`w-full ${severityColorClass(
+                            severityFromRange(params.liquidationSeverity, 0.01, 0.15)
+                          )}`}
                         />
                       </div>
                     </>
@@ -1198,7 +1700,11 @@ export default function StablecoinDepegSimulation() {
                             {tr('AMM depth')}
                             <Tooltip text={tr('Lower depth increases price impact of sells.')} />
                           </span>
-                          <span className="font-mono">{fmt(params.ammDepth, 2)}</span>
+                          <span
+                            className={`font-mono ${severityTextClass(severityFromRange(params.ammDepth, 0.1, 2.0, { invert: true }))}`}
+                          >
+                            {fmt(params.ammDepth, 2)}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -1207,7 +1713,7 @@ export default function StablecoinDepegSimulation() {
                           step={0.05}
                           value={params.ammDepth}
                           onChange={(e) => setParams((p) => ({ ...p, ammDepth: Number(e.target.value) }))}
-                          className="w-full"
+                          className={`w-full ${severityColorClass(severityFromRange(params.ammDepth, 0.1, 2.0, { invert: true }))}`}
                         />
                       </div>
 
@@ -1217,7 +1723,11 @@ export default function StablecoinDepegSimulation() {
                             {tr('Redemption intensity')}
                             <Tooltip text={tr('How aggressively users redeem stable for $1 of LUNA when below peg.')} />
                           </span>
-                          <span className="font-mono">{fmt(params.redemptionIntensity, 3)}</span>
+                          <span
+                            className={`font-mono ${severityTextClass(severityFromRange(params.redemptionIntensity, 0.02, 0.2))}`}
+                          >
+                            {fmt(params.redemptionIntensity, 3)}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -1226,7 +1736,7 @@ export default function StablecoinDepegSimulation() {
                           step={0.005}
                           value={params.redemptionIntensity}
                           onChange={(e) => setParams((p) => ({ ...p, redemptionIntensity: Number(e.target.value) }))}
-                          className="w-full"
+                          className={`w-full ${severityColorClass(severityFromRange(params.redemptionIntensity, 0.02, 0.2))}`}
                         />
                       </div>
 
@@ -1236,7 +1746,11 @@ export default function StablecoinDepegSimulation() {
                             {tr('Reflexivity multiplier')}
                             <Tooltip text={tr('How strongly supply inflation hits the backstop token price (LUNA).')} />
                           </span>
-                          <span className="font-mono">{fmt(params.reflexivityK, 2)}</span>
+                          <span
+                            className={`font-mono ${severityTextClass(severityFromRange(params.reflexivityK, 0.8, 4.0))}`}
+                          >
+                            {fmt(params.reflexivityK, 2)}
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -1245,7 +1759,7 @@ export default function StablecoinDepegSimulation() {
                           step={0.05}
                           value={params.reflexivityK}
                           onChange={(e) => setParams((p) => ({ ...p, reflexivityK: Number(e.target.value) }))}
-                          className="w-full"
+                          className={`w-full ${severityColorClass(severityFromRange(params.reflexivityK, 0.8, 4.0))}`}
                         />
                       </div>
                     </>
@@ -1265,7 +1779,10 @@ export default function StablecoinDepegSimulation() {
                 onClick={() => applyIntervention('add_liquidity')}
                 className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
               >
-                {tr('Add liquidity')}
+                <span className="inline-flex items-center gap-2">
+                  <Plus size={16} className="text-emerald-300" />
+                  {tr('Add liquidity')}
+                </span>
                 <TooltipInButton text={tr('Increase depth so the same sells cause less slippage.')} />
               </button>
 
@@ -1275,7 +1792,10 @@ export default function StablecoinDepegSimulation() {
                   onClick={() => applyIntervention('fix_oracle')}
                   className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
                 >
-                  {tr('Fix oracle')}
+                  <span className="inline-flex items-center gap-2">
+                    <Wrench size={16} className="text-amber-300" />
+                    {tr('Fix oracle')}
+                  </span>
                   <TooltipInButton text={tr('Improve oracle quality, which increases confidence and reduces wrong liquidations.')} />
                 </button>
               ) : (
@@ -1294,149 +1814,522 @@ export default function StablecoinDepegSimulation() {
                 onClick={() => applyIntervention('backstop_buy')}
                 className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
               >
-                {tr('Backstop buy (buy stable)')}
+                <span className="inline-flex items-center gap-2">
+                  <Banknote size={16} className="text-emerald-200" />
+                  {tr('Backstop buy (buy stable)')}
+                </span>
                 <TooltipInButton text={tr('A simplified “buyer of last resort” to show how external support can help peg recovery.')} />
               </button>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-800">
-              <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                <Activity size={18} className="text-emerald-300" />
-                {tr('Run')}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => stepOnce()}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-sm font-semibold whitespace-nowrap"
-                >
-                  {tr('Step')}
-                  <TooltipInButton text={tr('Advance the simulation by 1 tick and observe the chart + log.')} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => runSteps(5)}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm font-semibold whitespace-nowrap"
-                >
-                  {tr('Run 5')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => runSteps(10)}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm font-semibold whitespace-nowrap"
-                >
-                  {tr('Run 10')}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Quests */}
-          <div
-            ref={questsRef}
-            className={`rounded-xl border bg-slate-950/40 p-4 transition-shadow ${
-              sectionHighlight === 'quests'
-                ? 'border-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]'
-                : 'border-slate-800'
-            }`}
-          >
-            <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-              <ShieldAlert size={18} className="text-emerald-300" />
-              {tr('Learning quests')}
-            </div>
-            <div className="mt-3 space-y-4 text-sm">
-              <div>
-                <div className="text-xs text-slate-400 mb-2">{tr('Basics')}</div>
-                <div className="space-y-2">
-                  <QuestRow
-                    done={questFlags.everDepegged}
-                    text={tr('Cause a depeg (|price−1| > 2%)')}
-                    tip={tr('Apply a shock (whale sale / collateral crash / liquidity drain) and then step until price moves away from $1.')}
-                  />
-                  <QuestRow
-                    done={questFlags.everRecovered}
-                    text={tr('Recover the peg (back within 1%)')}
-                    tip={tr('Try adding liquidity or a backstop buy after a small depeg. Collateralized systems often recover if confidence remains high.')}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs text-slate-400 mb-2">{tr('Mechanism')}</div>
-                <div className="space-y-2">
-                  <QuestRow
-                    done={questFlags.everLiquidated}
-                    text={tr('Trigger liquidations (collateralized)')}
-                    tip={tr('In collateralized mode: apply Collateral crash and step until CR drops and liquidations start.')}
-                  />
-                  <QuestRow
-                    done={questFlags.everRedeemed}
-                    text={tr('Trigger redemptions (algorithmic)')}
-                    tip={tr('In algorithmic mode: cause price < $1, then step and observe stable is burned and LUNA is minted.')}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs text-slate-400 mb-2">{tr('Failure mode')}</div>
-                <div className="space-y-2">
-                  <QuestRow
-                    done={questFlags.everCollapsed}
-                    text={tr('Push the system into collapse (< $0.80)')}
-                    tip={tr('Try the Algorithmic “Start death spiral” preset and step 5–10 times. Watch LUNA supply inflate and price fall reflexively.')}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Chart + log */}
-          <div className="space-y-6">
-            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-              <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                <TrendingUp size={18} className="text-emerald-300" />
-                {tr('Price vs solvency')}
-                <Tooltip text={tr('A stablecoin can depeg due to liquidity/panic even while solvent. This panel separates market price from fundamental backing capacity.')} />
-              </div>
+          <div className="space-y-6 min-w-0">
+            {chartMaximized ? (
+              <div
+                className="fixed inset-0 z-[200] bg-black/80 p-3 sm:p-6"
+                role="dialog"
+                aria-modal="true"
+                aria-label={tr('Maximized chart')}
+                onMouseDown={(e) => {
+                  if (e.target === e.currentTarget) setChartMaximized(false);
+                }}
+              >
+                <div className="h-full w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 shadow-2xl flex flex-col">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-sm font-semibold text-slate-200 truncate flex items-center gap-2">
+                      <BarChart3 size={18} className="text-blue-300 shrink-0" />
+                      <span className="truncate">
+                        {scenario === 'collateralized' ? tr('Peg vs collateral stress') : tr('Peg vs reflexive backstop (LUNA)')}
+                      </span>
+                    </div>
 
-              {scenario === 'collateralized' ? (
-                <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-200">
-                  <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
-                    <div className="text-slate-400">{tr('Market price')}</div>
-                    <div className="text-lg font-semibold">${fmt(collat.stablePrice, 3)}</div>
-                    <div className="mt-1 text-slate-500">{tr('Can move quickly with slippage')}</div>
+                    <div className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        onClick={() => reset()}
+                        className="px-2.5 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 inline-flex items-center gap-2"
+                        aria-label={tr('Reset')}
+                      >
+                        <RefreshCw size={18} />
+                        <span className="text-xs font-semibold text-slate-200">{tr('Reset')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setChartMaximized(false)}
+                        className="p-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800"
+                        aria-label={tr('Close')}
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
-                    <div className="text-slate-400">{tr('Equity (solvency buffer)')}</div>
-                    <div className={`text-lg font-semibold ${collat.lastTick.equity < 0 ? 'text-red-300' : 'text-emerald-200'}`}>${fmt(collat.lastTick.equity, 2)}</div>
-                    <div className="mt-1 text-slate-500">{tr('Equity = collateral value − debt')}</div>
-                    <div className="mt-2 text-slate-400">{tr('Thresholds')}</div>
-                    <div className="mt-1 text-slate-500">{tr('Thin buffer')}: &lt; 10% debt • {tr('Insolvent')}: &lt; 0</div>
+                  <div className="mt-4 flex-1 min-h-0 overflow-hidden">
+                    <SimpleLineChart
+                      tr={tr}
+                      title={scenario === 'collateralized' ? tr('Peg vs collateral stress') : tr('Peg vs reflexive backstop (LUNA)')}
+                      showHeader={false}
+                      colorizeNow={true}
+                      footerRightExtra={
+                        (() => {
+                          const lastStable = series[series.length - 1]?.stable ?? 1;
+                          const nowColor = stablePriceColor(lastStable);
+                          return (
+                            <div className="flex flex-col items-end gap-1">
+                          <div className="text-right">{tr('t={{t}}', { t: currentT })}</div>
+                          <div className="flex items-center justify-end gap-2">
+                            {scenario === 'collateralized' ? (
+                              <img src={solvencyIconUrl} alt={tr('Solvency (equity)')} width={16} height={16} className="opacity-90" />
+                            ) : (
+                              <TrendingDown size={16} className="text-purple-300" />
+                            )}
+                            <span>{scenario === 'collateralized' ? tr('Solvency (equity)') : tr('Backstop strength')}</span>
+                            <span className={`font-mono ${nowColor}`}>
+                              {scenario === 'collateralized'
+                                ? `$${fmt(collat.lastTick.equity, 2)}`
+                                : pct(algo.lastTick.backstopStrength, 0)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-end gap-2">
+                            <img src={confidenceIconUrl} alt={tr('Confidence')} width={16} height={16} className="opacity-90" />
+                            <span>{tr('Confidence')}</span>
+                            <span className={`font-mono ${nowColor}`}>
+                              {pct(scenario === 'collateralized' ? collat.confidence : algo.confidence, 0)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-end gap-2">
+                            {scenario === 'collateralized' ? (
+                              <img src={collateralRatioIconUrl} alt={tr('Collateral ratio')} width={16} height={16} className="opacity-90" />
+                            ) : (
+                              <TrendingUp size={16} className="text-yellow-300" />
+                            )}
+                            <span>{scenario === 'collateralized' ? tr('Collateral ratio') : tr('Supply inflation')}</span>
+                            <span className={`font-mono ${nowColor}`}>
+                              {scenario === 'collateralized'
+                                ? pct(computeCR(collat), 0)
+                                : pct(algo.lastTick.supplyInflation, 1)}
+                            </span>
+                          </div>
+                        </div>
+                          );
+                        })()
+                      }
+                      points={series}
+                      markers={chartMarkers}
+                      stableLabel={tr('Stablecoin price')}
+                      refLabel={scenario === 'collateralized' ? tr('Collateral index') : tr('LUNA price')}
+                      refIsIndex={scenario === 'collateralized'}
+                      width={1100}
+                      height={360}
+                      legendExtra={
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => stepOnce()}
+                            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold whitespace-nowrap"
+                          >
+                            {tr('Step')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => runSteps(5)}
+                            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
+                          >
+                            {tr('Run 5')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => runSteps(10)}
+                            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
+                          >
+                            {tr('Run 10')}
+                          </button>
+                        </span>
+                      }
+                    />
+
+                    {/* Scenario, shocks & interventions (horizontal layout in maximized mode) */}
+                    <div
+                      className={
+                        maxControlsOpen
+                          ? 'mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3'
+                          : 'mt-2 flex justify-center'
+                      }
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setMaxControlsOpen((v) => !v)}
+                        className={
+                          maxControlsOpen
+                            ? 'w-full flex items-center justify-between gap-3'
+                            : 'mx-auto flex items-center justify-center p-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800'
+                        }
+                        aria-expanded={maxControlsOpen}
+                        aria-label={tr('Controls')}
+                      >
+                        {maxControlsOpen ? <div className="text-xs font-semibold text-slate-200">{tr('Controls')}</div> : null}
+                        <div className="text-slate-400">{maxControlsOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</div>
+                      </button>
+
+                      {maxControlsOpen ? (
+                        <>
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-slate-400">{tr('Scenario')}:</span>
+                              <button
+                                type="button"
+                                onClick={() => reset('collateralized')}
+                                className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold ${
+                                  scenario === 'collateralized'
+                                    ? 'bg-blue-600 border-blue-500'
+                                    : 'bg-slate-900 border-slate-700 hover:bg-slate-800'
+                                }`}
+                              >
+                                {tr('Collateralized')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => reset('algorithmic')}
+                                className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold ${
+                                  scenario === 'algorithmic'
+                                    ? 'bg-blue-600 border-blue-500'
+                                    : 'bg-slate-900 border-slate-700 hover:bg-slate-800'
+                                }`}
+                              >
+                                {tr('Algorithmic')}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-1 xl:grid-cols-[1fr_1fr_1.4fr] gap-3">
+                        <div>
+                          <div className="text-xs text-slate-500 mb-2">{tr('Shocks')}</div>
+                          <div className="flex flex-wrap gap-2">
+                            {scenario === 'collateralized' ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('collateral_crash')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <TrendingDown size={14} className="text-red-300" />
+                                  {tr('Collateral crash')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('liquidity_drain')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Droplets size={14} className="text-sky-200" />
+                                  {tr('Liquidity drain')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('whale_exit')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <ArrowRight size={14} className="text-slate-200" />
+                                  {tr('Whale exit')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('oracle_failure')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Bug size={14} className="text-amber-200" />
+                                  {tr('Oracle failure')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('confidence_shock')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <ShieldAlert size={14} className="text-amber-200" />
+                                  {tr('Confidence shock')}
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('yield_withdrawal')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Gauge size={14} className="text-slate-200" />
+                                  {tr('Yield withdrawal')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('whale_sale')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <TrendingDown size={14} className="text-rose-200" />
+                                  {tr('Whale sale')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('death_spiral')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <AlertTriangle size={14} className="text-red-300" />
+                                  {tr('Death spiral')}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs text-slate-500 mb-2">{tr('Interventions')}</div>
+                          <div className="flex flex-wrap gap-2">
+                            {scenario === 'collateralized' ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => applyIntervention('add_liquidity')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Plus size={14} className="text-emerald-300" />
+                                  {tr('Add liquidity')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyIntervention('fix_oracle')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Wrench size={14} className="text-amber-300" />
+                                  {tr('Fix oracle')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyIntervention('backstop_buy')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Banknote size={14} className="text-emerald-200" />
+                                  {tr('Backstop buy')}
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => applyIntervention('add_liquidity')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Plus size={14} className="text-emerald-300" />
+                                  {tr('Add liquidity')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyIntervention('restore_yield')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <TrendingUp size={14} className="text-blue-200" />
+                                  {tr('Restore yield')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyIntervention('backstop_buy')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Banknote size={14} className="text-emerald-200" />
+                                  {tr('Backstop buy')}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Advanced (maximized mode) */}
+                        <div>
+                          <div className="text-xs text-slate-500 mb-2">{tr('Advanced')}</div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            {scenario === 'collateralized' ? (
+                              <>
+                                <div>
+                                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                                    <span className="whitespace-nowrap">{tr('Liquidation threshold')}</span>
+                                    <span
+                                      className={`font-mono ${severityTextClass(
+                                        severityFromRange(params.liquidationTrigger, 1.2, 2.0, { invert: true })
+                                      )}`}
+                                    >
+                                      {pct(params.liquidationTrigger, 0)}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={1.2}
+                                    max={2.0}
+                                    step={0.01}
+                                    value={params.liquidationTrigger}
+                                    onChange={(e) =>
+                                      setParams((p) => ({ ...p, liquidationTrigger: Number(e.target.value) }))
+                                    }
+                                    className={`w-full h-1.5 ${severityColorClass(
+                                      severityFromRange(params.liquidationTrigger, 1.2, 2.0, { invert: true })
+                                    )}`}
+                                  />
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                                    <span className="whitespace-nowrap">{tr('Arbitrage efficiency')}</span>
+                                    <span
+                                      className={`font-mono ${severityTextClass(
+                                        severityFromRange(params.arbEfficiency, 2, 18, { invert: true })
+                                      )}`}
+                                    >
+                                      {fmt(params.arbEfficiency, 1)}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={2}
+                                    max={18}
+                                    step={0.5}
+                                    value={params.arbEfficiency}
+                                    onChange={(e) => setParams((p) => ({ ...p, arbEfficiency: Number(e.target.value) }))}
+                                    className={`w-full h-1.5 ${severityColorClass(
+                                      severityFromRange(params.arbEfficiency, 2, 18, { invert: true })
+                                    )}`}
+                                  />
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                                    <span className="whitespace-nowrap">{tr('Liquidation severity')}</span>
+                                    <span
+                                      className={`font-mono ${severityTextClass(
+                                        severityFromRange(params.liquidationSeverity, 0.01, 0.15)
+                                      )}`}
+                                    >
+                                      {pct(params.liquidationSeverity, 1)}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={0.01}
+                                    max={0.15}
+                                    step={0.005}
+                                    value={params.liquidationSeverity}
+                                    onChange={(e) =>
+                                      setParams((p) => ({ ...p, liquidationSeverity: Number(e.target.value) }))
+                                    }
+                                    className={`w-full h-1.5 ${severityColorClass(
+                                      severityFromRange(params.liquidationSeverity, 0.01, 0.15)
+                                    )}`}
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div>
+                                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                                    <span className="whitespace-nowrap">{tr('AMM depth')}</span>
+                                    <span
+                                      className={`font-mono ${severityTextClass(
+                                        severityFromRange(params.ammDepth, 0.1, 2.0, { invert: true })
+                                      )}`}
+                                    >
+                                      {fmt(params.ammDepth, 2)}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={0.1}
+                                    max={2.0}
+                                    step={0.05}
+                                    value={params.ammDepth}
+                                    onChange={(e) => setParams((p) => ({ ...p, ammDepth: Number(e.target.value) }))}
+                                    className={`w-full h-1.5 ${severityColorClass(
+                                      severityFromRange(params.ammDepth, 0.1, 2.0, { invert: true })
+                                    )}`}
+                                  />
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                                    <span className="whitespace-nowrap">{tr('Redemption intensity')}</span>
+                                    <span
+                                      className={`font-mono ${severityTextClass(
+                                        severityFromRange(params.redemptionIntensity, 0.02, 0.2)
+                                      )}`}
+                                    >
+                                      {fmt(params.redemptionIntensity, 3)}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={0.02}
+                                    max={0.2}
+                                    step={0.005}
+                                    value={params.redemptionIntensity}
+                                    onChange={(e) =>
+                                      setParams((p) => ({ ...p, redemptionIntensity: Number(e.target.value) }))
+                                    }
+                                    className={`w-full h-1.5 ${severityColorClass(
+                                      severityFromRange(params.redemptionIntensity, 0.02, 0.2)
+                                    )}`}
+                                  />
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                                    <span className="whitespace-nowrap">{tr('Reflexivity')}</span>
+                                    <span
+                                      className={`font-mono ${severityTextClass(
+                                        severityFromRange(params.reflexivityK, 0.8, 4.0)
+                                      )}`}
+                                    >
+                                      {fmt(params.reflexivityK, 2)}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={0.8}
+                                    max={4.0}
+                                    step={0.05}
+                                    value={params.reflexivityK}
+                                    onChange={(e) => setParams((p) => ({ ...p, reflexivityK: Number(e.target.value) }))}
+                                    className={`w-full h-1.5 ${severityColorClass(
+                                      severityFromRange(params.reflexivityK, 0.8, 4.0)
+                                    )}`}
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : null}
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-200">
-                  <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
-                    <div className="text-slate-400">{tr('Market price')}</div>
-                    <div className="text-lg font-semibold">${fmt(algo.stablePrice, 3)}</div>
-                    <div className="mt-1 text-slate-500">{tr('Depegs trigger redemptions')}</div>
-                  </div>
-
-                  <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
-                    <div className="text-slate-400">{tr('Backstop capacity')}</div>
-                    <div className={`text-lg font-semibold ${algo.lastTick.backstopStrength < 0.3 ? 'text-red-300' : algo.lastTick.backstopStrength < 0.6 ? 'text-amber-200' : 'text-emerald-200'}`}>{pct(algo.lastTick.backstopStrength, 0)}</div>
-                    <div className="mt-1 text-slate-500">{tr('Proxy: (LUNA price / $80) × confidence')}</div>
-                    <div className="mt-2 text-slate-400">{tr('Thresholds')}</div>
-                    <div className="mt-1 text-slate-500">{tr('Weakening')}: &lt; 60% • {tr('Failure')}: &lt; 30%</div>
-                  </div>
                 </div>
-              )}
-
-              <div className="mt-3 text-[11px] text-slate-400">
-                {tr('Key idea: price can deviate from $1 before solvency fails. In algorithmic designs, the backstop can fail reflexively even while redemptions still work mechanically.')}
+              
+            ) : null}
+            {whyBanner ? (
+              <div className="rounded-xl border border-amber-700/60 bg-amber-950/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-amber-200">{tr('Why did this happen?')}</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-100 truncate">{whyBanner.title}</div>
+                    <div className="mt-1 text-sm text-slate-200">{whyBanner.body}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setWhyBanner(null)}
+                    className="shrink-0 px-2 py-1 rounded-md border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                  >
+                    {tr('Dismiss')}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : null}
             {showFormulas ? (
               <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
                 <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
@@ -1502,6 +2395,45 @@ export default function StablecoinDepegSimulation() {
                 tr={tr}
                 title={scenario === 'collateralized' ? tr('Peg vs collateral stress') : tr('Peg vs reflexive backstop (LUNA)')}
                 points={series}
+                markers={chartMarkers}
+                headerRightExtra={
+                  <button
+                    type="button"
+                    onClick={() => setChartMaximized(true)}
+                    className="inline-flex items-center gap-2 px-2 py-1 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
+                    aria-label={tr('Maximize chart')}
+                    title={tr('Maximize chart')}
+                  >
+                    <Maximize2 size={14} />
+                  </button>
+                }
+                legendExtra={
+                  <span className="inline-flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => stepOnce()}
+                      className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold whitespace-nowrap"
+                    >
+                      {tr('Step')}
+                      <TooltipInButton text={tr('Advance the simulation by 1 tick and observe the chart + log.')} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => runSteps(5)}
+                      className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
+                    >
+                      {tr('Run 5')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => runSteps(10)}
+                      className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
+                    >
+                      {tr('Run 10')}
+                    </button>
+
+                  </span>
+                }
                 stableLabel={tr('Stablecoin price')}
                 refLabel={scenario === 'collateralized' ? tr('Collateral index') : tr('LUNA price')}
                 refIsIndex={scenario === 'collateralized'}
@@ -1597,6 +2529,108 @@ export default function StablecoinDepegSimulation() {
           </div>
         </div>
 
+        {/* Quests (moved into header widget dropdown via portal) */}
+        <LearningQuestsPortal>
+          <div className="p-0">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between gap-3"
+              onClick={() => {
+                setShowQuests((v) => !v);
+                setQuestsBlink(false);
+              }}
+              aria-expanded={showQuests}
+            >
+              <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                <ListTodo size={18} className={questsBlink ? 'text-amber-300' : 'text-emerald-300'} />
+                {tr('Learning quests')}
+                <span className="text-xs text-slate-400">({Object.values(questFlags).filter(Boolean).length}/10)</span>
+              </div>
+              <div className={`text-slate-400 ${!showQuests && questsBlink ? 'motion-safe:animate-pulse' : ''}`}>
+                {showQuests ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </div>
+            </button>
+
+            {showQuests ? (
+              <div className="mt-3 space-y-4 text-sm">
+                <div>
+                  <div className="text-xs text-slate-400 mb-2">{tr('Basics')}</div>
+                  <div className="space-y-2">
+                    <QuestRow
+                      done={questFlags.everDepegged}
+                      text={tr('Cause a depeg (|price−1| > 2%)')}
+                      tip={tr('Apply a shock (whale sale / collateral crash / liquidity drain) and then step until price moves away from $1.')}
+                    />
+                    <QuestRow
+                      done={questFlags.everRecovered}
+                      text={tr('Recover the peg (back within 1%)')}
+                      tip={tr('Try adding liquidity or a backstop buy after a small depeg. Collateralized systems often recover if confidence remains high.')}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-slate-400 mb-2">{tr('Mechanism')}</div>
+                  <div className="space-y-2">
+                    <QuestRow
+                      done={questFlags.everLiquidated}
+                      text={tr('Trigger liquidations (collateralized)')}
+                      tip={tr('In collateralized mode: apply Collateral crash and step until CR drops and liquidations start.')}
+                    />
+                    <QuestRow
+                      done={questFlags.everRedeemed}
+                      text={tr('Trigger redemptions (algorithmic)')}
+                      tip={tr('In algorithmic mode: cause price < $1, then step and observe stable is burned and LUNA is minted.')}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-slate-400 mb-2">{tr('Failure mode')}</div>
+                  <div className="space-y-2">
+                    <QuestRow
+                      done={questFlags.everCollapsed}
+                      text={tr('Push the system into collapse (< $0.80)')}
+                      tip={tr('Try the Algorithmic “Start death spiral” preset and step 5–10 times. Watch LUNA supply inflate and price fall reflexively.')}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-slate-400 mb-2">{tr('Optimization')}</div>
+                  <div className="space-y-2">
+                    <QuestRow
+                      done={questFlags.keptAbove97For10}
+                      text={tr('Keep price ≥ $0.97 for 10 steps')}
+                      tip={tr('Try small shocks, then use Add liquidity / Fix oracle / Backstop buy sparingly. Advanced settings can make the system more or less fragile.')}
+                    />
+                    <QuestRow
+                      done={questFlags.recoveredWithMinimalInterventions}
+                      text={tr('Recover the peg with ≤ 2 interventions')}
+                      tip={tr('After your first depeg, aim to return within 1% of $1 using at most two interventions. This teaches tradeoffs and timing.')}
+                    />
+                    <QuestRow
+                      done={questFlags.recoveredWithoutBackstopBuy}
+                      text={tr('Recover the peg without Backstop buy')}
+                      tip={tr('Try to recover using liquidity/oracle fixes and parameter choices — without relying on external bailout buy pressure.')}
+                    />
+                    <QuestRow
+                      done={questFlags.regainedConfidence}
+                      text={tr('Let confidence fall (< 0.50) then recover it (≥ 0.75)')}
+                      tip={tr('Confidence is a feedback loop amplifier. Create stress, then stabilize price/liquidity so confidence can rebuild.')}
+                    />
+                    <QuestRow
+                      done={questFlags.survivedCrash10StepsNoInsolvency}
+                      text={tr('After a collateral crash, survive 10 steps without insolvency')}
+                      tip={tr('Apply Collateral crash, then manage liquidations and liquidity so equity never goes negative for 10 steps.')}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </LearningQuestsPortal>
+
         {/* Real-world applications */}
         <div className="mt-6 bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-30 rounded-lg p-6 border border-blue-700">
           <h2 className="text-2xl font-bold mb-4 text-blue-300">🌐 {tr('Real-World Applications')}</h2>
@@ -1655,5 +2689,6 @@ export default function StablecoinDepegSimulation() {
         </div>
       </div>
     </div>
+    </>
   );
 }

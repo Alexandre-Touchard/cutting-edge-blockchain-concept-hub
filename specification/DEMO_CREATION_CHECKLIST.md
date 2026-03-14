@@ -131,10 +131,21 @@ Recommended additions (especially for complex demos):
   - briefly highlight the changed control/state (e.g. ring/glow around the updated chip/row)
 - Purpose: make cause/effect obvious for beginners.
 
-### 9.1 In-demo quests / checkpoints
-- Add a small in-demo checklist panel (collapsible on small screens).
-- Include 3-6 tasks that map directly to the learning objectives (e.g. "make a tx become Ignored", "replace a tx via Speed up", "cause an out-of-gas revert").
+### 9.1 Learning quests / checkpoints
+Quests are shown in the **global "Learning quests" widget in the sticky demo header** (next to the language switcher), not as a standalone on-page section.
+
+Implementation requirements:
+- Register the total count in `src/demos/demoRegistry.ts`:
+  - `learningQuestsTotal: <number>` (used for the widget badge/count)
+- Render the quests UI into the widget using the portal mount:
+  - Wrap your quests panel with `LearningQuestsPortal` (`src/ui/LearningQuestsPortal.tsx`)
+  - The portal target element is `#learning-quests-portal` (owned by `src/pages/DemoPage.tsx`)
+- The widget dropdown itself is folded by default; when opened, the quests content should be readable and usable.
+
+Quest design guidelines:
+- Include ~3–8 tasks that map directly to the learning objectives.
 - Track completion using deterministic state checks (e.g. a tx reached a certain status, a specific revert reason occurred).
+- Keep the quests panel internally collapsible if long, but default to expanded when visible.
 - Add an `EduTooltip` next to each quest explaining exactly how to complete it.
 
 ### 9.2 Advanced / Debug panel

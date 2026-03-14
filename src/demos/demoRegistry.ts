@@ -175,6 +175,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
     description:
       'Simulate what happens when you click “confirm” in a wallet: nonces, EIP-1559 fees, mempool inclusion, ignored vs pending txs, replacement (speed up / cancel), and common revert reasons.',
     concepts: ['Nonce', 'Gas Economics', 'Transaction Pool', 'Approval', 'Allowance'],
+    learningQuestsTotal: 5,
     keyTakeaways: [
       'Your nonce enforces per-account ordering; a gap blocks later txs from being mined',
       'With EIP-1559, you set max fee + priority fee; effective gas price is min(maxFee, baseFee + priorityFee)',
@@ -209,7 +210,8 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
     thumbnail: new URL('../public/photo/Demo14.png', import.meta.url).href,
     description:
       'Simulate two depeg cascades: (1) collateralized stablecoin liquidations and liquidity drains, and (2) Terra-style algorithmic reflexive collapse.',
-    concepts: ['Slippage', 'Price Impact', 'Oracle Networks', 'Stablecoin', 'Liquidation'],
+    concepts: ['Stablecoin', 'Depeg', 'Liquidity', 'Slippage', 'Price Impact', 'Oracle Networks', 'Liquidation', 'Reflexivity'],
+    learningQuestsTotal: 10,
     keyTakeaways: [
       'Low liquidity amplifies price moves: the same sell pressure causes more slippage and faster depegs',
       'Collateral crashes can trigger liquidations that sell collateral into markets, worsening the cascade',
@@ -229,6 +231,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
     difficulty: 'Beginner',
     tags: ['Coming soon'],
     concepts: ['Sequential execution', 'Parallel scheduling', 'Account locks', 'Read/write conflicts'],
+    learningQuestsTotal: 8,
     keyTakeaways: ['Why parallel scheduling increases throughput when transactions do not conflict'],
     status: 'coming_soon'
   },

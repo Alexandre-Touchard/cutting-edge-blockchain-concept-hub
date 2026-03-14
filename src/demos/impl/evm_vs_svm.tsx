@@ -1,13 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import EduTooltip from '../../ui/EduTooltip';
+import LearningQuestsPortal from '../../ui/LearningQuestsPortal';
 import LinkWithCopy from '../../ui/LinkWithCopy';
 import { useDemoI18n } from '../useDemoI18n';
 import {
   ArrowDown,
   ArrowUp,
   Bug,
+  ChevronDown,
+  ChevronUp,
   Cpu,
   Layers,
+  ListTodo,
   Plus,
   RefreshCw,
   ScrollText,
@@ -312,6 +316,17 @@ export default function EvmVsSvmDemo() {
   const [guidedMode, setGuidedMode] = useState(true);
   const [guidedHighlight, setGuidedHighlight] = useState<null | { txId: number; account: AccountId }>(null);
   const [sectionHighlight, setSectionHighlight] = useState<null | 'waves' | 'timeline'>(null);
+
+  const [showQuests, setShowQuests] = useState(true);
+  const [questsBlink, setQuestsBlink] = useState(true);
+
+  // Fold quests by default; blink the folded header for 10s.
+  useEffect(() => {
+    setShowQuests(true);
+    setQuestsBlink(true);
+    const t = window.setTimeout(() => setQuestsBlink(false), 10_000);
+    return () => window.clearTimeout(t);
+  }, []);
 
   const [questFlags, setQuestFlags] = useState(() => ({
     loadedOrderingPreset: false,
@@ -903,40 +918,61 @@ export default function EvmVsSvmDemo() {
             </div>
           </div>
 
-          {/* Quests */}
-          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-            <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-              <Shield size={18} className="text-emerald-300" />
-              {tr('Learning quests')}
-            </div>
-            <div className="mt-3 space-y-4 text-sm">
-              <div>
-                <div className="text-xs text-slate-400 mb-2">{tr('Basics')}</div>
-                <div className="space-y-2">
-                  <QuestRow done={quests.fixedMissing} text={tr('Fix TX #2 by declaring FeeVault as write')} />
-                  <QuestRow done={quests.ranBoth} text={tr('Run both EVM and Solana-style to completion')} />
-                  <QuestRow done={quests.locksViewed} text={tr('Open the lock timeline (Show locks)')} />
-                </div>
+          {/* Quests (moved into header widget dropdown via portal) */}
+          <LearningQuestsPortal>
+            <div className="p-0">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between gap-3"
+              onClick={() => {
+                setShowQuests((v) => !v);
+                setQuestsBlink(false);
+              }}
+              aria-expanded={showQuests}
+            >
+              <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                <ListTodo size={18} className={questsBlink ? 'text-amber-300' : 'text-emerald-300'} />
+                {tr('Learning quests')}
+                <span className="text-xs text-slate-400">
+                  ({Object.values(quests).filter(Boolean).length}/8)
+                </span>
               </div>
+              <div className={`text-slate-400 ${!showQuests && questsBlink ? 'motion-safe:animate-pulse' : ''}`}>
+                {showQuests ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </div>
+            </button>
 
-              <div>
-                <div className="text-xs text-slate-400 mb-2">{tr('Parallelism & conflicts')}</div>
-                <div className="space-y-2">
-                  <QuestRow done={quests.gotSpeedup} text={tr('Reach speedup ≥ 1.2× (increase threads + reduce conflicts)')} />
-                  <QuestRow done={quests.hasOracleReadParallel} text={tr('Make two Oracle READ txs run in the same wave (R/R)')} />
-                  <QuestRow done={quests.oracleWriteCreatesWLock} text={tr('Add an Oracle WRITE and observe it creates a W lock (blocks reads)')} />
-                  <QuestRow done={quests.threadLimitConcept} text={tr('Increase threads so a disjoint preset fits in 1 wave')} />
+            {showQuests ? (
+              <div className="mt-3 space-y-4 text-sm">
+                <div>
+                  <div className="text-xs text-slate-400 mb-2">{tr('Basics')}</div>
+                  <div className="space-y-2">
+                    <QuestRow done={quests.fixedMissing} text={tr('Fix TX #2 by declaring FeeVault as write')} />
+                    <QuestRow done={quests.ranBoth} text={tr('Run both EVM and Solana-style to completion')} />
+                    <QuestRow done={quests.locksViewed} text={tr('Open the lock timeline (Show locks)')} />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <div className="text-xs text-slate-400 mb-2">{tr('Ordering (MEV)')}</div>
-                <div className="space-y-2">
-                  <QuestRow done={quests.orderingExplored} text={tr('Load ordering preset and swap TX1 ↔ TX2')} />
+                <div>
+                  <div className="text-xs text-slate-400 mb-2">{tr('Parallelism & conflicts')}</div>
+                  <div className="space-y-2">
+                    <QuestRow done={quests.gotSpeedup} text={tr('Reach speedup ≥ 1.2× (increase threads + reduce conflicts)')} />
+                    <QuestRow done={quests.hasOracleReadParallel} text={tr('Make two Oracle READ txs run in the same wave (R/R)')} />
+                    <QuestRow done={quests.oracleWriteCreatesWLock} text={tr('Add an Oracle WRITE and observe it creates a W lock (blocks reads)')} />
+                    <QuestRow done={quests.threadLimitConcept} text={tr('Increase threads so a disjoint preset fits in 1 wave')} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-slate-400 mb-2">{tr('Ordering (MEV)')}</div>
+                  <div className="space-y-2">
+                    <QuestRow done={quests.orderingExplored} text={tr('Load ordering preset and swap TX1 ↔ TX2')} />
+                  </div>
                 </div>
               </div>
+            ) : null}
             </div>
-          </div>
+          </LearningQuestsPortal>
 
           {/* Waves */}
           <div

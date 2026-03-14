@@ -14,6 +14,8 @@ import {
   ListTodo,
   Plus,
   RefreshCw,
+  Play,
+  Pause,
   ShieldAlert,
   TrendingDown,
   TrendingUp,
@@ -315,9 +317,11 @@ function SimpleLineChart({
 }) {
   const w = width ?? 560;
   const h = height ?? 180;
-  const padLeft = 20;
+  const padLeft = 54;
   const padRight = 10;
-  const padY = 20;
+  const padTop = 16;
+  const padBottom = 34;
+  const yAxis = h - padBottom;
 
   const xs = points.map((p) => p.t);
   const stableYs = points.map((p) => p.stable);
@@ -326,9 +330,39 @@ function SimpleLineChart({
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);
 
+  const xTickCount = 5;
+  const xTicks = (() => {
+    if (!Number.isFinite(minX) || !Number.isFinite(maxX)) return [] as number[];
+    if (maxX === minX) return [minX];
+    const raw = Array.from({ length: xTickCount }, (_, i) => minX + (i / (xTickCount - 1)) * (maxX - minX));
+    const rounded = raw.map((v) => Math.round(v));
+    const unique = Array.from(new Set(rounded));
+    // Ensure endpoints exist.
+    if (unique[0] !== minX) unique.unshift(minX);
+    if (unique[unique.length - 1] !== maxX) unique.push(maxX);
+    return unique;
+  })();
+
   // Stable is usually around 1.0; keep scale anchored to show depegs clearly.
   const minStable = Math.min(...stableYs, 0.0);
   const maxStable = Math.max(...stableYs, 1.05);
+
+  const yTickCount = 5;
+  const yLabelDecimals = maxStable - minStable < 0.2 ? 3 : 2;
+  const yTicks = (() => {
+    if (!Number.isFinite(minStable) || !Number.isFinite(maxStable)) return [] as number[];
+    if (maxStable === minStable) return [minStable];
+    const raw = Array.from({ length: yTickCount }, (_, i) => minStable + (i / (yTickCount - 1)) * (maxStable - minStable));
+    const roundTo = Math.pow(10, yLabelDecimals);
+    const rounded = raw.map((v) => Math.round(v * roundTo) / roundTo);
+    const unique = Array.from(new Set(rounded));
+    // Ensure $1 tick is shown when in range.
+    if (1 >= minStable && 1 <= maxStable && !unique.some((v) => Math.abs(v - 1) < 1e-9)) {
+      unique.push(1);
+      unique.sort((a, b) => a - b);
+    }
+    return unique;
+  })();
 
   const minRef = Math.min(...refYs);
   const maxRef = Math.max(...refYs);
@@ -340,7 +374,7 @@ function SimpleLineChart({
 
   function yScale(y: number, min: number, max: number) {
     if (max === min) return h / 2;
-    return padY + (1 - (y - min) / (max - min)) * (h - padY * 2);
+    return padTop + (1 - (y - min) / (max - min)) * (h - padTop - padBottom);
   }
 
   function pathFor(series: number[], min: number, max: number) {
@@ -395,7 +429,7 @@ function SimpleLineChart({
   const last = points[points.length - 1];
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+    <div id ="control_section" className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
       {showHeader ? (
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
@@ -411,6 +445,39 @@ function SimpleLineChart({
 
       <div className="mt-3 overflow-auto">
         <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
+          {/* y-axis (price) */}
+          <line x1={padLeft} x2={padLeft} y1={padTop} y2={yAxis} stroke="rgba(148,163,184,0.35)" />
+          {yTicks.map((v) => (
+            <g key={v}>
+              <line
+                x1={padLeft - 4}
+                x2={padLeft}
+                y1={yScale(v, minStable, maxStable)}
+                y2={yScale(v, minStable, maxStable)}
+                stroke="rgba(148,163,184,0.35)"
+              />
+              <text
+                x={padLeft - 6}
+                y={yScale(v, minStable, maxStable) + 3}
+                textAnchor="end"
+                fontSize={10}
+                fill="rgba(148,163,184,0.85)"
+              >
+                {`$${fmt(v, yLabelDecimals)}`}
+              </text>
+            </g>
+          ))}
+          <text
+            x={14}
+            y={(padTop + yAxis) / 2}
+            transform={`rotate(-90 14 ${(padTop + yAxis) / 2})`}
+            textAnchor="middle"
+            fontSize={11}
+            fill="rgba(148,163,184,0.9)"
+          >
+            {tr('Price')}
+          </text>
+
           {/* Baseline at $1 */}
           <line
             x1={padLeft}
@@ -420,6 +487,32 @@ function SimpleLineChart({
             stroke="rgba(148,163,184,0.35)"
             strokeDasharray="4 4"
           />
+
+          {/* x-axis (t) */}
+          <line x1={padLeft} x2={w - padRight} y1={yAxis} y2={yAxis} stroke="rgba(148,163,184,0.35)" />
+          {xTicks.map((t) => (
+            <g key={t}>
+              <line
+                x1={xScale(t)}
+                x2={xScale(t)}
+                y1={yAxis}
+                y2={yAxis + 4}
+                stroke="rgba(148,163,184,0.35)"
+              />
+              <text
+                x={xScale(t)}
+                y={yAxis + 16}
+                textAnchor="middle"
+                fontSize={10}
+                fill="rgba(148,163,184,0.85)"
+              >
+                {t}
+              </text>
+            </g>
+          ))}
+          <text x={w - padRight} y={h - 8} textAnchor="end" fontSize={11} fill="rgba(148,163,184,0.9)">
+            t
+          </text>
 
           <path d={refPath} fill="none" stroke="rgba(167,139,250,0.9)" strokeWidth={2} />
           <path d={stablePath} fill="none" stroke="rgba(52,211,153,0.95)" strokeWidth={2.5} />
@@ -482,6 +575,10 @@ export default function StablecoinDepegSimulation() {
 
   const [chartMaximized, setChartMaximized] = useState(false);
   const [maxControlsOpen, setMaxControlsOpen] = useState(true);
+  const [isAutoRunning, setIsAutoRunning] = useState(false);
+  const [mechanicsOverlayOpen, setMechanicsOverlayOpen] = useState(true);
+  const autoRunIntervalRef = useRef<number | null>(null);
+  const stepOnceRef = useRef<() => void>(() => undefined);
 
   // When entering maximized mode, expand controls by default.
   useEffect(() => {
@@ -509,19 +606,24 @@ export default function StablecoinDepegSimulation() {
     return () => window.clearTimeout(t);
   }, []);
 
-  const [params, setParams] = useState(() => ({
-    // Collateralized
-    liquidationTrigger: 1.5, // 150%
-    arbEfficiency: 10, // higher -> faster return to peg
-    liquidationSeverity: 0.06, // fraction of collateral value sold per tick under full pressure
-    collateralImpactK: 0.08,
+  const DEFAULT_PARAMS = useMemo(
+    () => ({
+      // Collateralized
+      liquidationTrigger: 1.5, // 150%
+      arbEfficiency: 10, // higher -> faster return to peg
+      liquidationSeverity: 0.06, // fraction of collateral value sold per tick under full pressure
+      collateralImpactK: 0.08,
 
-    // Algorithmic
-    redemptionIntensity: 0.08, // fraction of supply per unit of stress
-    redemptionCap: 0.12, // cap as fraction of supply per tick
-    reflexivityK: 2.8, // how strongly inflation hits price
-    ammDepth: 1.0
-  }));
+      // Algorithmic
+      redemptionIntensity: 0.08, // fraction of supply per unit of stress
+      redemptionCap: 0.12, // cap as fraction of supply per tick
+      reflexivityK: 2.8, // how strongly inflation hits price
+      ammDepth: 1.0
+    }),
+    []
+  );
+
+  const [params, setParams] = useState(() => ({ ...DEFAULT_PARAMS }));
 
   const controlsRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
@@ -618,14 +720,23 @@ export default function StablecoinDepegSimulation() {
     window.setTimeout(() => setSectionHighlight(null), 900);
   }
 
-  function reset(nextScenario?: ScenarioId) {
+  function reset(nextScenario?: ScenarioId, opts?: { resetAdvanced?: boolean }) {
     const sc = nextScenario ?? scenario;
+
+    const nextParams = opts?.resetAdvanced ? { ...DEFAULT_PARAMS } : params;
+    if (opts?.resetAdvanced) {
+      setParams(nextParams);
+      setShowAdvanced(false);
+      setShowFormulas(false);
+      setShowDebug(false);
+    }
+
     const c = initialCollateralized();
     const a = initialAlgorithmic();
 
-    // Initialize state using current advanced parameters.
-    c.lastTick.liquidationTrigger = params.liquidationTrigger;
-    a.ammDepth = params.ammDepth;
+    // Initialize state using advanced parameters (either preserved or reset to defaults).
+    c.lastTick.liquidationTrigger = nextParams.liquidationTrigger;
+    a.ammDepth = nextParams.ammDepth;
 
     setScenario(sc);
     setCollat(c);
@@ -643,6 +754,7 @@ export default function StablecoinDepegSimulation() {
       survivedCrash10StepsNoInsolvency: false
     });
 
+    setIsAutoRunning(false);
     setWhyBanner(null);
     setChartMarkers([]);
     chartMarkerIdRef.current = 0;
@@ -1224,6 +1336,38 @@ export default function StablecoinDepegSimulation() {
     for (let i = 0; i < n; i++) stepOnce();
   }
 
+  // Keep a ref to the latest stepOnce closure for interval-based auto-run.
+  useEffect(() => {
+    stepOnceRef.current = stepOnce;
+  });
+
+  // Auto-run loop (500ms).
+  useEffect(() => {
+    if (!isAutoRunning) {
+      if (autoRunIntervalRef.current != null) {
+        window.clearInterval(autoRunIntervalRef.current);
+        autoRunIntervalRef.current = null;
+      }
+      return;
+    }
+
+    autoRunIntervalRef.current = window.setInterval(() => {
+      stepOnceRef.current();
+    }, 500);
+
+    return () => {
+      if (autoRunIntervalRef.current != null) {
+        window.clearInterval(autoRunIntervalRef.current);
+        autoRunIntervalRef.current = null;
+      }
+    };
+  }, [isAutoRunning]);
+
+  // Stop auto-run when closing the maximized modal.
+  useEffect(() => {
+    if (!chartMaximized) setIsAutoRunning(false);
+  }, [chartMaximized]);
+
   const stableNow = scenario === 'collateralized' ? collat.stablePrice : algo.stablePrice;
   const outcome = outcomeLabel(stableNow);
 
@@ -1288,7 +1432,7 @@ export default function StablecoinDepegSimulation() {
 
             <button
               type="button"
-              onClick={() => reset()}
+              onClick={() => reset(undefined, { resetAdvanced: true })}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800"
             >
               <RefreshCw size={16} />
@@ -1623,7 +1767,7 @@ export default function StablecoinDepegSimulation() {
                           </span>
                           <span
                             className={`font-mono ${severityTextClass(
-                              severityFromRange(params.liquidationTrigger, 1.2, 2.0, { invert: true })
+                              severityFromRange(params.liquidationTrigger, 1.2, 2.0)
                             )}`}
                           >
                             {pct(params.liquidationTrigger, 0)}
@@ -1637,7 +1781,7 @@ export default function StablecoinDepegSimulation() {
                           value={params.liquidationTrigger}
                           onChange={(e) => setParams((p) => ({ ...p, liquidationTrigger: Number(e.target.value) }))}
                           className={`w-full ${severityColorClass(
-                            severityFromRange(params.liquidationTrigger, 1.2, 2.0, { invert: true })
+                            severityFromRange(params.liquidationTrigger, 1.2, 2.0)
                           )}`}
                         />
                       </div>
@@ -1836,7 +1980,7 @@ export default function StablecoinDepegSimulation() {
                   if (e.target === e.currentTarget) setChartMaximized(false);
                 }}
               >
-                <div className="h-full w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 shadow-2xl flex flex-col">
+                <div id="maximized_modal" className="h-full w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 shadow-2xl flex flex-col">
                   <div className="flex items-start justify-between gap-3">
                     <div className="text-sm font-semibold text-slate-200 truncate flex items-center gap-2">
                       <BarChart3 size={18} className="text-blue-300 shrink-0" />
@@ -1848,7 +1992,7 @@ export default function StablecoinDepegSimulation() {
                     <div className="flex items-start gap-2">
                       <button
                         type="button"
-                        onClick={() => reset()}
+                        onClick={() => reset(undefined, { resetAdvanced: true })}
                         className="px-2.5 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 inline-flex items-center gap-2"
                         aria-label={tr('Reset')}
                       >
@@ -1866,8 +2010,125 @@ export default function StablecoinDepegSimulation() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex-1 min-h-0 overflow-hidden">
-                    <SimpleLineChart
+                  <div className="mt-4 flex-1 min-h-0 flex flex-col">
+                    <div className="flex-1 min-h-0 overflow-hidden relative">
+                      {!maxControlsOpen ? (
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-3 z-20">
+                          <button
+                            type="button"
+                            onClick={() => setMaxControlsOpen(true)}
+                            className="flex items-center justify-center p-2 rounded-lg border border-slate-700 bg-slate-900/90 hover:bg-slate-800"
+                            aria-label={tr('Controls')}
+                          >
+                            <ChevronDown size={18} className="text-slate-200" />
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {whyBanner ? (
+                        <div className="absolute right-3 top-3 z-20 max-w-[480px] flex flex-col gap-2">
+                          <div className="rounded-lg border border-amber-700/60 bg-amber-950/30 p-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="text-[11px] font-semibold text-amber-200">{tr('Why did this happen?')}</div>
+                                <div className="mt-0.5 text-[11px] font-semibold text-slate-100 truncate">{whyBanner.title}</div>
+                                <div className="mt-0.5 text-[11px] text-slate-200">{whyBanner.body}</div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setWhyBanner(null)}
+                                className="shrink-0 px-1.5 py-0.5 rounded-md border border-slate-700 bg-slate-900 hover:bg-slate-800 text-[10px]"
+                                aria-label={tr('Dismiss')}
+                              >
+                                {tr('Dismiss')}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+                            <button
+                              type="button"
+                              onClick={() => setMechanicsOverlayOpen((v) => !v)}
+                              className="w-full text-left"
+                              aria-expanded={mechanicsOverlayOpen}
+                            >
+                              <div className="text-[11px] font-semibold text-slate-200 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <BarChart3 size={16} className="text-amber-300" />
+                                  {tr('Mechanics breakdown (last step)')}
+                                </div>
+                                <div className="text-slate-400">
+                                  {mechanicsOverlayOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                </div>
+                              </div>
+                            </button>
+
+                            {mechanicsOverlayOpen ? (
+                              <div className="mt-2 max-h-[45vh] overflow-auto">
+                                {scenario === 'collateralized' ? (
+                              <div className="mt-2 grid grid-cols-1 gap-2 text-[11px] text-slate-200 leading-4">
+                                <div className="rounded-md border border-slate-800 bg-slate-900/30 p-2">
+                                  <div className="grid grid-cols-3 gap-x-2 text-slate-400">
+                                    <div className="truncate whitespace-nowrap">{tr('Collateral ratio (CR)')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Liquidation pressure')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Collateral sold (USD)')}</div>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-x-2 font-mono text-slate-100">
+                                    <div className="whitespace-nowrap">{fmt(collat.lastTick.cr, 3)}</div>
+                                    <div className="whitespace-nowrap">{fmt(collat.lastTick.liquidationPressure, 3)}</div>
+                                    <div className="whitespace-nowrap">{fmt(collat.lastTick.collateralSellUsd, 2)}</div>
+                                  </div>
+                                </div>
+
+                                <div className="rounded-md border border-slate-800 bg-slate-900/30 p-2">
+                                  <div className="grid grid-cols-3 gap-x-2 text-slate-400">
+                                    <div className="truncate whitespace-nowrap">{tr('Panic sell')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Arbitrage support')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Δprice')}</div>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-x-2 font-mono text-slate-100">
+                                    <div className="whitespace-nowrap">{fmt(collat.lastTick.panicSell, 3)}</div>
+                                    <div className="whitespace-nowrap">{fmt(collat.lastTick.arbPressure, 3)}</div>
+                                    <div className="whitespace-nowrap">{fmt(collat.lastTick.stableDelta, 4)}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mt-2 grid grid-cols-1 gap-2 text-[11px] text-slate-200 leading-4">
+                                <div className="rounded-md border border-slate-800 bg-slate-900/30 p-2">
+                                  <div className="grid grid-cols-3 gap-x-2 text-slate-400">
+                                    <div className="truncate whitespace-nowrap">{tr('Price stress')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Redemption')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('LUNA minted')}</div>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-x-2 font-mono text-slate-100">
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.priceStress, 3)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.redemption, 2)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.lunaMinted, 3)}</div>
+                                  </div>
+                                </div>
+
+                                <div className="rounded-md border border-slate-800 bg-slate-900/30 p-2">
+                                  <div className="grid grid-cols-3 gap-x-2 text-slate-400">
+                                    <div className="truncate whitespace-nowrap">{tr('Supply inflation')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Backstop strength')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Δprice')}</div>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-x-2 font-mono text-slate-100">
+                                    <div className="whitespace-nowrap">{pct(algo.lastTick.supplyInflation, 2)}</div>
+                                    <div className="whitespace-nowrap">{pct(algo.lastTick.backstopStrength, 0)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.stableDelta, 4)}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                      ) : null}
+                        </div>
+                        </div>
+                      ) : null}
+
+                      <SimpleLineChart
                       tr={tr}
                       title={scenario === 'collateralized' ? tr('Peg vs collateral stress') : tr('Peg vs reflexive backstop (LUNA)')}
                       showHeader={false}
@@ -1878,7 +2139,7 @@ export default function StablecoinDepegSimulation() {
                           const nowColor = stablePriceColor(lastStable);
                           return (
                             <div className="flex flex-col items-end gap-1">
-                          <div className="text-right">{tr('t={{t}}', { t: currentT })}</div>
+                              <div className="text-right">{tr('t={{t}}', { t: currentT })}</div>
                           <div className="flex items-center justify-end gap-2">
                             {scenario === 'collateralized' ? (
                               <img src={solvencyIconUrl} alt={tr('Solvency (equity)')} width={16} height={16} className="opacity-90" />
@@ -1922,7 +2183,7 @@ export default function StablecoinDepegSimulation() {
                       refLabel={scenario === 'collateralized' ? tr('Collateral index') : tr('LUNA price')}
                       refIsIndex={scenario === 'collateralized'}
                       width={1100}
-                      height={360}
+                      height={maxControlsOpen ? 360 : 520}
                       legendExtra={
                         <span className="inline-flex flex-wrap items-center gap-2">
                           <button
@@ -1946,34 +2207,42 @@ export default function StablecoinDepegSimulation() {
                           >
                             {tr('Run 10')}
                           </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setIsAutoRunning((v) => !v)}
+                            className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap ${
+                              isAutoRunning
+                                ? 'bg-blue-600 border-blue-500 hover:bg-blue-700'
+                                : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                            }`}
+                            aria-pressed={isAutoRunning}
+                            aria-label={isAutoRunning ? tr('Pause') : tr('Play')}
+                          >
+                            {isAutoRunning ? <Pause size={14} /> : <Play size={14} />}
+                          </button>
                         </span>
                       }
                     />
 
-                    {/* Scenario, shocks & interventions (horizontal layout in maximized mode) */}
-                    <div
-                      className={
-                        maxControlsOpen
-                          ? 'mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3'
-                          : 'mt-2 flex justify-center'
-                      }
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setMaxControlsOpen((v) => !v)}
-                        className={
-                          maxControlsOpen
-                            ? 'w-full flex items-center justify-between gap-3'
-                            : 'mx-auto flex items-center justify-center p-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800'
-                        }
-                        aria-expanded={maxControlsOpen}
-                        aria-label={tr('Controls')}
-                      >
-                        {maxControlsOpen ? <div className="text-xs font-semibold text-slate-200">{tr('Controls')}</div> : null}
-                        <div className="text-slate-400">{maxControlsOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</div>
-                      </button>
+                    </div>
 
-                      {maxControlsOpen ? (
+                    {/* Scenario, shocks & interventions (horizontal layout in maximized mode) */}
+                    {maxControlsOpen ? (
+                      <div className="shrink-0 mt-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 max-h-[42vh] overflow-auto" id="controls_section">
+                        <button
+                          type="button"
+                          onClick={() => setMaxControlsOpen(false)}
+                          className="w-full flex items-center justify-between gap-3"
+                          aria-expanded={true}
+                          aria-label={tr('Controls')}
+                        >
+                          <div className="text-xs font-semibold text-slate-200">{tr('Controls')}</div>
+                          <div className="text-slate-400">
+                            <ChevronUp size={18} />
+                          </div>
+                        </button>
+
                         <>
                           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
@@ -2153,7 +2422,7 @@ export default function StablecoinDepegSimulation() {
                                     <span className="whitespace-nowrap">{tr('Liquidation threshold')}</span>
                                     <span
                                       className={`font-mono ${severityTextClass(
-                                        severityFromRange(params.liquidationTrigger, 1.2, 2.0, { invert: true })
+                                        severityFromRange(params.liquidationTrigger, 1.2, 2.0)
                                       )}`}
                                     >
                                       {pct(params.liquidationTrigger, 0)}
@@ -2169,7 +2438,7 @@ export default function StablecoinDepegSimulation() {
                                       setParams((p) => ({ ...p, liquidationTrigger: Number(e.target.value) }))
                                     }
                                     className={`w-full h-1.5 ${severityColorClass(
-                                      severityFromRange(params.liquidationTrigger, 1.2, 2.0, { invert: true })
+                                      severityFromRange(params.liquidationTrigger, 1.2, 2.0)
                                     )}`}
                                   />
                                 </div>
@@ -2305,14 +2574,14 @@ export default function StablecoinDepegSimulation() {
                         </div>
                       </div>
                     </>
-                  ) : null}
-                    </div>
+                  </div>
+                ) : null}
                   </div>
                 </div>
                 </div>
               
             ) : null}
-            {whyBanner ? (
+            {whyBanner && !chartMaximized ? (
               <div className="rounded-xl border border-amber-700/60 bg-amber-950/20 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -2430,6 +2699,20 @@ export default function StablecoinDepegSimulation() {
                       className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
                     >
                       {tr('Run 10')}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsAutoRunning((v) => !v)}
+                      className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap ${
+                        isAutoRunning
+                          ? 'bg-blue-600 border-blue-500 hover:bg-blue-700'
+                          : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                      }`}
+                      aria-pressed={isAutoRunning}
+                      aria-label={isAutoRunning ? tr('Pause') : tr('Play')}
+                    >
+                      {isAutoRunning ? <Pause size={14} /> : <Play size={14} />}
                     </button>
 
                   </span>

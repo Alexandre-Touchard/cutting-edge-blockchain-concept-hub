@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
-  ArrowRight,
   BarChart3,
   Bug,
+  Eye,
   Maximize2,
   X,
   ChevronDown,
@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Play,
   Pause,
+  FastForward,
   ShieldAlert,
   TrendingDown,
   TrendingUp,
@@ -30,6 +31,28 @@ import { define as defineGlossary } from '../glossary';
 const collateralRatioIconUrl = new URL('../../public/icons/Icon1.png', import.meta.url).href;
 const solvencyIconUrl = new URL('../../public/icons/Icon2.png', import.meta.url).href;
 const confidenceIconUrl = new URL('../../public/icons/Icon3.png', import.meta.url).href;
+
+function WhaleIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
+  // Simple inline SVG whale (local component to avoid depending on icon availability).
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M3 13c2.2 0 3.7-1.7 5.1-3.3C9.7 7.9 11.4 6 14.5 6c3.1 0 5.2 1.7 6.2 4.2.5 1.2.7 2.5.7 3.8l2.1 1.4-2.1 1.4c0 1.3-.2 2.6-.7 3.8-1 2.5-3.1 4.2-6.2 4.2-2.4 0-4.1-1.1-5.7-2.5-.8-.7-1.6-1.5-2.4-2.3C5.1 18.7 4 18 3 18v-5Z"
+        fill="currentColor"
+        opacity="0.85"
+      />
+      <path d="M6.2 9.8c-.5-.8-.7-1.8-.2-2.8.4-.8 1.1-1.4 1.9-1.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="16.6" cy="11" r="1" fill="currentColor" />
+    </svg>
+  );
+}
 import { useDemoI18n } from '../useDemoI18n';
 
 // Backwards-compatible alias so we don't have to rewrite all usages.
@@ -409,11 +432,11 @@ function SimpleLineChart({
       case 'shock_liquidity_drain':
         return <Droplets size={14} className="text-sky-200" />;
       case 'shock_whale_exit':
-        return <ArrowRight size={14} className="text-slate-200" />;
+        return <WhaleIcon size={14} className="text-slate-200" />;
       case 'shock_oracle_failure':
-        return <Bug size={14} className="text-amber-200" />;
+        return <Eye size={14} className="text-red-300" />;
       case 'shock_confidence_shock':
-        return <ShieldAlert size={14} className="text-amber-200" />;
+        return <img src={confidenceIconUrl} alt={tr('Confidence')} width={14} height={14} className="opacity-90" />;
       case 'shock_yield_withdrawal':
         return <Gauge size={14} className="text-slate-200" />;
       case 'shock_whale_sale':
@@ -567,16 +590,53 @@ export default function StablecoinDepegSimulation() {
   const { tr } = useDemoI18n('stablecoin-depeg');
 
   const [scenario, setScenario] = useState<ScenarioId>('collateralized');
-  const [guidedMode, setGuidedMode] = useState(true);
-  const [showDebug, setShowDebug] = useState(false);
   const [showFormulas, setShowFormulas] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [sectionHighlight, setSectionHighlight] = useState<'controls' | 'chart' | 'log' | null>(null);
-
   const [chartMaximized, setChartMaximized] = useState(false);
   const [maxControlsOpen, setMaxControlsOpen] = useState(true);
-  const [isAutoRunning, setIsAutoRunning] = useState(false);
+  const [isAutoRunning, setIsAutoRunning] = useState(true);
+  const [autoRunSpeed, setAutoRunSpeed] = useState<1 | 2>(1);
+  const [showPlayHint, setShowPlayHint] = useState(true);
   const [mechanicsOverlayOpen, setMechanicsOverlayOpen] = useState(true);
+
+  type KpiKey = 'price' | 'confidence' | 'solvency' | 'cr' | 'liquidity' | 'oracle' | 'yield';
+  const [kpiHighlights, setKpiHighlights] = useState<Partial<Record<KpiKey, boolean>>>({});
+  const kpiHighlightTimeoutsRef = useRef<Partial<Record<KpiKey, number>>>({});
+
+  function flashKpis(keys: KpiKey[]) {
+    setKpiHighlights((prev) => {
+      const next = { ...prev };
+      for (const k of keys) next[k] = true;
+      return next;
+    });
+
+    for (const k of keys) {
+      const existing = kpiHighlightTimeoutsRef.current[k];
+      if (existing) window.clearTimeout(existing);
+      kpiHighlightTimeoutsRef.current[k] = window.setTimeout(() => {
+        setKpiHighlights((prev) => {
+          const next = { ...prev };
+          delete next[k];
+          return next;
+        });
+      }, 3000);
+    }
+  }
+
+  function kpiGlowClass(key: KpiKey) {
+    return kpiHighlights[key]
+      ? 'ring-2 ring-amber-400 shadow-[0_0_0_3px_rgba(245,158,11,0.25)] transition-shadow'
+      : '';
+  }
+
+  useEffect(() => {
+    return () => {
+      for (const t of Object.values(kpiHighlightTimeoutsRef.current)) {
+        if (t) window.clearTimeout(t);
+      }
+    };
+  }, []);
+
   const autoRunIntervalRef = useRef<number | null>(null);
   const stepOnceRef = useRef<() => void>(() => undefined);
 
@@ -625,9 +685,6 @@ export default function StablecoinDepegSimulation() {
 
   const [params, setParams] = useState(() => ({ ...DEFAULT_PARAMS }));
 
-  const controlsRef = useRef<HTMLDivElement | null>(null);
-  const chartRef = useRef<HTMLDivElement | null>(null);
-  const logRef = useRef<HTMLDivElement | null>(null);
   const [collat, setCollat] = useState<CollateralizedState>(() => initialCollateralized());
   const [algo, setAlgo] = useState<AlgorithmicState>(() => initialAlgorithmic());
 
@@ -647,6 +704,30 @@ export default function StablecoinDepegSimulation() {
   }));
 
   const currentT = scenario === 'collateralized' ? collat.t : algo.t;
+
+  const liquidityDepthNow = scenario === 'collateralized' ? collat.liquidityDepth : algo.ammDepth;
+  const oracleQualityNow = scenario === 'collateralized' ? collat.oracleQuality : null;
+  const yieldSupportNow = scenario === 'algorithmic' ? algo.yieldSupport : null;
+  // Slippage multiplier vs baseline depth=1, using the same nonlinear depthImpact used in the step model.
+  const slippageMultiplierNow = (() => {
+    const d = clamp(liquidityDepthNow, 0.06, 2);
+    const denomBase = 10 + 18 * 1 * 1;
+    const denomNow = 10 + 18 * d * d;
+    return denomBase / denomNow;
+  })();
+
+  const slippageSeverityClass = (() => {
+    // 1.0x = baseline. Show amber/red when impact meaningfully increases.
+    if (slippageMultiplierNow >= 2.0) return 'text-red-200';
+    if (slippageMultiplierNow >= 1.3) return 'text-amber-200';
+    return 'text-slate-200';
+  })();
+
+  const slippagePillBorderClass = (() => {
+    if (slippageMultiplierNow >= 2.0) return 'border-red-700/60';
+    if (slippageMultiplierNow >= 1.3) return 'border-amber-700/60';
+    return 'border-slate-800';
+  })();
 
   const [events, setEvents] = useState<SimEvent[]>(() => [
     {
@@ -712,14 +793,6 @@ export default function StablecoinDepegSimulation() {
     setWhyBanner({ title, body });
   }
 
-  function highlight(which: 'controls' | 'chart' | 'log') {
-    setSectionHighlight(which);
-    const el = which === 'controls' ? controlsRef.current : which === 'chart' ? chartRef.current : logRef.current;
-
-    // Auto-scroll disabled (guided mode keeps highlights only).
-    window.setTimeout(() => setSectionHighlight(null), 900);
-  }
-
   function reset(nextScenario?: ScenarioId, opts?: { resetAdvanced?: boolean }) {
     const sc = nextScenario ?? scenario;
 
@@ -728,7 +801,6 @@ export default function StablecoinDepegSimulation() {
       setParams(nextParams);
       setShowAdvanced(false);
       setShowFormulas(false);
-      setShowDebug(false);
     }
 
     const c = initialCollateralized();
@@ -854,7 +926,8 @@ export default function StablecoinDepegSimulation() {
           next.collateralValue = next.collateralValue * 0.6;
         }
         if (preset === 'liquidity_drain') {
-          next.liquidityDepth = clamp(next.liquidityDepth * 0.6, 0.05, 2);
+          // Stronger depth shock => higher slippage for the same sells.
+          next.liquidityDepth = clamp(next.liquidityDepth * 0.35, 0.05, 2);
         }
         if (preset === 'whale_exit') {
           next.whaleSell += 14;
@@ -897,7 +970,20 @@ export default function StablecoinDepegSimulation() {
         crashTicksRef.current = 0;
         crashInsolvencyRef.current = false;
       }
-    } else {
+
+      flashKpis(
+        preset === 'collateral_crash'
+          ? ['solvency', 'cr']
+          : preset === 'liquidity_drain'
+            ? ['liquidity']
+            : preset === 'whale_exit'
+              ? ['price']
+              : preset === 'oracle_failure'
+                ? ['oracle', 'confidence']
+                : ['confidence']
+      );
+    } else { 
+
       setAlgo((s) => {
         const next = { ...s };
         if (preset === 'yield_withdrawal') {
@@ -930,6 +1016,14 @@ export default function StablecoinDepegSimulation() {
             ? 'shock_whale_sale'
             : 'shock_death_spiral';
       addChartMarker(markerKind, tr('Shock: {{name}}', { name }));
+
+      flashKpis(
+        preset === 'yield_withdrawal'
+          ? ['yield', 'confidence']
+          : preset === 'whale_sale'
+            ? ['price']
+            : ['yield', 'confidence', 'price']
+      );
     }
 
     // No auto-scroll on action.
@@ -960,6 +1054,7 @@ export default function StablecoinDepegSimulation() {
 
       addEvent('success', tr('Intervention: {{name}}', { name }));
       addChartMarker(kind as ChartMarker['kind'], tr('Intervention: {{name}}', { name }));
+      flashKpis(kind === 'add_liquidity' ? ['liquidity', 'price'] : kind === 'fix_oracle' ? ['oracle', 'confidence'] : ['price', 'confidence']);
       setWhy(
         tr('Intervention effect'),
         kind === 'add_liquidity'
@@ -990,6 +1085,7 @@ export default function StablecoinDepegSimulation() {
 
       addEvent('success', tr('Intervention: {{name}}', { name }));
       addChartMarker(kind as ChartMarker['kind'], tr('Intervention: {{name}}', { name }));
+      flashKpis(kind === 'add_liquidity' ? ['liquidity', 'price'] : kind === 'restore_yield' ? ['yield', 'confidence'] : ['price', 'confidence']);
       setWhy(
         tr('Intervention effect'),
         kind === 'add_liquidity'
@@ -1036,7 +1132,9 @@ export default function StablecoinDepegSimulation() {
         const sellPressure = s.whaleSell + panicSell;
         const arbPressure = (1 - s.stablePrice) * params.arbEfficiency * confidenceNext;
 
-        const stableDelta = clamp((-sellPressure + arbPressure) / (10 + 18 * liquidityDepthNext), -0.08, 0.08);
+        // Nonlinear slippage: shallow liquidity causes disproportionately larger price moves.
+        const depthImpact = liquidityDepthNext * liquidityDepthNext;
+        const stableDelta = clamp((-sellPressure + arbPressure) / (10 + 18 * depthImpact), -0.08, 0.08);
         const stablePriceNext = clamp(s.stablePrice + stableDelta, 0.05, 1.2);
 
         // Shocks slowly decay/recover.
@@ -1341,7 +1439,7 @@ export default function StablecoinDepegSimulation() {
     stepOnceRef.current = stepOnce;
   });
 
-  // Auto-run loop (500ms).
+  // Auto-run loop.
   useEffect(() => {
     if (!isAutoRunning) {
       if (autoRunIntervalRef.current != null) {
@@ -1351,9 +1449,10 @@ export default function StablecoinDepegSimulation() {
       return;
     }
 
+    const delayMs = autoRunSpeed === 2 ? 250 : 500;
     autoRunIntervalRef.current = window.setInterval(() => {
       stepOnceRef.current();
-    }, 500);
+    }, delayMs);
 
     return () => {
       if (autoRunIntervalRef.current != null) {
@@ -1361,23 +1460,31 @@ export default function StablecoinDepegSimulation() {
         autoRunIntervalRef.current = null;
       }
     };
-  }, [isAutoRunning]);
+  }, [isAutoRunning, autoRunSpeed]);
+
+  // Hint: highlight Play button briefly on first load.
+  useEffect(() => {
+    const t = window.setTimeout(() => setShowPlayHint(false), 10_000);
+    return () => window.clearTimeout(t);
+  }, []);
 
   // Stop auto-run when closing the maximized modal.
+  const prevChartMaximizedRef = useRef(chartMaximized);
   useEffect(() => {
-    if (!chartMaximized) setIsAutoRunning(false);
+    if (prevChartMaximizedRef.current && !chartMaximized) setIsAutoRunning(false);
+    prevChartMaximizedRef.current = chartMaximized;
   }, [chartMaximized]);
 
   const stableNow = scenario === 'collateralized' ? collat.stablePrice : algo.stablePrice;
   const outcome = outcomeLabel(stableNow);
 
   return (
-    <>
+    //<>
       <div className="w-full max-w-7xl mx-auto p-6 text-white">
       <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-950 to-slate-900 p-6">
         {/* Header */}
         <div className="flex flex-col gap-4">
-          {/* Title + subtitle (force single-line each; truncate on small widths) */}
+          {/* Title */}
           <div className="min-w-0">
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 min-w-0">
               <Droplets className="text-blue-300 shrink-0" />
@@ -1385,25 +1492,21 @@ export default function StablecoinDepegSimulation() {
                 {tr('Stablecoin Depeg Cascade Simulation')}
               </span>
             </h1>
+          </div>
+
+          {/* Subtitle + actions */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
             <p
-              className="text-slate-300 mt-2 min-w-0 truncate whitespace-nowrap"
+              className="text-slate-300 min-w-0"
               title={tr(
                 'Apply shocks and watch how liquidity, confidence, and feedback loops can break (or restore) a stablecoin peg.'
               )}
             >
               {tr('Apply shocks and watch how liquidity, confidence, and feedback loops can break (or restore) a stablecoin peg.')}
             </p>
-          </div>
 
-          {/* Toggles row (sits directly under subtitle) */}
-          <div className="shrink-0 flex flex-wrap items-center gap-2">
-            <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-sm text-slate-200">
-              <input type="checkbox" checked={guidedMode} onChange={(e) => setGuidedMode(e.target.checked)} />
-              {tr('Guided mode')}
-              <Tooltip text={tr('When enabled, shock buttons and Step will scroll to the key panels so beginners can follow cause → effect.')} />
-            </label>
-
-            <button
+            <div className="shrink-0 flex flex-wrap items-center gap-2 justify-start lg:justify-end">
+              <button
               type="button"
               onClick={() => setShowAdvanced((v) => !v)}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800"
@@ -1423,26 +1526,18 @@ export default function StablecoinDepegSimulation() {
 
             <button
               type="button"
-              onClick={() => setShowDebug((v) => !v)}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800"
-            >
-              <Bug size={16} />
-              {showDebug ? tr('Hide debug') : tr('Show debug')}
-            </button>
-
-            <button
-              type="button"
               onClick={() => reset(undefined, { resetAdvanced: true })}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800"
             >
               <RefreshCw size={16} />
               {tr('Reset')}
             </button>
-
+          </div>
           </div>
 
-          {/* 60-second tour */}
-          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 w-full lg:max-w-[300px] xl:max-w-[280px]">
+          {/* 60-second tour + What happened */}
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[280px_1fr] gap-4 items-start">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 w-full">
             <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
               {tr('60-second tour')}
               <Tooltip
@@ -1477,14 +1572,33 @@ export default function StablecoinDepegSimulation() {
                   )}
                 />
               </li>
-              <li>{tr('Use Guided mode to auto-scroll to the relevant panel as things change.')}</li>
             </ol>
           </div>
-        </div>
 
-        {/* Top stats */}
+          {whyBanner ? (
+            <div className="rounded-xl border border-amber-700/60 bg-amber-950/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-amber-200">{tr('Why did this happen?')}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-100 truncate">{whyBanner.title}</div>
+                  <div className="mt-1 text-sm text-slate-200">{whyBanner.body}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWhyBanner(null)}
+                  className="shrink-0 px-2 py-1 rounded-md border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                >
+                  {tr('Dismiss')}
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Top stats */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+          <div className={`bg-slate-800 rounded-lg p-4 border border-slate-700 ${kpiGlowClass('price')}`}>
             <div className="flex items-center gap-2 mb-1">
               <Gauge size={18} className="text-emerald-300" />
               <span className="text-xs text-slate-400">
@@ -1498,7 +1612,7 @@ export default function StablecoinDepegSimulation() {
             </div>
           </div>
 
-          <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+          <div className={`bg-slate-800 rounded-lg p-4 border border-slate-700 ${kpiGlowClass('confidence')}`}>
             <div className="flex items-center gap-2 mb-1">
               <img
                 src={confidenceIconUrl}
@@ -1518,7 +1632,7 @@ export default function StablecoinDepegSimulation() {
             <div className="text-xs text-slate-500 mt-1">{tr('t={{t}}', { t: currentT })}</div>
           </div>
 
-          <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+          <div className={`bg-slate-800 rounded-lg p-4 border border-slate-700 ${kpiGlowClass('solvency')}`}>
             <div className="flex items-center gap-2 mb-1">
               {scenario === 'collateralized' ? (
                 <img
@@ -1552,7 +1666,7 @@ export default function StablecoinDepegSimulation() {
             </div>
           </div>
 
-          <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+          <div className={`bg-slate-800 rounded-lg p-4 border border-slate-700 ${kpiGlowClass('cr')}`}>
             <div className="flex items-center gap-2 mb-1">
               {scenario === 'collateralized' ? (
                 <img
@@ -1588,12 +1702,7 @@ export default function StablecoinDepegSimulation() {
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[280px_1fr] gap-6">
           {/* Controls */}
           <div
-            ref={controlsRef}
-            className={`rounded-xl border bg-slate-950/40 p-4 transition-shadow ${
-              sectionHighlight === 'controls'
-                ? 'border-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]'
-                : 'border-slate-800'
-            }`}
+            className="rounded-xl border border-slate-800 bg-slate-950/40 p-4"
           >
             <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
               <ShieldAlert size={18} className="text-blue-300" />
@@ -1659,7 +1768,7 @@ export default function StablecoinDepegSimulation() {
                   className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
                 >
                   <span className="inline-flex items-center gap-2">
-                    <Activity size={16} className="text-red-300" />
+                    <WhaleIcon size={16} className="text-slate-200" />
                     {tr('Whale exit')}
                   </span>
                   <TooltipInButton text={tr('A large holder sells stablecoin into AMMs, creating imbalance and pushing price below $1.')} />
@@ -1671,7 +1780,7 @@ export default function StablecoinDepegSimulation() {
                   className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
                 >
                   <span className="inline-flex items-center gap-2">
-                    <Bug size={16} className="text-yellow-300" />
+                    <Eye size={16} className="text-red-300" />
                     {tr('Oracle failure')}
                   </span>
                   <TooltipInButton text={tr('Bad or delayed price feeds can trigger wrong liquidations and reduce arbitrage confidence.')} />
@@ -1683,7 +1792,7 @@ export default function StablecoinDepegSimulation() {
                   className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
                 >
                   <span className="inline-flex items-center gap-2">
-                    <Activity size={16} className="text-blue-300" />
+                    <img src={confidenceIconUrl} alt={tr('Confidence')} width={16} height={16} className="opacity-90" />
                     {tr('Confidence shock')}
                   </span>
                   <TooltipInButton text={tr('Rumors/hacks/news can cause panic selling and liquidity withdrawal even without a fundamental change.')} />
@@ -2057,8 +2166,20 @@ export default function StablecoinDepegSimulation() {
                                   <BarChart3 size={16} className="text-amber-300" />
                                   {tr('Mechanics breakdown (last step)')}
                                 </div>
-                                <div className="text-slate-400">
-                                  {mechanicsOverlayOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+
+                                <div className="flex items-center gap-2">
+                                  <div className={`inline-flex items-center gap-2 px-2 py-0.5 rounded-md border ${slippagePillBorderClass} bg-slate-900/30 text-[11px] text-slate-200`}>
+                                    <Droplets size={14} className="text-sky-200" />
+                                    <span className="text-slate-400">{tr('Depth')}</span>
+                                    <span className="font-mono">{fmt(liquidityDepthNow, 2)}</span>
+                                    <span className="text-slate-500">•</span>
+                                    <span className="text-slate-400">{tr('Slippage')}</span>
+                                    <span className={`font-mono ${slippageSeverityClass}`}>{fmt(slippageMultiplierNow, 2)}x</span>
+                                  </div>
+
+                                  <div className="text-slate-400">
+                                    {mechanicsOverlayOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                  </div>
                                 </div>
                               </div>
                             </button>
@@ -2128,6 +2249,7 @@ export default function StablecoinDepegSimulation() {
                         </div>
                       ) : null}
 
+                      <div className={kpiGlowClass('price')}>
                       <SimpleLineChart
                       tr={tr}
                       title={scenario === 'collateralized' ? tr('Peg vs collateral stress') : tr('Peg vs reflexive backstop (LUNA)')}
@@ -2140,7 +2262,9 @@ export default function StablecoinDepegSimulation() {
                           return (
                             <div className="flex flex-col items-end gap-1">
                               <div className="text-right">{tr('t={{t}}', { t: currentT })}</div>
-                          <div className="flex items-center justify-end gap-2">
+
+
+                              <div className={`flex items-center justify-end gap-2 ${kpiGlowClass('solvency')}`}>
                             {scenario === 'collateralized' ? (
                               <img src={solvencyIconUrl} alt={tr('Solvency (equity)')} width={16} height={16} className="opacity-90" />
                             ) : (
@@ -2153,14 +2277,14 @@ export default function StablecoinDepegSimulation() {
                                 : pct(algo.lastTick.backstopStrength, 0)}
                             </span>
                           </div>
-                          <div className="flex items-center justify-end gap-2">
+                          <div className={`flex items-center justify-end gap-2 ${kpiGlowClass('confidence')}`}>
                             <img src={confidenceIconUrl} alt={tr('Confidence')} width={16} height={16} className="opacity-90" />
                             <span>{tr('Confidence')}</span>
                             <span className={`font-mono ${nowColor}`}>
                               {pct(scenario === 'collateralized' ? collat.confidence : algo.confidence, 0)}
                             </span>
                           </div>
-                          <div className="flex items-center justify-end gap-2">
+                          <div className={`flex items-center justify-end gap-2 ${kpiGlowClass('cr')}`}>
                             {scenario === 'collateralized' ? (
                               <img src={collateralRatioIconUrl} alt={tr('Collateral ratio')} width={16} height={16} className="opacity-90" />
                             ) : (
@@ -2189,7 +2313,7 @@ export default function StablecoinDepegSimulation() {
                           <button
                             type="button"
                             onClick={() => stepOnce()}
-                            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold whitespace-nowrap"
+                            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
                           >
                             {tr('Step')}
                           </button>
@@ -2208,23 +2332,47 @@ export default function StablecoinDepegSimulation() {
                             {tr('Run 10')}
                           </button>
 
+
                           <button
                             type="button"
-                            onClick={() => setIsAutoRunning((v) => !v)}
+                            onClick={() => {
+                              setShowPlayHint(false);
+                              setAutoRunSpeed(1);
+                              setIsAutoRunning((v) => !(v && autoRunSpeed === 1));
+                            }}
                             className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap ${
-                              isAutoRunning
+                              isAutoRunning && autoRunSpeed === 1
+                                ? 'bg-blue-600 border-blue-500 hover:bg-blue-700'
+                                : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                            } ${showPlayHint ? 'ring-2 ring-amber-400 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]' : ''}`}
+                            aria-pressed={isAutoRunning && autoRunSpeed === 1}
+                            aria-label={isAutoRunning && autoRunSpeed === 1 ? tr('Pause') : tr('Play')}
+                          >
+                            {isAutoRunning && autoRunSpeed === 1 ? <Pause size={14} /> : <Play size={14} />}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAutoRunSpeed(2);
+                              setIsAutoRunning((v) => !(v && autoRunSpeed === 2));
+                            }}
+                            className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap ${
+                              isAutoRunning && autoRunSpeed === 2
                                 ? 'bg-blue-600 border-blue-500 hover:bg-blue-700'
                                 : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
                             }`}
-                            aria-pressed={isAutoRunning}
-                            aria-label={isAutoRunning ? tr('Pause') : tr('Play')}
+                            aria-pressed={isAutoRunning && autoRunSpeed === 2}
+                            aria-label={isAutoRunning && autoRunSpeed === 2 ? tr('Pause') : tr('Play 2x')}
                           >
-                            {isAutoRunning ? <Pause size={14} /> : <Play size={14} />}
+                            {isAutoRunning && autoRunSpeed === 2 ? <Pause size={14} /> : <FastForward size={14} />}
+                            <span className="text-[10px] font-bold">2x</span>
                           </button>
                         </span>
                       }
                     />
 
+                    </div>
                     </div>
 
                     {/* Scenario, shocks & interventions (horizontal layout in maximized mode) */}
@@ -2299,7 +2447,7 @@ export default function StablecoinDepegSimulation() {
                                   onClick={() => applyShock('whale_exit')}
                                   className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
                                 >
-                                  <ArrowRight size={14} className="text-slate-200" />
+                                  <WhaleIcon size={14} className="text-slate-200" />
                                   {tr('Whale exit')}
                                 </button>
                                 <button
@@ -2307,7 +2455,7 @@ export default function StablecoinDepegSimulation() {
                                   onClick={() => applyShock('oracle_failure')}
                                   className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
                                 >
-                                  <Bug size={14} className="text-amber-200" />
+                                  <Eye size={14} className="text-red-300" />
                                   {tr('Oracle failure')}
                                 </button>
                                 <button
@@ -2315,7 +2463,7 @@ export default function StablecoinDepegSimulation() {
                                   onClick={() => applyShock('confidence_shock')}
                                   className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
                                 >
-                                  <ShieldAlert size={14} className="text-amber-200" />
+                                  <img src={confidenceIconUrl} alt={tr('Confidence')} width={14} height={14} className="opacity-90" />
                                   {tr('Confidence shock')}
                                 </button>
                               </>
@@ -2576,73 +2724,115 @@ export default function StablecoinDepegSimulation() {
                     </>
                   </div>
                 ) : null}
-                  </div>
-                </div>
-                </div>
-              
-            ) : null}
-            {whyBanner && !chartMaximized ? (
-              <div className="rounded-xl border border-amber-700/60 bg-amber-950/20 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold text-amber-200">{tr('Why did this happen?')}</div>
-                    <div className="mt-1 text-sm font-semibold text-slate-100 truncate">{whyBanner.title}</div>
-                    <div className="mt-1 text-sm text-slate-200">{whyBanner.body}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setWhyBanner(null)}
-                    className="shrink-0 px-2 py-1 rounded-md border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
-                  >
-                    {tr('Dismiss')}
-                  </button>
+              </div>
                 </div>
               </div>
             ) : null}
             {showFormulas ? (
               <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-                <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                  <BarChart3 size={18} className="text-amber-300" />
-                  {tr('Mechanics breakdown (last step)')}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <BarChart3 size={18} className="text-amber-300" />
+                    {tr('Mechanics breakdown (last step)')}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-lg border ${slippagePillBorderClass} bg-slate-900/30 text-[11px] text-slate-200 ${kpiGlowClass('liquidity')}`}>
+                      <Droplets size={14} className="text-sky-200" />
+                      <span className="text-slate-400">{tr('Depth')}</span>
+                      <span className="font-mono">{fmt(liquidityDepthNow, 2)}</span>
+                      <span className="text-slate-500">•</span>
+                      <span className="text-slate-400">{tr('Slippage')}</span>
+                      <span className={`font-mono ${slippageSeverityClass}`}>{fmt(slippageMultiplierNow, 2)}x</span>
+                    </div>
+
+                    {scenario === 'collateralized' ? (
+                      <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900/30 text-[11px] text-slate-200 ${kpiGlowClass('oracle')}`}>
+                        <span className="text-slate-400">{tr('Oracle')}</span>
+                        <span className="font-mono">{fmt(oracleQualityNow ?? 0, 2)}</span>
+                      </div>
+                    ) : (
+                      <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900/30 text-[11px] text-slate-200 ${kpiGlowClass('yield')}`}>
+                        <span className="text-slate-400">{tr('Yield')}</span>
+                        <span className="font-mono">{fmt(yieldSupportNow ?? 0, 2)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {scenario === 'collateralized' ? (
                   <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-200">
                     <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
-                      <div className="text-slate-400">{tr('Collateral ratio (CR)')}</div>
+                      <div className="text-slate-400 inline-flex items-center gap-2">
+                        {tr('Collateral ratio (CR)')}
+                        <Tooltip text={tr('Collateral ratio = collateral value / debt. If it falls below the liquidation threshold, liquidations begin.')} />
+                      </div>
                       <div className="font-mono text-slate-100">{fmt(collat.lastTick.cr, 3)}</div>
-                      <div className="mt-2 text-slate-400">{tr('Liquidation pressure')}</div>
+                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
+                        {tr('Liquidation pressure')}
+                        <Tooltip text={tr('0..1 measure of how far below the liquidation threshold the system is. Drives forced collateral selling.')} />
+                      </div>
                       <div className="font-mono text-slate-100">{fmt(collat.lastTick.liquidationPressure, 3)}</div>
-                      <div className="mt-2 text-slate-400">{tr('Collateral sold (USD)')}</div>
+                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
+                        {tr('Collateral sold (USD)')}
+                        <Tooltip text={tr('USD value of collateral sold this step due to liquidations. More selling pushes collateral price down.')} />
+                      </div>
                       <div className="font-mono text-slate-100">{fmt(collat.lastTick.collateralSellUsd, 2)}</div>
                     </div>
 
                     <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
-                      <div className="text-slate-400">{tr('Panic sell')}</div>
+                      <div className="text-slate-400 inline-flex items-center gap-2">
+                        {tr('Panic sell')}
+                        <Tooltip text={tr('Selling pressure driven by low confidence and/or oracle stress (not necessarily liquidations).')} />
+                      </div>
                       <div className="font-mono text-slate-100">{fmt(collat.lastTick.panicSell, 3)}</div>
-                      <div className="mt-2 text-slate-400">{tr('Arbitrage support')}</div>
+                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
+                        {tr('Arbitrage support')}
+                        <Tooltip text={tr('Buy pressure from arbitrageurs when price deviates from $1. Stronger with higher confidence and arb efficiency.')} />
+                      </div>
                       <div className="font-mono text-slate-100">{fmt(collat.lastTick.arbPressure, 3)}</div>
-                      <div className="mt-2 text-slate-400">{tr('Δprice')}</div>
+                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
+                        {tr('Δprice')}
+                        <Tooltip text={tr('Stablecoin price change this step (after sells and arbitrage).')} />
+                      </div>
                       <div className="font-mono text-slate-100">{fmt(collat.lastTick.stableDelta, 4)}</div>
                     </div>
                   </div>
                 ) : (
                   <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-200">
                     <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
-                      <div className="text-slate-400">{tr('Price stress')}</div>
+                      <div className="text-slate-400 inline-flex items-center gap-2">
+                        {tr('Price stress')}
+                        <Tooltip text={tr('How far the stablecoin price is from $1. Higher stress increases redemption and reflexive selling.')} />
+                      </div>
                       <div className="font-mono text-slate-100">{fmt(algo.lastTick.priceStress, 3)}</div>
-                      <div className="mt-2 text-slate-400">{tr('Redemption')}</div>
+                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
+                        {tr('Redemption')}
+                        <Tooltip text={tr('Stablecoin redeemed/burned this step when price < $1, which mints backstop tokens.')} />
+                      </div>
                       <div className="font-mono text-slate-100">{fmt(algo.lastTick.redemption, 2)}</div>
-                      <div className="mt-2 text-slate-400">{tr('LUNA minted')}</div>
+                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
+                        {tr('LUNA minted')}
+                        <Tooltip text={tr('Backstop tokens minted to honor redemptions. More minting increases inflation and can accelerate a death spiral.')} />
+                      </div>
                       <div className="font-mono text-slate-100">{fmt(algo.lastTick.lunaMinted, 3)}</div>
                     </div>
 
                     <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
-                      <div className="text-slate-400">{tr('Supply inflation')}</div>
+                      <div className="text-slate-400 inline-flex items-center gap-2">
+                        {tr('Supply inflation')}
+                        <Tooltip text={tr('Minted backstop tokens relative to prior supply (per step). High inflation weakens the backstop price.')} />
+                      </div>
                       <div className="font-mono text-slate-100">{pct(algo.lastTick.supplyInflation, 2)}</div>
-                      <div className="mt-2 text-slate-400">{tr('Backstop strength')}</div>
+                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
+                        {tr('Backstop strength')}
+                        <Tooltip text={tr('0..1 proxy for how credible $1 redemptions are. Falls as inflation rises and backstop price weakens.')} />
+                      </div>
                       <div className="font-mono text-slate-100">{pct(algo.lastTick.backstopStrength, 0)}</div>
-                      <div className="mt-2 text-slate-400">{tr('Δprice')}</div>
+                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
+                        {tr('Δprice')}
+                        <Tooltip text={tr('Stablecoin price change this step (after redemptions and reflexive effects).')} />
+                      </div>
                       <div className="font-mono text-slate-100">{fmt(algo.lastTick.stableDelta, 4)}</div>
                     </div>
                   </div>
@@ -2654,12 +2844,7 @@ export default function StablecoinDepegSimulation() {
               </div>
             ) : null}
 
-            <div
-              ref={chartRef}
-              className={`transition-shadow ${
-                sectionHighlight === 'chart' ? 'rounded-xl shadow-[0_0_0_3px_rgba(245,158,11,0.25)]' : ''
-              }`}
-            >
+            <div>
               <SimpleLineChart
                 tr={tr}
                 title={scenario === 'collateralized' ? tr('Peg vs collateral stress') : tr('Peg vs reflexive backstop (LUNA)')}
@@ -2681,7 +2866,7 @@ export default function StablecoinDepegSimulation() {
                     <button
                       type="button"
                       onClick={() => stepOnce()}
-                      className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold whitespace-nowrap"
+                      className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
                     >
                       {tr('Step')}
                       <TooltipInButton text={tr('Advance the simulation by 1 tick and observe the chart + log.')} />
@@ -2701,18 +2886,41 @@ export default function StablecoinDepegSimulation() {
                       {tr('Run 10')}
                     </button>
 
+
                     <button
                       type="button"
-                      onClick={() => setIsAutoRunning((v) => !v)}
+                      onClick={() => {
+                        setShowPlayHint(false);
+                        setAutoRunSpeed(1);
+                        setIsAutoRunning((v) => !(v && autoRunSpeed === 1));
+                      }}
                       className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap ${
-                        isAutoRunning
+                        isAutoRunning && autoRunSpeed === 1
+                          ? 'bg-blue-600 border-blue-500 hover:bg-blue-700'
+                          : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                      } ${showPlayHint ? 'ring-2 ring-amber-400 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]' : ''}`}
+                      aria-pressed={isAutoRunning && autoRunSpeed === 1}
+                      aria-label={isAutoRunning && autoRunSpeed === 1 ? tr('Pause') : tr('Play')}
+                    >
+                      {isAutoRunning && autoRunSpeed === 1 ? <Pause size={14} /> : <Play size={14} />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutoRunSpeed(2);
+                        setIsAutoRunning((v) => !(v && autoRunSpeed === 2));
+                      }}
+                      className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap ${
+                        isAutoRunning && autoRunSpeed === 2
                           ? 'bg-blue-600 border-blue-500 hover:bg-blue-700'
                           : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
                       }`}
-                      aria-pressed={isAutoRunning}
-                      aria-label={isAutoRunning ? tr('Pause') : tr('Play')}
+                      aria-pressed={isAutoRunning && autoRunSpeed === 2}
+                      aria-label={isAutoRunning && autoRunSpeed === 2 ? tr('Pause') : tr('Play 2x')}
                     >
-                      {isAutoRunning ? <Pause size={14} /> : <Play size={14} />}
+                      {isAutoRunning && autoRunSpeed === 2 ? <Pause size={14} /> : <FastForward size={14} />}
+                      <span className="text-[10px] font-bold">2x</span>
                     </button>
 
                   </span>
@@ -2723,14 +2931,7 @@ export default function StablecoinDepegSimulation() {
               />
             </div>
 
-            <div
-              ref={logRef}
-              className={`rounded-xl border bg-slate-950/40 p-4 transition-shadow ${
-                sectionHighlight === 'log'
-                  ? 'border-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]'
-                  : 'border-slate-800'
-              }`}
-            >
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
               <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
                 <Activity size={18} className="text-blue-300" />
                 {tr('Event log')}
@@ -2753,61 +2954,6 @@ export default function StablecoinDepegSimulation() {
                 )}
               </div>
 
-              {showDebug ? (
-                <div className="mt-4 pt-4 border-t border-slate-800 text-xs text-slate-300 space-y-3">
-                  <div className="font-semibold text-slate-200 flex items-center gap-2">
-                    <Bug size={14} /> {tr('Debug')}
-                  </div>
-
-                  {scenario === 'collateralized' ? (
-                    <div className="space-y-1">
-                      <div>
-                        {tr('CR')}: <span className="font-mono">{fmt(collat.lastTick.cr, 3)}</span>
-                      </div>
-                      <div>
-                        {tr('Liquidation pressure')}: <span className="font-mono">{fmt(collat.liquidationPressure, 3)}</span>
-                      </div>
-                      <div>
-                        {tr('Panic sell')}: <span className="font-mono">{fmt(collat.lastTick.panicSell, 3)}</span>
-                      </div>
-                      <div>
-                        {tr('Arb pressure')}: <span className="font-mono">{fmt(collat.lastTick.arbPressure, 3)}</span>
-                      </div>
-                      <div>
-                        {tr('Liquidity depth')}: <span className="font-mono">{fmt(collat.liquidityDepth, 2)}</span>
-                      </div>
-                      <div>
-                        {tr('Oracle quality')}: <span className="font-mono">{fmt(collat.oracleQuality, 2)}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <div>
-                        {tr('Redemption')}: <span className="font-mono">{fmt(algo.lastTick.redemption, 2)}</span>
-                      </div>
-                      <div>
-                        {tr('LUNA minted')}: <span className="font-mono">{fmt(algo.lastTick.lunaMinted, 3)}</span>
-                      </div>
-                      <div>
-                        {tr('Supply inflation')}: <span className="font-mono">{pct(algo.lastTick.supplyInflation, 2)}</span>
-                      </div>
-                      <div>
-                        {tr('Backstop strength')}: <span className="font-mono">{fmt(algo.lastTick.backstopStrength, 2)}</span>
-                      </div>
-                      <div>
-                        {tr('Yield support')}: <span className="font-mono">{fmt(algo.yieldSupport, 2)}</span>
-                      </div>
-                      <div>
-                        {tr('AMM depth')}: <span className="font-mono">{fmt(algo.ammDepth, 2)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="text-[11px] text-slate-500">
-                    {tr('Note: This is a teaching simulation, not a faithful market model. It aims to illustrate feedback loops and cascade dynamics.')}
-                  </div>
-                </div>
-              ) : null}
             </div>
           </div>
         </div>
@@ -2972,6 +3118,6 @@ export default function StablecoinDepegSimulation() {
         </div>
       </div>
     </div>
-    </>
+    //</div>
   );
 }

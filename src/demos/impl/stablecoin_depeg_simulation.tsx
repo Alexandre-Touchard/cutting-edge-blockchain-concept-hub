@@ -18,6 +18,7 @@ import {
   Pause,
   FastForward,
   ShieldAlert,
+  Waves,
   TrendingDown,
   TrendingUp,
   Wrench,
@@ -109,6 +110,7 @@ type AlgorithmicState = {
   ammDepth: number; // 0..2
   yieldSupport: number; // 0..1
   confidence: number; // 0..1
+  demandDecayOn: boolean;
   whaleSell: number;
   lastTick: {
     sentiment: number;
@@ -205,8 +207,9 @@ function initialAlgorithmic(): AlgorithmicState {
     stableSupply: 18_000, // 18B scaled down by 1e6
     lunaSupply: 350, // 350M scaled down by 1e6
     ammDepth: 1.0,
-    yieldSupport: 0.9,
-    confidence: 0.85,
+    yieldSupport: 1.0,
+    confidence: 1.0,
+    demandDecayOn: false,
     whaleSell: 0,
     lastTick: {
       sentiment: 0,
@@ -296,6 +299,8 @@ type ChartMarker = {
     | 'shock_yield_withdrawal'
     | 'shock_whale_sale'
     | 'shock_death_spiral'
+    | 'shock_shockwave'
+    | 'shock_demand_decay'
     | 'add_liquidity'
     | 'fix_oracle'
     | 'backstop_buy'
@@ -313,6 +318,7 @@ function SimpleLineChart({
   legendExtra,
   headerRightExtra,
   footerRightExtra,
+  titleExtra,
   stableLabel,
   refLabel,
   refIsIndex,
@@ -330,6 +336,7 @@ function SimpleLineChart({
   legendExtra?: React.ReactNode;
   headerRightExtra?: React.ReactNode;
   footerRightExtra?: React.ReactNode;
+  titleExtra?: React.ReactNode;
   stableLabel: string;
   refLabel: string;
   refIsIndex?: boolean;
@@ -356,14 +363,16 @@ function SimpleLineChart({
   const xTickCount = 5;
   const xTicks = (() => {
     if (!Number.isFinite(minX) || !Number.isFinite(maxX)) return [] as number[];
-    if (maxX === minX) return [minX];
-    const raw = Array.from({ length: xTickCount }, (_, i) => minX + (i / (xTickCount - 1)) * (maxX - minX));
-    const rounded = raw.map((v) => Math.round(v));
-    const unique = Array.from(new Set(rounded));
-    // Ensure endpoints exist.
-    if (unique[0] !== minX) unique.unshift(minX);
-    if (unique[unique.length - 1] !== maxX) unique.push(maxX);
-    return unique;
+    if (maxX === minX) return [Math.round(minX)];
+
+    const range = Math.max(1, Math.round(maxX - minX));
+    const step = Math.max(1, Math.round(range / (xTickCount - 1)));
+
+    const ticks: number[] = [Math.round(minX)];
+    for (let v = Math.round(minX) + step; v < Math.round(maxX); v += step) ticks.push(v);
+    ticks.push(Math.round(maxX));
+
+    return Array.from(new Set(ticks));
   })();
 
   // Stable is usually around 1.0; keep scale anchored to show depegs clearly.
@@ -443,6 +452,10 @@ function SimpleLineChart({
         return <TrendingDown size={14} className="text-rose-200" />;
       case 'shock_death_spiral':
         return <AlertTriangle size={14} className="text-red-300" />;
+      case 'shock_shockwave':
+        return <Waves size={14} className="text-violet-200" />;
+      case 'shock_demand_decay':
+        return <TrendingDown size={14} className="text-slate-300" />;
 
       default:
         return <AlertTriangle size={14} className="text-red-300" />;
@@ -458,6 +471,7 @@ function SimpleLineChart({
           <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
             <BarChart3 size={18} className="text-blue-300" />
             <span className="truncate">{title}</span>
+              {titleExtra ? <span className="ml-2 shrink-0">{titleExtra}</span> : null}
           </div>
           <div className="flex items-center gap-2">
             <div className="text-xs text-slate-400 whitespace-nowrap">{tr('t={{t}}', { t: last?.t ?? 0 })}</div>
@@ -749,7 +763,7 @@ export default function StablecoinDepegSimulation() {
     const last = series[series.length - 1];
     if (!last) return;
     const id = `m_${chartMarkerIdRef.current++}`;
-    setChartMarkers((prev) => [...prev, { id, t: last.t, stable: last.stable, kind, label }].slice(-40));
+    setChartMarkers((prev) => [...prev, { id, t: last.t, stable: last.stable, kind, label }]);
   }
 
   // Optimization quest helpers
@@ -784,6 +798,20 @@ export default function StablecoinDepegSimulation() {
 
 
   const [series, setSeries] = useState<SeriesPoint[]>(() => [{ t: 0, stable: 1.0, ref: 1.0 }]);
+  const [historyMode, setHistoryMode] = useState<'full' | 'slice30'>('full');
+
+  const tNow = scenario === 'collateralized' ? collat.t : algo.t;
+  const visibleSeries = useMemo(() => {
+    if (historyMode === 'full') return series;
+    const cutoff = Math.max(0, tNow - 30);
+    return series.filter((p) => p.t >= cutoff);
+  }, [historyMode, series, tNow]);
+
+  const visibleChartMarkers = useMemo(() => {
+    if (historyMode === 'full') return chartMarkers;
+    const cutoff = Math.max(0, tNow - 30);
+    return chartMarkers.filter((m) => m.t >= cutoff);
+  }, [historyMode, chartMarkers, tNow]);
 
   function addEvent(type: EventType, message: string, tOverride?: number) {
     setEvents((prev) => [{ id: nowId(), t: tOverride ?? currentT, type, message }, ...prev].slice(0, 18));
@@ -998,6 +1026,17 @@ export default function StablecoinDepegSimulation() {
           next.confidence = 0.35;
           next.whaleSell += 520;
         }
+        if (preset === 'shockwave') {
+          // A broad market shock: confidence drops, liquidity thins, and some selling starts.
+          next.confidence = clamp(next.confidence - 0.25, 0, 1);
+          next.ammDepth = clamp(next.ammDepth * 0.55, 0.05, 2);
+          next.yieldSupport = clamp(next.yieldSupport - 0.15, 0, 1);
+          next.whaleSell += 140;
+        }
+        if (preset === 'demand_decay') {
+          // Toggle mode: enables/disables ongoing baseline erosion applied each tick.
+          next.demandDecayOn = !next.demandDecayOn;
+        }
         return next;
       });
 
@@ -1006,7 +1045,11 @@ export default function StablecoinDepegSimulation() {
           ? tr('Yield withdrawal')
           : preset === 'whale_sale'
             ? tr('Whale sale')
-            : tr('Death spiral starter');
+            : preset === 'demand_decay'
+              ? tr('Demand decay (toggle)')
+              : preset === 'shockwave'
+                ? tr('Shockwave')
+                : tr('Death spiral starter');
 
       addEvent('warn', tr('Applied shock: {{name}}', { name }));
       const markerKind: ChartMarker['kind'] =
@@ -1014,7 +1057,11 @@ export default function StablecoinDepegSimulation() {
           ? 'shock_yield_withdrawal'
           : preset === 'whale_sale'
             ? 'shock_whale_sale'
-            : 'shock_death_spiral';
+            : preset === 'demand_decay'
+              ? 'shock_demand_decay'
+              : preset === 'shockwave'
+                ? 'shock_shockwave'
+                : 'shock_death_spiral';
       addChartMarker(markerKind, tr('Shock: {{name}}', { name }));
 
       flashKpis(
@@ -1022,7 +1069,11 @@ export default function StablecoinDepegSimulation() {
           ? ['yield', 'confidence']
           : preset === 'whale_sale'
             ? ['price']
-            : ['yield', 'confidence', 'price']
+            : preset === 'demand_decay'
+              ? ['yield', 'confidence']
+              : preset === 'shockwave'
+                ? ['confidence', 'liquidity', 'price']
+                : ['yield', 'confidence', 'price']
       );
     }
 
@@ -1262,7 +1313,10 @@ export default function StablecoinDepegSimulation() {
           );
         }
 
-        setSeries((prev) => [...prev, { t: next.t, stable: stablePriceNext, ref: collateralIndexNext }].slice(-60));
+        setSeries((prev) => {
+          const nextSeries = [...prev, { t: next.t, stable: stablePriceNext, ref: collateralIndexNext }];
+          return nextSeries.length > 5000 ? nextSeries.slice(-5000) : nextSeries;
+        });
         return next;
       });
 
@@ -1271,7 +1325,9 @@ export default function StablecoinDepegSimulation() {
 
     // Algorithmic / Terra-style
     setAlgo((s) => {
-      const priceStress = Math.max(0, 1 - s.stablePrice);
+      // No-redemption zone near the peg: tiny deviations shouldn't trigger LUNA minting.
+      const redeemThreshold = 0.99;
+      const priceStress = s.stablePrice < redeemThreshold ? Math.max(0, 1 - s.stablePrice) : 0;
 
       // Yield support and confidence reduce sell pressure.
       const sentiment = clamp((s.confidence + s.yieldSupport) / 2, 0, 1);
@@ -1314,10 +1370,11 @@ export default function StablecoinDepegSimulation() {
         -0.2,
         0.04
       );
-      const confidenceNext = clamp(s.confidence + confDelta, 0, 1);
+      const demandDecay = s.demandDecayOn ? 0.004 : 0;
+      const confidenceNext = clamp(s.confidence + confDelta - demandDecay, 0, 1);
 
       const whaleSellNext = s.whaleSell * 0.6;
-      const yieldSupportNext = clamp(s.yieldSupport - Math.abs(stablePriceNext - 1) * 0.02, 0, 1);
+      const yieldSupportNext = clamp(s.yieldSupport - Math.abs(stablePriceNext - 1) * 0.02 - demandDecay, 0, 1);
 
       const next: AlgorithmicState = {
         ...s,
@@ -1424,7 +1481,10 @@ export default function StablecoinDepegSimulation() {
         );
       }
 
-      setSeries((prev) => [...prev, { t: next.t, stable: stablePriceNext, ref: lunaPriceNext }].slice(-60));
+      setSeries((prev) => {
+        const nextSeries = [...prev, { t: next.t, stable: stablePriceNext, ref: lunaPriceNext }];
+        return nextSeries.length > 5000 ? nextSeries.slice(-5000) : nextSeries;
+      });
       return next;
     });
 
@@ -1814,6 +1874,27 @@ export default function StablecoinDepegSimulation() {
 
                 <button
                   type="button"
+                  onClick={() => applyShock('demand_decay')}
+                  className={`inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-sm ${
+                    algo.demandDecayOn
+                      ? 'bg-blue-600 border-blue-500 hover:bg-blue-700'
+                      : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                  }`}
+                  aria-pressed={algo.demandDecayOn}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <TrendingDown size={16} className="text-slate-300" />
+                    {tr('Demand decay')}
+                  </span>
+                  <TooltipInButton
+                    text={tr(
+                      'Gradually erode yield support and confidence which : 1) reduces sentiment/demand 2) which creates persistent sell pressure → peg fragility → potential redemption/mint reflexivity'
+                    )}
+                  />
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => applyShock('whale_sale')}
                   className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
                 >
@@ -1833,7 +1914,19 @@ export default function StablecoinDepegSimulation() {
                     <AlertTriangle size={16} className="text-amber-300" />
                     {tr('Start death spiral')}
                   </span>
-                  <TooltipInButton text={tr('Combines low confidence, low yield support, and heavy selling — a recipe for reflexive collapse.')} />
+                  <TooltipInButton text={tr('Combines low confidence, low yield support, and heavy selling, a recipe for reflexive collapse.')} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyShock('shockwave')}
+                  className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Waves size={16} className="text-violet-200" />
+                    {tr('Shockwave')}
+                  </span>
+                  <TooltipInButton text={tr('A broad market shock: liquidity thins and confidence drops, amplifying slippage and reflexive selling.')} />
                 </button>
               </div>
             )}
@@ -2099,6 +2192,12 @@ export default function StablecoinDepegSimulation() {
                     </div>
 
                     <div className="flex items-start gap-2">
+                      {scenario === 'algorithmic' && algo.demandDecayOn ? (
+                        <span className="mr-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-blue-500/50 bg-blue-950/30 text-xs font-semibold text-blue-200">
+                          <span className="h-2 w-2 rounded-full bg-blue-400" />
+                          {tr('Demand_decay')}: {tr('ON')}
+                        </span>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => reset(undefined, { resetAdvanced: true })}
@@ -2301,9 +2400,9 @@ export default function StablecoinDepegSimulation() {
                           );
                         })()
                       }
-                      points={series}
-                      markers={chartMarkers}
-                      stableLabel={tr('Stablecoin price')}
+                      points={visibleSeries}
+                      markers={visibleChartMarkers}
+                      stableLabel={scenario === 'algorithmic' ? tr('UST stablecoin price') : tr('Stablecoin price')}
                       refLabel={scenario === 'collateralized' ? tr('Collateral index') : tr('LUNA price')}
                       refIsIndex={scenario === 'collateralized'}
                       width={1100}
@@ -2316,13 +2415,6 @@ export default function StablecoinDepegSimulation() {
                             className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
                           >
                             {tr('Step')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => runSteps(5)}
-                            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
-                          >
-                            {tr('Run 5')}
                           </button>
                           <button
                             type="button"
@@ -2368,6 +2460,33 @@ export default function StablecoinDepegSimulation() {
                             {isAutoRunning && autoRunSpeed === 2 ? <Pause size={14} /> : <FastForward size={14} />}
                             <span className="text-[10px] font-bold">2x</span>
                           </button>
+
+                          <div className="inline-flex rounded-lg border border-slate-700 overflow-hidden" title={tr('Chart window')} aria-label={tr('Chart window')}>
+                            <button
+                              type="button"
+                              onClick={() => setHistoryMode('slice30')}
+                              className={`px-2.5 py-1.5 text-xs font-semibold ${
+                                historyMode === 'slice30'
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-slate-900 text-slate-200 hover:bg-slate-800'
+                              }`}
+                              aria-pressed={historyMode === 'slice30'}
+                            >
+                              {tr('Last 30s')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setHistoryMode('full')}
+                              className={`px-2.5 py-1.5 text-xs font-semibold ${
+                                historyMode === 'full'
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-slate-900 text-slate-200 hover:bg-slate-800'
+                              }`}
+                              aria-pressed={historyMode === 'full'}
+                            >
+                              {tr('Full history')}
+                            </button>
+                          </div>
                         </span>
                       }
                     />
@@ -2477,6 +2596,27 @@ export default function StablecoinDepegSimulation() {
                                   <Gauge size={14} className="text-slate-200" />
                                   {tr('Yield withdrawal')}
                                 </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('demand_decay')}
+                                  className={`inline-flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border text-xs ${
+                                    algo.demandDecayOn
+                                      ? 'bg-blue-600 border-blue-500 hover:bg-blue-700'
+                                      : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                                  }`}
+                                  aria-pressed={algo.demandDecayOn}
+                                >
+                                  <span className="inline-flex items-center gap-2">
+                                    <TrendingDown size={14} className="text-slate-300" />
+                                    {tr('Demand decay')}
+                                  </span>
+                                  <TooltipInButton
+                                    text={tr(
+                                      'Gradually erode yield support and confidence which : 1) reduces sentiment/demand 2) which creates persistent sell pressure → peg fragility → potential redemption/mint reflexivity'
+                                    )}
+                                  />
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => applyShock('whale_sale')}
@@ -2492,6 +2632,15 @@ export default function StablecoinDepegSimulation() {
                                 >
                                   <AlertTriangle size={14} className="text-red-300" />
                                   {tr('Death spiral')}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('shockwave')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Waves size={14} className="text-violet-200" />
+                                  {tr('Shockwave')}
                                 </button>
                               </>
                             )}
@@ -2848,8 +2997,16 @@ export default function StablecoinDepegSimulation() {
               <SimpleLineChart
                 tr={tr}
                 title={scenario === 'collateralized' ? tr('Peg vs collateral stress') : tr('Peg vs reflexive backstop (LUNA)')}
-                points={series}
-                markers={chartMarkers}
+                titleExtra={
+                  scenario === 'algorithmic' && algo.demandDecay ? (
+                    <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-blue-500/50 bg-blue-950/30 text-[11px] font-semibold text-blue-200">
+                      <span className="h-2 w-2 rounded-full bg-blue-400" />
+                      {tr('Demand decay')}: {tr('ON')}
+                    </span>
+                  ) : null
+                }
+                points={visibleSeries}
+                markers={visibleChartMarkers}
                 headerRightExtra={
                   <button
                     type="button"
@@ -2870,13 +3027,6 @@ export default function StablecoinDepegSimulation() {
                     >
                       {tr('Step')}
                       <TooltipInButton text={tr('Advance the simulation by 1 tick and observe the chart + log.')} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => runSteps(5)}
-                      className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold whitespace-nowrap"
-                    >
-                      {tr('Run 5')}
                     </button>
                     <button
                       type="button"
@@ -2923,9 +3073,36 @@ export default function StablecoinDepegSimulation() {
                       <span className="text-[10px] font-bold">2x</span>
                     </button>
 
+                    <div className="inline-flex rounded-lg border border-slate-700 overflow-hidden" title={tr('Chart window')} aria-label={tr('Chart window')}>
+                      <button
+                        type="button"
+                        onClick={() => setHistoryMode('slice30')}
+                        className={`px-2.5 py-1.5 text-xs font-semibold ${
+                          historyMode === 'slice30'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-900 text-slate-200 hover:bg-slate-800'
+                        }`}
+                        aria-pressed={historyMode === 'slice30'}
+                      >
+                        {tr('Last 30s')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHistoryMode('full')}
+                        className={`px-2.5 py-1.5 text-xs font-semibold ${
+                          historyMode === 'full'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-900 text-slate-200 hover:bg-slate-800'
+                        }`}
+                        aria-pressed={historyMode === 'full'}
+                      >
+                        {tr('Full history')}
+                      </button>
+                    </div>
+
                   </span>
                 }
-                stableLabel={tr('Stablecoin price')}
+                stableLabel={scenario === 'algorithmic' ? tr('UST stablecoin price') : tr('Stablecoin price')}
                 refLabel={scenario === 'collateralized' ? tr('Collateral index') : tr('LUNA price')}
                 refIsIndex={scenario === 'collateralized'}
               />

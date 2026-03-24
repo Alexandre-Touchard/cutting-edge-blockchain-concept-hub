@@ -101,30 +101,90 @@ type CollateralizedState = {
   };
 };
 
+type ReservePolicy = 'auto' | 'manual';
+
 type AlgorithmicState = {
   t: number;
-  stablePrice: number;
-  lunaPrice: number;
-  stableSupply: number;
-  lunaSupply: number;
-  ammDepth: number; // 0..2
-  yieldSupport: number; // 0..1
+  // Core market state
+  stablePrice: number; // UST price (USD)
+  lunaPrice: number; // LUNA price (USD)
+  stableSupply: number; // UST supply (scaled units)
+  lunaSupply: number; // LUNA supply (scaled units)
+
+  // Split market depth
+  ustDepth: number; // 0..2 (UST/USDC depth proxy)
+  lunaDepth: number; // 0..2 (LUNA/USD depth proxy)
+
+  // Demand + confidence
   confidence: number; // 0..1
-  demandDecayOn: boolean;
+  yieldSupport: number; // 0..1
+
+  // Anchor module (simplified)
+  anchorTVL: number;
+  anchorYieldRate: number; // normalized 0..1
+  yieldReserve: number;
+  withdrawalRate: number; // fraction of TVL per tick
+  bankRunTicksRemaining: number;
+
+  // Redemption / swap constraints
+  mintCapMultiplier: number; // 1.0 = normal
+  unfilledRedemption: number;
+
+  // Reserves (LFG-like)
+  reserveUSD: number;
+  reserveDeployRateCapPerTick: number;
+  reservePolicy: ReservePolicy;
+  reserveEffectiveness: number; // 0..1
+  reserveManualDeployRequestUsd: number;
+
+  // Drift / regimes
+  baselineDriftOn: boolean;
+
+  // Exogenous selling
   whaleSell: number;
+
   lastTick: {
+    // Sell-flow decomposition
     sentiment: number;
-    sellPressure: number;
+    sellWhaleUST: number;
+    sellAnchorOutflowUST: number;
+    sellFromLowSentimentUST: number;
+    sellFromUnfilledRedemptionUST: number;
+    ustSellFlow: number;
+
+    // Price formation
     sellDelta: number;
+    stablePriceAfterSell: number;
     priceStress: number;
+
+    // Redemptions
+    redemptionRequested: number;
+    redemptionExecuted: number;
     redemption: number;
+    mintCapPerTick: number;
     redemptionCap: number;
+    unfilledRedemptionNext: number;
+
+    // LUNA reflexivity
     lunaMinted: number;
     supplyInflation: number;
     lunaDeltaPct: number;
     lunaPriceNext: number;
+
+    // Support terms
     backstopStrength: number;
     redeemSupport: number;
+    reserveDeployedUsd: number;
+    reserveSupport: number;
+    reserveUSDNext: number;
+
+    // Next values
+    ustDepthNext: number;
+    lunaDepthNext: number;
+    confidenceNext: number;
+    yieldSupportNext: number;
+
+    // Net
     stableDelta: number;
   };
 };
@@ -198,32 +258,81 @@ function initialCollateralized(): CollateralizedState {
 }
 
 function initialAlgorithmic(): AlgorithmicState {
-  // Mirrors the spec: stable=$1, LUNA $80, 18B stable, 350M LUNA.
-  // We keep smaller numbers but preserve ratios.
+  // Terra-style teaching defaults.
+  // Mirrors the rough ratios: stable=$1, LUNA ~$80, 18B stable, 350M LUNA.
+  const stableSupply = 18_000;
+  const lunaSupply = 350;
+
+  const reserveUSD = 3_000;
+
   return {
     t: 0,
+
     stablePrice: 1.0,
     lunaPrice: 80,
-    stableSupply: 18_000, // 18B scaled down by 1e6
-    lunaSupply: 350, // 350M scaled down by 1e6
-    ammDepth: 1.0,
-    yieldSupport: 1.0,
+    stableSupply,
+    lunaSupply,
+
+    ustDepth: 1.0,
+    lunaDepth: 1.0,
+
     confidence: 1.0,
-    demandDecayOn: false,
+    yieldSupport: 1.0,
+
+    anchorTVL: 12_000,
+    anchorYieldRate: 1.0,
+    yieldReserve: 1_200,
+    withdrawalRate: 0.0,
+    bankRunTicksRemaining: 0,
+
+    mintCapMultiplier: 1.0,
+    unfilledRedemption: 0,
+
+    reserveUSD,
+    reserveDeployRateCapPerTick: 220,
+    reservePolicy: 'manual',
+    reserveEffectiveness: 1.0,
+    reserveManualDeployRequestUsd: 0,
+
+    baselineDriftOn: false,
+
     whaleSell: 0,
+
     lastTick: {
-      sentiment: 0,
-      sellPressure: 0,
+      sentiment: 1,
+      sellWhaleUST: 0,
+      sellAnchorOutflowUST: 0,
+      sellFromLowSentimentUST: 0,
+      sellFromUnfilledRedemptionUST: 0,
+      ustSellFlow: 0,
+
       sellDelta: 0,
+      stablePriceAfterSell: 1.0,
       priceStress: 0,
+
+      redemptionRequested: 0,
+      redemptionExecuted: 0,
       redemption: 0,
+      mintCapPerTick: 0,
       redemptionCap: 0,
+      unfilledRedemptionNext: 0,
+
       lunaMinted: 0,
       supplyInflation: 0,
       lunaDeltaPct: 0,
       lunaPriceNext: 80,
+
       backstopStrength: 1,
       redeemSupport: 0,
+      reserveDeployedUsd: 0,
+      reserveSupport: 0,
+      reserveUSDNext: reserveUSD,
+
+      ustDepthNext: 1.0,
+      lunaDepthNext: 1.0,
+      confidenceNext: 1.0,
+      yieldSupportNext: 1.0,
+
       stableDelta: 0
     }
   };
@@ -301,10 +410,19 @@ type ChartMarker = {
     | 'shock_death_spiral'
     | 'shock_shockwave'
     | 'shock_demand_decay'
+    | 'shock_anchor_bank_run'
+    | 'shock_mint_cap_tightened'
+    | 'shock_reserve_confidence_loss'
+    | 'marker_mint_cap_binding'
+    | 'marker_reserves_depleted'
+    | 'marker_reserves_deployed'
     | 'add_liquidity'
     | 'fix_oracle'
     | 'backstop_buy'
-    | 'restore_yield';
+    | 'restore_yield'
+    | 'toggle_reserve_policy'
+    | 'deploy_reserves_now'
+    | 'increase_mint_cap';
   label: string;
 };
 
@@ -434,6 +552,12 @@ function SimpleLineChart({
         return <Banknote size={14} className="text-emerald-200" />;
       case 'restore_yield':
         return <TrendingUp size={14} className="text-blue-200" />;
+      case 'toggle_reserve_policy':
+        return <RefreshCw size={14} className="text-violet-200" />;
+      case 'deploy_reserves_now':
+        return <Banknote size={14} className="text-emerald-200" />;
+      case 'increase_mint_cap':
+        return <TrendingUp size={14} className="text-amber-200" />;
 
       // Shocks
       case 'shock_collateral_crash':
@@ -456,6 +580,18 @@ function SimpleLineChart({
         return <Waves size={14} className="text-violet-200" />;
       case 'shock_demand_decay':
         return <TrendingDown size={14} className="text-slate-300" />;
+      case 'shock_anchor_bank_run':
+        return <AlertTriangle size={14} className="text-amber-300" />;
+      case 'shock_mint_cap_tightened':
+        return <Gauge size={14} className="text-amber-200" />;
+      case 'shock_reserve_confidence_loss':
+        return <Banknote size={14} className="text-slate-300" />;
+      case 'marker_mint_cap_binding':
+        return <Gauge size={14} className="text-amber-200" />;
+      case 'marker_reserves_deployed':
+        return <Banknote size={14} className="text-emerald-200" />;
+      case 'marker_reserves_depleted':
+        return <Banknote size={14} className="text-red-200" />;
 
       default:
         return <AlertTriangle size={14} className="text-red-300" />;
@@ -719,7 +855,7 @@ export default function StablecoinDepegSimulation() {
 
   const currentT = scenario === 'collateralized' ? collat.t : algo.t;
 
-  const liquidityDepthNow = scenario === 'collateralized' ? collat.liquidityDepth : algo.ammDepth;
+  const liquidityDepthNow = scenario === 'collateralized' ? collat.liquidityDepth : algo.ustDepth;
   const oracleQualityNow = scenario === 'collateralized' ? collat.oracleQuality : null;
   const yieldSupportNow = scenario === 'algorithmic' ? algo.yieldSupport : null;
   // Slippage multiplier vs baseline depth=1, using the same nonlinear depthImpact used in the step model.
@@ -757,10 +893,20 @@ export default function StablecoinDepegSimulation() {
   const [chartMarkers, setChartMarkers] = useState<ChartMarker[]>([]);
   const chartMarkerIdRef = useRef(0);
 
-  function addChartMarker(kind: ChartMarker['kind'], label: string) {
-    // Anchor markers to the *plotted* curve (series), not the mutable state.
-    // Shocks/interventions happen between steps, so the curve only updates when you Step.
-    const last = series[series.length - 1];
+  // When stepping many times quickly (runSteps), React state for `series` doesn't update synchronously.
+  // Keep a ref to the latest plotted point so markers can be anchored correctly.
+  const lastPlottedPointRef = useRef<SeriesPoint>({ t: 0, stable: 1.0, ref: 1.0 });
+
+  function addChartMarker(
+    kind: ChartMarker['kind'],
+    label: string,
+    anchor?: { t: number; stable: number }
+  ) {
+    // Anchor markers to a known point on the plotted curve.
+    // IMPORTANT: when we run many steps in a tight loop (runSteps), React state for `series`
+    // does not update synchronously between iterations, so relying on `series[series.length-1]`
+    // can anchor everything to t=0 and then get filtered out by "recent" history.
+    const last = anchor ?? lastPlottedPointRef.current ?? series[series.length - 1];
     if (!last) return;
     const id = `m_${chartMarkerIdRef.current++}`;
     setChartMarkers((prev) => [...prev, { id, t: last.t, stable: last.stable, kind, label }]);
@@ -836,7 +982,8 @@ export default function StablecoinDepegSimulation() {
 
     // Initialize state using advanced parameters (either preserved or reset to defaults).
     c.lastTick.liquidationTrigger = nextParams.liquidationTrigger;
-    a.ammDepth = nextParams.ammDepth;
+    a.ustDepth = nextParams.ammDepth;
+    a.lunaDepth = nextParams.ammDepth;
 
     setScenario(sc);
     setCollat(c);
@@ -871,7 +1018,9 @@ export default function StablecoinDepegSimulation() {
     setEverDepeggedAtLeastOnce(false);
     everDepeggedAtLeastOnceRef.current = false;
 
-    setSeries([{ t: 0, stable: 1.0, ref: sc === 'collateralized' ? 1.0 : a.lunaPrice }]);
+    const initialPoint = { t: 0, stable: 1.0, ref: sc === 'collateralized' ? 1.0 : a.lunaPrice };
+    lastPlottedPointRef.current = initialPoint;
+    setSeries([initialPoint]);
     setEvents([{ id: nowId(), t: 0, type: 'info', message: tr('Reset simulation') }]);
   }
 
@@ -946,6 +1095,10 @@ export default function StablecoinDepegSimulation() {
   }
 
   function applyShock(preset: string) {
+    const markerAnchor =
+      scenario === 'collateralized'
+        ? { t: collat.t, stable: collat.stablePrice }
+        : { t: algo.t, stable: algo.stablePrice };
     if (scenario === 'collateralized') {
       setCollat((s) => {
         const next = { ...s };
@@ -1029,13 +1182,29 @@ export default function StablecoinDepegSimulation() {
         if (preset === 'shockwave') {
           // A broad market shock: confidence drops, liquidity thins, and some selling starts.
           next.confidence = clamp(next.confidence - 0.25, 0, 1);
-          next.ammDepth = clamp(next.ammDepth * 0.55, 0.05, 2);
+          next.ustDepth = clamp(next.ustDepth * 0.55, 0.05, 2);
+          next.lunaDepth = clamp(next.lunaDepth * 0.75, 0.05, 2);
           next.yieldSupport = clamp(next.yieldSupport - 0.15, 0, 1);
           next.whaleSell += 140;
         }
+        if (preset === 'anchor_bank_run') {
+          // A sudden withdrawal wave from Anchor-like demand.
+          next.bankRunTicksRemaining = Math.max(next.bankRunTicksRemaining, 8);
+          next.withdrawalRate = Math.max(next.withdrawalRate, 0.12);
+          next.confidence = clamp(next.confidence - 0.12, 0, 1);
+          next.yieldSupport = clamp(next.yieldSupport - 0.1, 0, 1);
+        }
+        if (preset === 'mint_cap_tightened') {
+          next.mintCapMultiplier = clamp(next.mintCapMultiplier * 0.6, 0.05, 2);
+          next.confidence = clamp(next.confidence - 0.06, 0, 1);
+        }
+        if (preset === 'reserve_confidence_loss') {
+          next.reserveEffectiveness = clamp(next.reserveEffectiveness * 0.65, 0.1, 1);
+          next.confidence = clamp(next.confidence - 0.08, 0, 1);
+        }
         if (preset === 'demand_decay') {
           // Toggle mode: enables/disables ongoing baseline erosion applied each tick.
-          next.demandDecayOn = !next.demandDecayOn;
+          next.baselineDriftOn = !next.baselineDriftOn;
         }
         return next;
       });
@@ -1043,37 +1212,55 @@ export default function StablecoinDepegSimulation() {
       const name =
         preset === 'yield_withdrawal'
           ? tr('Yield withdrawal')
-          : preset === 'whale_sale'
-            ? tr('Whale sale')
-            : preset === 'demand_decay'
-              ? tr('Demand decay (toggle)')
-              : preset === 'shockwave'
-                ? tr('Shockwave')
-                : tr('Death spiral starter');
+          : preset === 'anchor_bank_run'
+            ? tr('Anchor bank run')
+            : preset === 'whale_sale'
+              ? tr('Whale sale')
+              : preset === 'mint_cap_tightened'
+                ? tr('Mint cap tightened')
+                : preset === 'reserve_confidence_loss'
+                  ? tr('Reserve confidence loss')
+                  : preset === 'demand_decay'
+                    ? tr('Baseline drift (toggle)')
+                    : preset === 'shockwave'
+                      ? tr('Shockwave')
+                      : tr('Death spiral starter');
 
       addEvent('warn', tr('Applied shock: {{name}}', { name }));
       const markerKind: ChartMarker['kind'] =
         preset === 'yield_withdrawal'
           ? 'shock_yield_withdrawal'
-          : preset === 'whale_sale'
-            ? 'shock_whale_sale'
-            : preset === 'demand_decay'
-              ? 'shock_demand_decay'
-              : preset === 'shockwave'
-                ? 'shock_shockwave'
-                : 'shock_death_spiral';
+          : preset === 'anchor_bank_run'
+            ? 'shock_anchor_bank_run'
+            : preset === 'whale_sale'
+              ? 'shock_whale_sale'
+              : preset === 'mint_cap_tightened'
+                ? 'shock_mint_cap_tightened'
+                : preset === 'reserve_confidence_loss'
+                  ? 'shock_reserve_confidence_loss'
+                  : preset === 'demand_decay'
+                    ? 'shock_demand_decay'
+                    : preset === 'shockwave'
+                      ? 'shock_shockwave'
+                      : 'shock_death_spiral';
       addChartMarker(markerKind, tr('Shock: {{name}}', { name }));
 
       flashKpis(
         preset === 'yield_withdrawal'
           ? ['yield', 'confidence']
-          : preset === 'whale_sale'
-            ? ['price']
-            : preset === 'demand_decay'
-              ? ['yield', 'confidence']
-              : preset === 'shockwave'
-                ? ['confidence', 'liquidity', 'price']
-                : ['yield', 'confidence', 'price']
+          : preset === 'anchor_bank_run'
+            ? ['yield', 'price']
+            : preset === 'whale_sale'
+              ? ['price']
+              : preset === 'mint_cap_tightened'
+                ? ['confidence', 'price']
+                : preset === 'reserve_confidence_loss'
+                  ? ['confidence', 'price']
+                  : preset === 'demand_decay'
+                    ? ['yield', 'confidence']
+                    : preset === 'shockwave'
+                      ? ['confidence', 'liquidity', 'price']
+                      : ['yield', 'confidence', 'price']
       );
     }
 
@@ -1117,8 +1304,22 @@ export default function StablecoinDepegSimulation() {
     } else {
       setAlgo((s) => {
         const next = { ...s };
-        if (kind === 'add_liquidity') next.ammDepth = clamp(next.ammDepth * 1.25, 0.06, 2);
+        if (kind === 'add_liquidity') {
+          next.ustDepth = clamp(next.ustDepth * 1.25, 0.06, 2);
+          next.lunaDepth = clamp(next.lunaDepth * 1.15, 0.06, 2);
+        }
         if (kind === 'restore_yield') next.yieldSupport = clamp(next.yieldSupport + 0.25, 0, 1);
+        if (kind === 'toggle_reserve_policy') {
+          next.reservePolicy = next.reservePolicy === 'auto' ? 'manual' : 'auto';
+        }
+        if (kind === 'deploy_reserves_now') {
+          // In manual policy, request a deployment on the next tick; in auto, this is effectively immediate.
+          next.reserveManualDeployRequestUsd += next.reserveDeployRateCapPerTick;
+        }
+        if (kind === 'increase_mint_cap') {
+          next.mintCapMultiplier = clamp(next.mintCapMultiplier * 1.4, 0.05, 2);
+          next.confidence = clamp(next.confidence + 0.03, 0, 1);
+        }
         if (kind === 'backstop_buy') {
           next.whaleSell = Math.max(0, next.whaleSell - 180);
           next.confidence = clamp(next.confidence + 0.06, 0, 1);
@@ -1132,18 +1333,42 @@ export default function StablecoinDepegSimulation() {
           ? tr('Add liquidity')
           : kind === 'restore_yield'
             ? tr('Restore yield incentives')
-            : tr('Backstop buy (buy stable)');
+            : kind === 'toggle_reserve_policy'
+              ? tr('Toggle reserve policy')
+              : kind === 'deploy_reserves_now'
+                ? tr('Deploy reserves now')
+                : kind === 'increase_mint_cap'
+                  ? tr('Increase mint cap')
+                  : tr('Backstop buy (buy stable)');
 
       addEvent('success', tr('Intervention: {{name}}', { name }));
       addChartMarker(kind as ChartMarker['kind'], tr('Intervention: {{name}}', { name }));
-      flashKpis(kind === 'add_liquidity' ? ['liquidity', 'price'] : kind === 'restore_yield' ? ['yield', 'confidence'] : ['price', 'confidence']);
+      flashKpis(
+        kind === 'add_liquidity'
+          ? ['liquidity', 'price']
+          : kind === 'restore_yield'
+            ? ['yield', 'confidence']
+            : kind === 'toggle_reserve_policy'
+              ? ['confidence', 'price']
+              : kind === 'deploy_reserves_now'
+                ? ['price']
+                : kind === 'increase_mint_cap'
+                  ? ['price', 'confidence']
+                  : ['price', 'confidence']
+      );
       setWhy(
         tr('Intervention effect'),
         kind === 'add_liquidity'
-          ? tr('Adding liquidity increases AMM depth, which reduces price impact from sells and makes the peg harder to break.')
+          ? tr('Adding liquidity increases market depth, which reduces price impact from sells and makes the peg harder to break.')
           : kind === 'restore_yield'
             ? tr('Restoring yield incentives boosts demand and confidence, reducing sell pressure and slowing the reflexive loop.')
-            : tr('A backstop buy adds external buy pressure for the stablecoin, helping it move back toward $1 in the short term.')
+            : kind === 'toggle_reserve_policy'
+              ? tr('Switching reserve policy changes whether reserves deploy automatically when UST is below peg, or only when you click Deploy.')
+              : kind === 'deploy_reserves_now'
+                ? tr('Deploying reserves adds buy support for UST when it is below peg, but drains remaining reserves and can hurt credibility if depleted.')
+                : kind === 'increase_mint_cap'
+                  ? tr('Increasing mint cap relieves swap throttles, allowing more redemptions to execute per tick and reducing unfilled redemption pressure.')
+                  : tr('A backstop buy adds external buy pressure for the stablecoin, helping it move back toward $1 in the short term.')
       );
     }
 
@@ -1314,7 +1539,9 @@ export default function StablecoinDepegSimulation() {
         }
 
         setSeries((prev) => {
-          const nextSeries = [...prev, { t: next.t, stable: stablePriceNext, ref: collateralIndexNext }];
+          const point = { t: next.t, stable: stablePriceNext, ref: collateralIndexNext };
+          lastPlottedPointRef.current = point;
+          const nextSeries = [...prev, point];
           return nextSeries.length > 5000 ? nextSeries.slice(-5000) : nextSeries;
         });
         return next;
@@ -1323,58 +1550,136 @@ export default function StablecoinDepegSimulation() {
       return;
     }
 
-    // Algorithmic / Terra-style
+    // Algorithmic / Terra-style (Appendix spec)
     setAlgo((s) => {
-      // No-redemption zone near the peg: tiny deviations shouldn't trigger LUNA minting.
-      const redeemThreshold = 0.99;
-      const priceStress = s.stablePrice < redeemThreshold ? Math.max(0, 1 - s.stablePrice) : 0;
+      const peg = 1.0;
 
-      // Yield support and confidence reduce sell pressure.
+      // -----------------------------
+      // 1) Demand & sell-flow components
+      // -----------------------------
       const sentiment = clamp((s.confidence + s.yieldSupport) / 2, 0, 1);
 
-      // Whale sells stable into AMMs.
-      const sellPressure = s.whaleSell + (1 - sentiment) * 180;
+      const sellWhaleUST = s.whaleSell;
 
-      // Keep AMM depth in sync with advanced params for algorithmic mode.
-      const ammDepth = params.ammDepth;
+      const effectiveWithdrawalRate =
+        s.bankRunTicksRemaining > 0 ? Math.max(s.withdrawalRate, 0.08) : s.withdrawalRate;
+      const sellAnchorOutflowUST = s.anchorTVL * clamp(effectiveWithdrawalRate, 0, 0.25);
 
-      // Price impact is stronger when AMM depth is low.
-      const sellDelta = -sellPressure / (1400 + 2000 * ammDepth);
+      // Low-sentiment sells (teaching proxy): increases when confidence/yield fall.
+      const sellFromLowSentimentUST = (1 - sentiment) * 180;
 
-      // Redemption arbitrage: burn stable for $1 of LUNA.
-      const redemptionCap = s.stableSupply * params.redemptionCap;
-      const redemption = clamp(
-        priceStress * params.redemptionIntensity * s.stableSupply * (0.4 + 0.6 * s.confidence),
+      // Failed arb pressure: when mint cap binds, unfilled redemptions become an accelerant.
+      const sellFromUnfilledRedemptionUST = clamp(s.unfilledRedemption * 0.06, 0, 320);
+
+      const ustSellFlow = sellWhaleUST + sellAnchorOutflowUST + sellFromLowSentimentUST + sellFromUnfilledRedemptionUST;
+
+      // -----------------------------
+      // 2) UST price formation (depth-based impact)
+      // -----------------------------
+      const ustDepthNow = clamp(s.ustDepth, 0.06, 2);
+      const sellDelta = -ustSellFlow / (1400 + 2000 * ustDepthNow);
+      const stablePriceAfterSell = clamp(s.stablePrice + sellDelta, 0.01, 1.1);
+
+      const priceStress = stablePriceAfterSell < 0.99 ? Math.max(0, peg - stablePriceAfterSell) : 0;
+
+      // -----------------------------
+      // 3) Redemption requested vs executed (capacity-bound)
+      // -----------------------------
+      const mintCapPerTick = s.stableSupply * params.redemptionCap * clamp(s.mintCapMultiplier, 0.05, 2);
+
+      const redemptionRequested = clamp(
+        priceStress * params.redemptionIntensity * s.stableSupply * (0.35 + 0.65 * s.confidence),
         0,
-        redemptionCap
+        s.stableSupply
       );
+      const redemptionExecuted = Math.min(redemptionRequested, mintCapPerTick);
+
+      // Unfilled is NOT a FIFO queue; treat as failed-arb pressure that worsens sentiment.
+      let unfilledRedemptionNext = s.unfilledRedemption + (redemptionRequested - redemptionExecuted);
+      // Slow decay when peg is basically restored (pressure dissipates).
+      if (stablePriceAfterSell >= 0.995) unfilledRedemptionNext *= 0.85;
+      unfilledRedemptionNext = clamp(unfilledRedemptionNext, 0, s.stableSupply * 2);
+
+      // -----------------------------
+      // 4) LUNA minting + reflexive price impact
+      // -----------------------------
+      const redemption = redemptionExecuted;
       const lunaMinted = redemption / Math.max(0.5, s.lunaPrice);
 
       const stableSupplyNext = Math.max(1, s.stableSupply - redemption);
       const lunaSupplyNext = s.lunaSupply + lunaMinted;
 
-      // LUNA price becomes reflexive: minting + low confidence crushes it.
       const supplyInflation = lunaMinted / Math.max(1e-6, s.lunaSupply);
-      const lunaDeltaPct = clamp(-(supplyInflation * params.reflexivityK + (1 - s.confidence) * 0.06), -0.9, 0.05);
-      const lunaPriceNext = clamp(s.lunaPrice * (1 + lunaDeltaPct), 0.02, 200);
+      const lunaDepthNow = clamp(s.lunaDepth, 0.06, 2);
 
-      // Stable price depends on selling + (weakening) redemption backstop.
+      const lunaDeltaPct = clamp(
+        -((supplyInflation * params.reflexivityK) / (0.6 + 0.8 * lunaDepthNow) + (1 - s.confidence) * 0.06),
+        -0.92,
+        0.08
+      );
+      const lunaPriceNext = clamp(s.lunaPrice * (1 + lunaDeltaPct), 0.02, 250);
+
+      // Backstop strength is the *credibility* of $1 redemptions.
       const backstopStrength = clamp((lunaPriceNext / 80) * s.confidence, 0, 1);
       const redeemSupport = backstopStrength * (redemption / Math.max(1, s.stableSupply)) * 0.9;
-      const stableDelta = clamp(sellDelta + redeemSupport, -0.25, 0.12);
+
+      // -----------------------------
+      // 5) Reserves support (LFG-like)
+      // -----------------------------
+      const reserveThreshold = 0.99;
+      const wantsReserveSupport = stablePriceAfterSell < reserveThreshold;
+
+      let reserveDeployedUsd = 0;
+      if (wantsReserveSupport) {
+        if (s.reservePolicy === 'auto') {
+          reserveDeployedUsd = Math.min(s.reserveDeployRateCapPerTick, s.reserveUSD);
+        } else {
+          reserveDeployedUsd = Math.min(
+            s.reserveManualDeployRequestUsd,
+            s.reserveDeployRateCapPerTick,
+            s.reserveUSD
+          );
+        }
+      }
+
+      const reserveUSDNext = Math.max(0, s.reserveUSD - reserveDeployedUsd);
+      const reserveBuyUST = reserveDeployedUsd / Math.max(0.8, stablePriceAfterSell);
+      const reserveSupport = s.reserveEffectiveness * (reserveBuyUST / (1400 + 2000 * ustDepthNow)) * 1.25;
+
+      // -----------------------------
+      // 6) Final UST price update
+      // -----------------------------
+      const stableDelta = clamp(sellDelta + redeemSupport + reserveSupport, -0.25, 0.14);
       const stablePriceNext = clamp(s.stablePrice + stableDelta, 0.01, 1.1);
 
-      // Confidence decays when stable deviates and when LUNA collapses.
+      // -----------------------------
+      // 7) Confidence + depth updates
+      // -----------------------------
+      const reserveDepletionStress = reserveUSDNext <= 1e-6 ? 0.12 : reserveDeployedUsd > 0 ? 0.03 : 0;
+      const unfilledStress = clamp(unfilledRedemptionNext / Math.max(1, s.stableSupply), 0, 1);
+
       const confDelta = clamp(
-        -Math.abs(stablePriceNext - 1) * 0.25 - Math.max(0, -lunaDeltaPct) * 0.05 + 0.01,
-        -0.2,
-        0.04
+        -Math.abs(stablePriceNext - peg) * 0.25 - Math.max(0, -lunaDeltaPct) * 0.05 - unfilledStress * 0.08 - reserveDepletionStress + 0.012,
+        -0.28,
+        0.05
       );
-      const demandDecay = s.demandDecayOn ? 0.004 : 0;
-      const confidenceNext = clamp(s.confidence + confDelta - demandDecay, 0, 1);
+
+      const baselineDrift = s.baselineDriftOn ? 0.004 : 0;
+      const confidenceNext = clamp(s.confidence + confDelta - baselineDrift, 0, 1);
+
+      const yieldSupportNext = clamp(s.yieldSupport - Math.abs(stablePriceNext - peg) * 0.02 - baselineDrift, 0, 1);
+
+      const liquidityDrainUst = clamp((0.6 - confidenceNext) * 0.05 + unfilledStress * 0.03, 0, 0.08);
+      const ustDepthNext = clamp(s.ustDepth * (1 - liquidityDrainUst), 0.06, 2);
+
+      const liquidityDrainLuna = clamp((0.65 - confidenceNext) * 0.05 + supplyInflation * 0.18, 0, 0.12);
+      const lunaDepthNext = clamp(s.lunaDepth * (1 - liquidityDrainLuna), 0.06, 2);
+
+      // Anchor TVL update
+      const anchorTVLNext = clamp(s.anchorTVL - sellAnchorOutflowUST, 0, s.anchorTVL);
+      const bankRunTicksRemainingNext = Math.max(0, s.bankRunTicksRemaining - 1);
 
       const whaleSellNext = s.whaleSell * 0.6;
-      const yieldSupportNext = clamp(s.yieldSupport - Math.abs(stablePriceNext - 1) * 0.02 - demandDecay, 0, 1);
 
       const next: AlgorithmicState = {
         ...s,
@@ -1383,108 +1688,121 @@ export default function StablecoinDepegSimulation() {
         lunaPrice: lunaPriceNext,
         stableSupply: stableSupplyNext,
         lunaSupply: lunaSupplyNext,
-        ammDepth,
+        ustDepth: ustDepthNext,
+        lunaDepth: lunaDepthNext,
         confidence: confidenceNext,
         yieldSupport: yieldSupportNext,
         whaleSell: whaleSellNext,
+        unfilledRedemption: unfilledRedemptionNext,
+        reserveUSD: reserveUSDNext,
+        reserveManualDeployRequestUsd: s.reservePolicy === 'manual' ? 0 : s.reserveManualDeployRequestUsd,
+        anchorTVL: anchorTVLNext,
+        bankRunTicksRemaining: bankRunTicksRemainingNext,
         lastTick: {
           sentiment,
-          sellPressure,
+          sellWhaleUST,
+          sellAnchorOutflowUST,
+          sellFromLowSentimentUST,
+          sellFromUnfilledRedemptionUST,
+          ustSellFlow,
+
           sellDelta,
+          stablePriceAfterSell,
           priceStress,
+
+          redemptionRequested,
+          redemptionExecuted,
           redemption,
-          redemptionCap,
+          mintCapPerTick,
+          redemptionCap: mintCapPerTick,
+          unfilledRedemptionNext,
+
           lunaMinted,
           supplyInflation,
           lunaDeltaPct,
           lunaPriceNext,
+
           backstopStrength,
           redeemSupport,
+          reserveDeployedUsd,
+          reserveSupport,
+          reserveUSDNext,
+
+          ustDepthNext,
+          lunaDepthNext,
+          confidenceNext,
+          yieldSupportNext,
+
           stableDelta
         }
       };
 
       updateQuestsFromStep(stablePriceNext, {
-        redeemed: redemption > 0.01,
+        redeemed: redemptionExecuted > 0.01,
         confidenceNext
       });
 
+      // Regime ladder markers
       if (stablePriceNext < 0.97 && s.stablePrice >= 0.97) {
-        addEvent('warn', tr('Early stress: stablecoin dips below $0.97.'), next.t);
+        addEvent('warn', tr('Early stress: UST dips below $0.97.'), next.t);
         setWhy(
           tr('Early stress'),
           tr(
-            'Price dipped below peg as sell pressure {{sell}} hit AMM depth {{depth}}. Redemptions burn {{redeem}} stable this step. Backstop strength is {{bs}} (reflexivity {{k}}).',
+            'UST sell flow {{sell}} hit UST depth {{d}}. Redemptions requested {{req}} (executed {{exe}}; cap {{cap}}). Unfilled redemptions {{unf}} increase panic pressure.',
             {
-              sell: fmt(sellPressure, 0),
-              depth: fmt(ammDepth, 2),
-              redeem: fmt(redemption, 0),
-              bs: fmt(backstopStrength, 2),
-              k: fmt(params.reflexivityK, 2)
+              sell: fmt(ustSellFlow, 0),
+              d: fmt(ustDepthNow, 2),
+              req: fmt(redemptionRequested, 0),
+              exe: fmt(redemptionExecuted, 0),
+              cap: fmt(mintCapPerTick, 0),
+              unf: fmt(unfilledRedemptionNext, 0)
             }
           )
         );
       }
       if (stablePriceNext < 0.8 && s.stablePrice >= 0.8) {
-        addEvent('error', tr('Panic zone: stablecoin falls below $0.80.'), next.t);
+        addEvent('error', tr('Run begins: UST falls below $0.80.'), next.t);
         setWhy(
-          tr('Panic zone'),
+          tr('Run begins'),
           tr(
-            'Redemptions accelerate ({{redeem}} stable burned), minting {{mint}} backstop tokens. Supply inflation {{infl}} + low confidence {{conf}} pushes the backstop price down, weakening the $1 redemption promise.',
+            'When UST is far below peg, redemptions request {{req}} per tick, but only {{exe}} can execute due to mint cap. This creates unfilled pressure and accelerates confidence loss.',
             {
-              redeem: fmt(redemption, 0),
-              mint: fmt(lunaMinted, 0),
-              infl: pct(supplyInflation, 1),
-              conf: fmt(confidenceNext, 2)
+              req: fmt(redemptionRequested, 0),
+              exe: fmt(redemptionExecuted, 0)
             }
           )
         );
+      }
+      if (stablePriceNext < 0.3 && s.stablePrice >= 0.3) {
+        addEvent('error', tr('Cascade: UST falls below $0.30.'), next.t);
       }
       if (stablePriceNext < 0.05 && s.stablePrice >= 0.05) {
-        addEvent('error', tr('Failure: stablecoin collapses (< $0.05).'), next.t);
-        setWhy(
-          tr('Reflexive collapse'),
-          tr(
-            'The backstop token price fell to ${{luna}} (Δ {{d}}). Backstop strength {{bs}} means redemptions no longer create meaningful support, so the stablecoin can spiral down even as supply is burned.',
-            {
-              luna: fmt(lunaPriceNext, 2),
-              d: pct(lunaDeltaPct, 1),
-              bs: fmt(backstopStrength, 2)
-            }
-          )
-        );
+        addEvent('error', tr('Failure: UST collapses (< $0.05).'), next.t);
       }
 
-      // Backstop credibility thresholds (teaching): when redemptions become less meaningful.
-      if (backstopStrength < 0.3 && s.lastTick.backstopStrength >= 0.3) {
-        addEvent('error', tr('Backstop failure: redemptions lose credibility as the backstop token collapses.'), next.t);
-        setWhy(
-          tr('Backstop failure'),
-          tr(
-            'Backstop strength fell to {{bs}}. With a weak backstop, minting more backstop tokens (supply inflation {{infl}}) does not translate into credible $1 support, so confidence breaks.',
-            {
-              bs: fmt(backstopStrength, 2),
-              infl: pct(supplyInflation, 1)
-            }
-          )
-        );
-      } else if (backstopStrength < 0.6 && s.lastTick.backstopStrength >= 0.6) {
-        addEvent('warn', tr('Backstop weakening: redemptions still work mechanically, but market confidence deteriorates.'), next.t);
-        setWhy(
-          tr('Backstop weakening'),
-          tr(
-            'Backstop strength fell to {{bs}}. Redemptions still function, but markets price the risk that future redemptions will be less valuable as backstop supply inflates.',
-            {
-              bs: fmt(backstopStrength, 2)
-            }
-          )
-        );
+      // Mint cap binding marker
+      if (redemptionRequested > redemptionExecuted && s.lastTick.redemptionRequested <= s.lastTick.redemptionExecuted) {
+        addEvent('warn', tr('Mint cap is binding: redemption demand exceeds execution capacity.'), next.t);
+        addChartMarker('marker_mint_cap_binding', tr('Mint cap binding'), { t: next.t, stable: stablePriceNext });
+      }
+
+      // Reserves deployed / depleted markers
+      if (reserveDeployedUsd > 0 && s.lastTick.reserveDeployedUsd <= 0) {
+        addEvent('info', tr('Reserves deployed to support UST.'), next.t);
+        addChartMarker('marker_reserves_deployed', tr('Reserves deployed'), { t: next.t, stable: stablePriceNext });
+      }
+      if (reserveUSDNext <= 1e-6 && s.reserveUSD > 1e-6) {
+        addEvent('error', tr('Reserves depleted: credibility drops sharply.'), next.t);
+        addChartMarker('marker_reserves_depleted', tr('Reserves depleted'), { t: next.t, stable: stablePriceNext });
       }
 
       setSeries((prev) => {
-        const nextSeries = [...prev, { t: next.t, stable: stablePriceNext, ref: lunaPriceNext }];
+        const point = { t: next.t, stable: stablePriceNext, ref: lunaPriceNext };
+        lastPlottedPointRef.current = point;
+        const nextSeries = [...prev, point];
         return nextSeries.length > 5000 ? nextSeries.slice(-5000) : nextSeries;
       });
+
       return next;
     });
 
@@ -1521,6 +1839,49 @@ export default function StablecoinDepegSimulation() {
       }
     };
   }, [isAutoRunning, autoRunSpeed]);
+
+  // Dev-only debug harness (for fast acceptance testing from the browser console).
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    const api = {
+      reset,
+      applyShock,
+      applyIntervention,
+      runSteps,
+      stepOnce,
+      getState: () => ({
+        scenario,
+        collat,
+        algo,
+        params,
+        series,
+        chartMarkers,
+        events
+      }),
+      // Scripted Terra acceptance run.
+      terraAcceptance: () => {
+        reset('algorithmic');
+        runSteps(20);
+        applyShock('yield_withdrawal');
+        runSteps(8);
+        applyShock('anchor_bank_run');
+        runSteps(6);
+        applyShock('whale_sale');
+        runSteps(6);
+        applyShock('mint_cap_tightened');
+        runSteps(6);
+        applyIntervention('toggle_reserve_policy');
+        runSteps(40);
+        return api.getState();
+      }
+    };
+
+    (window as any).__depegSim = api;
+    return () => {
+      if ((window as any).__depegSim === api) delete (window as any).__depegSim;
+    };
+  }, [scenario, collat, algo, params, series, chartMarkers, events]);
 
   // Hint: highlight Play button briefly on first load.
   useEffect(() => {
@@ -1876,15 +2237,15 @@ export default function StablecoinDepegSimulation() {
                   type="button"
                   onClick={() => applyShock('demand_decay')}
                   className={`inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-sm ${
-                    algo.demandDecayOn
+                    algo.baselineDriftOn
                       ? 'bg-blue-600 border-blue-500 hover:bg-blue-700'
                       : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
                   }`}
-                  aria-pressed={algo.demandDecayOn}
+                  aria-pressed={algo.baselineDriftOn}
                 >
                   <span className="inline-flex items-center gap-2">
                     <TrendingDown size={16} className="text-slate-300" />
-                    {tr('Demand decay')}
+                    {tr('Baseline drift')}
                   </span>
                   <TooltipInButton
                     text={tr(
@@ -1903,6 +2264,42 @@ export default function StablecoinDepegSimulation() {
                     {tr('Whale sale')}
                   </span>
                   <TooltipInButton text={tr('Large stablecoin sells push price below $1, triggering redemptions into LUNA.')} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyShock('anchor_bank_run')}
+                  className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-amber-300" />
+                    {tr('Anchor bank run')}
+                  </span>
+                  <TooltipInButton text={tr('A wave of withdrawals turns into explicit UST sell flow, stressing the peg.')} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyShock('mint_cap_tightened')}
+                  className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Gauge size={16} className="text-amber-200" />
+                    {tr('Mint cap tightened')}
+                  </span>
+                  <TooltipInButton text={tr('Swap throttles: redemption demand exceeds execution capacity, creating unfilled redemptions and panic.')} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyShock('reserve_confidence_loss')}
+                  className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Banknote size={16} className="text-slate-200" />
+                    {tr('Reserve confidence loss')}
+                  </span>
+                  <TooltipInButton text={tr('Markets doubt reserves: reserve buys become less effective and confidence drops.')} />
                 </button>
 
                 <button
@@ -2145,14 +2542,55 @@ export default function StablecoinDepegSimulation() {
                   <TooltipInButton text={tr('Improve oracle quality, which increases confidence and reduces wrong liquidations.')} />
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => applyIntervention('restore_yield')}
-                  className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
-                >
-                  {tr('Restore yield incentives')}
-                  <TooltipInButton text={tr('Yield can temporarily support demand, but it is not a real collateral backstop.')} />
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => applyIntervention('restore_yield')}
+                    className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <TrendingUp size={16} className="text-blue-200" />
+                      {tr('Restore yield incentives')}
+                    </span>
+                    <TooltipInButton text={tr('Yield can temporarily support demand, but it is not a real collateral backstop.')} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applyIntervention('toggle_reserve_policy')}
+                    className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <RefreshCw size={16} className="text-violet-200" />
+                      {tr('Toggle reserve policy')}
+                    </span>
+                    <TooltipInButton text={tr('Switch between Auto reserves and Manual reserves (click Deploy to spend reserves).')} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applyIntervention('deploy_reserves_now')}
+                    className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Banknote size={16} className="text-emerald-200" />
+                      {tr('Deploy reserves now')}
+                    </span>
+                    <TooltipInButton text={tr('Spend reserves to buy UST when below peg. Helps in the short term but drains remaining reserves.')} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applyIntervention('increase_mint_cap')}
+                    className="inline-flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Gauge size={16} className="text-amber-200" />
+                      {tr('Increase mint cap')}
+                    </span>
+                    <TooltipInButton text={tr('Relieve swap throttles so more redemptions can execute per tick, reducing unfilled pressure.')} />
+                  </button>
+                </>
               )}
 
               <button
@@ -2192,10 +2630,17 @@ export default function StablecoinDepegSimulation() {
                     </div>
 
                     <div className="flex items-start gap-2">
-                      {scenario === 'algorithmic' && algo.demandDecayOn ? (
+                      {scenario === 'algorithmic' && algo.baselineDriftOn ? (
                         <span className="mr-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-blue-500/50 bg-blue-950/30 text-xs font-semibold text-blue-200">
                           <span className="h-2 w-2 rounded-full bg-blue-400" />
-                          {tr('Demand_decay')}: {tr('ON')}
+                          {tr('Baseline drift')}: {tr('ON')}
+                        </span>
+                      ) : null}
+
+                      {scenario === 'algorithmic' ? (
+                        <span className="mr-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900/30 text-xs font-semibold text-slate-200">
+                          <span className="h-2 w-2 rounded-full bg-violet-400" />
+                          {tr('Reserve policy')}: {tr(algo.reservePolicy === 'auto' ? 'Auto' : 'Manual')}
                         </span>
                       ) : null}
                       <button
@@ -2316,26 +2761,79 @@ export default function StablecoinDepegSimulation() {
                             ) : (
                               <div className="mt-2 grid grid-cols-1 gap-2 text-[11px] text-slate-200 leading-4">
                                 <div className="rounded-md border border-slate-800 bg-slate-900/30 p-2">
-                                  <div className="grid grid-cols-3 gap-x-2 text-slate-400">
-                                    <div className="truncate whitespace-nowrap">{tr('Price stress')}</div>
-                                    <div className="truncate whitespace-nowrap">{tr('Redemption')}</div>
-                                    <div className="truncate whitespace-nowrap">{tr('LUNA minted')}</div>
+                                  <div className="grid grid-cols-5 gap-x-2 text-slate-400">
+                                    <div className="truncate whitespace-nowrap">{tr('Sell: whale')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Sell: Anchor')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Sell: sentiment')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Sell: unfilled')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Total sell')}</div>
                                   </div>
-                                  <div className="grid grid-cols-3 gap-x-2 font-mono text-slate-100">
-                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.priceStress, 3)}</div>
-                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.redemption, 2)}</div>
-                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.lunaMinted, 3)}</div>
+                                  <div className="grid grid-cols-5 gap-x-2 font-mono text-slate-100">
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.sellWhaleUST, 0)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.sellAnchorOutflowUST, 0)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.sellFromLowSentimentUST, 0)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.sellFromUnfilledRedemptionUST, 0)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.ustSellFlow, 0)}</div>
                                   </div>
                                 </div>
 
                                 <div className="rounded-md border border-slate-800 bg-slate-900/30 p-2">
-                                  <div className="grid grid-cols-3 gap-x-2 text-slate-400">
-                                    <div className="truncate whitespace-nowrap">{tr('Supply inflation')}</div>
-                                    <div className="truncate whitespace-nowrap">{tr('Backstop strength')}</div>
-                                    <div className="truncate whitespace-nowrap">{tr('Δprice')}</div>
+                                  <div className="grid grid-cols-4 gap-x-2 text-slate-400">
+                                    <div className="truncate whitespace-nowrap">{tr('UST depth')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Δprice (sell)')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Price after sell')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Price stress')}</div>
                                   </div>
-                                  <div className="grid grid-cols-3 gap-x-2 font-mono text-slate-100">
+                                  <div className="grid grid-cols-4 gap-x-2 font-mono text-slate-100">
+                                    <div className="whitespace-nowrap">{fmt(algo.ustDepth, 2)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.sellDelta, 4)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.stablePriceAfterSell, 3)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.priceStress, 3)}</div>
+                                  </div>
+                                </div>
+
+                                <div className="rounded-md border border-slate-800 bg-slate-900/30 p-2">
+                                  <div className="grid grid-cols-4 gap-x-2 text-slate-400">
+                                    <div className="truncate whitespace-nowrap">{tr('Redeem requested')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Executed')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Mint cap')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Unfilled')}</div>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-x-2 font-mono text-slate-100">
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.redemptionRequested, 0)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.redemptionExecuted, 0)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.mintCapPerTick, 0)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.unfilledRedemptionNext, 0)}</div>
+                                  </div>
+                                </div>
+
+                                <div className="rounded-md border border-slate-800 bg-slate-900/30 p-2">
+                                  <div className="grid grid-cols-5 gap-x-2 text-slate-400">
+                                    <div className="truncate whitespace-nowrap">{tr('LUNA minted')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Inflation')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('LUNA Δ%')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('LUNA depth')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('LUNA price')}</div>
+                                  </div>
+                                  <div className="grid grid-cols-5 gap-x-2 font-mono text-slate-100">
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.lunaMinted, 0)}</div>
                                     <div className="whitespace-nowrap">{pct(algo.lastTick.supplyInflation, 2)}</div>
+                                    <div className="whitespace-nowrap">{pct(algo.lastTick.lunaDeltaPct, 1)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.lunaDepth, 2)}</div>
+                                    <div className="whitespace-nowrap">${fmt(algo.lunaPrice, 2)}</div>
+                                  </div>
+                                </div>
+
+                                <div className="rounded-md border border-slate-800 bg-slate-900/30 p-2">
+                                  <div className="grid grid-cols-4 gap-x-2 text-slate-400">
+                                    <div className="truncate whitespace-nowrap">{tr('Reserves deployed')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Reserves left')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Backstop strength')}</div>
+                                    <div className="truncate whitespace-nowrap">{tr('Δprice (net)')}</div>
+                                  </div>
+                                  <div className="grid grid-cols-4 gap-x-2 font-mono text-slate-100">
+                                    <div className="whitespace-nowrap">{fmt(algo.lastTick.reserveDeployedUsd, 0)}</div>
+                                    <div className="whitespace-nowrap">{fmt(algo.reserveUSD, 0)}</div>
                                     <div className="whitespace-nowrap">{pct(algo.lastTick.backstopStrength, 0)}</div>
                                     <div className="whitespace-nowrap">{fmt(algo.lastTick.stableDelta, 4)}</div>
                                   </div>
@@ -2601,15 +3099,15 @@ export default function StablecoinDepegSimulation() {
                                   type="button"
                                   onClick={() => applyShock('demand_decay')}
                                   className={`inline-flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border text-xs ${
-                                    algo.demandDecayOn
+                                    algo.baselineDriftOn
                                       ? 'bg-blue-600 border-blue-500 hover:bg-blue-700'
                                       : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
                                   }`}
-                                  aria-pressed={algo.demandDecayOn}
+                                  aria-pressed={algo.baselineDriftOn}
                                 >
                                   <span className="inline-flex items-center gap-2">
                                     <TrendingDown size={14} className="text-slate-300" />
-                                    {tr('Demand decay')}
+                                    {tr('Baseline drift')}
                                   </span>
                                   <TooltipInButton
                                     text={tr(
@@ -2624,6 +3122,30 @@ export default function StablecoinDepegSimulation() {
                                 >
                                   <TrendingDown size={14} className="text-rose-200" />
                                   {tr('Whale sale')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('anchor_bank_run')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <AlertTriangle size={14} className="text-amber-300" />
+                                  {tr('Anchor bank run')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('mint_cap_tightened')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Gauge size={14} className="text-amber-200" />
+                                  {tr('Mint cap tightened')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyShock('reserve_confidence_loss')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Banknote size={14} className="text-slate-200" />
+                                  {tr('Reserve confidence loss')}
                                 </button>
                                 <button
                                   type="button"
@@ -2694,6 +3216,30 @@ export default function StablecoinDepegSimulation() {
                                 >
                                   <TrendingUp size={14} className="text-blue-200" />
                                   {tr('Restore yield')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyIntervention('toggle_reserve_policy')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <RefreshCw size={14} className="text-violet-200" />
+                                  {tr('Reserve policy')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyIntervention('deploy_reserves_now')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Banknote size={14} className="text-emerald-200" />
+                                  {tr('Deploy reserves')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyIntervention('increase_mint_cap')}
+                                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs"
+                                >
+                                  <Gauge size={14} className="text-amber-200" />
+                                  {tr('Increase cap')}
                                 </button>
                                 <button
                                   type="button"
@@ -2951,36 +3497,83 @@ export default function StablecoinDepegSimulation() {
                   <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-slate-200">
                     <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
                       <div className="text-slate-400 inline-flex items-center gap-2">
-                        {tr('Price stress')}
-                        <Tooltip text={tr('How far the stablecoin price is from $1. Higher stress increases redemption and reflexive selling.')} />
+                        {tr('Sell flow (UST)')}
+                        <Tooltip text={tr('Decomposed UST sell flow this tick: whale selling + Anchor outflows + low-sentiment selling + failed-arbitrage pressure.')} />
                       </div>
-                      <div className="font-mono text-slate-100">{fmt(algo.lastTick.priceStress, 3)}</div>
-                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
-                        {tr('Redemption')}
-                        <Tooltip text={tr('Stablecoin redeemed/burned this step when price < $1, which mints backstop tokens.')} />
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-slate-100">
+                        <div className="text-slate-400">{tr('whale')}</div>
+                        <div className="text-right">{fmt(algo.lastTick.sellWhaleUST, 0)}</div>
+                        <div className="text-slate-400">{tr('Anchor')}</div>
+                        <div className="text-right">{fmt(algo.lastTick.sellAnchorOutflowUST, 0)}</div>
+                        <div className="text-slate-400">{tr('sentiment')}</div>
+                        <div className="text-right">{fmt(algo.lastTick.sellFromLowSentimentUST, 0)}</div>
+                        <div className="text-slate-400">{tr('unfilled')}</div>
+                        <div className="text-right">{fmt(algo.lastTick.sellFromUnfilledRedemptionUST, 0)}</div>
+                        <div className="text-slate-400">{tr('total')}</div>
+                        <div className="text-right">{fmt(algo.lastTick.ustSellFlow, 0)}</div>
                       </div>
-                      <div className="font-mono text-slate-100">{fmt(algo.lastTick.redemption, 2)}</div>
-                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
-                        {tr('LUNA minted')}
-                        <Tooltip text={tr('Backstop tokens minted to honor redemptions. More minting increases inflation and can accelerate a death spiral.')} />
+
+                      <div className="mt-3 text-slate-400 inline-flex items-center gap-2">
+                        {tr('UST depth')}
+                        <Tooltip text={tr('Market depth proxy for UST. Lower depth makes the same sell flow cause larger price impact.')} />
                       </div>
-                      <div className="font-mono text-slate-100">{fmt(algo.lastTick.lunaMinted, 3)}</div>
+                      <div className="font-mono text-slate-100">{fmt(algo.ustDepth, 2)}</div>
+
+                      <div className="mt-3 text-slate-400 inline-flex items-center gap-2">
+                        {tr('Price after sell')}
+                        <Tooltip text={tr('Intermediate price after sell impact, before redemption + reserves support.')} />
+                      </div>
+                      <div className="font-mono text-slate-100">${fmt(algo.lastTick.stablePriceAfterSell, 3)}</div>
                     </div>
 
                     <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
                       <div className="text-slate-400 inline-flex items-center gap-2">
+                        {tr('Redemption capacity')}
+                        <Tooltip text={tr('When UST < $1, users try to redeem UST for $1 worth of LUNA. If capacity is limited, some redemptions fail and become unfilled pressure.')} />
+                      </div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-slate-100">
+                        <div className="text-slate-400">{tr('requested')}</div>
+                        <div className="text-right">{fmt(algo.lastTick.redemptionRequested, 0)}</div>
+                        <div className="text-slate-400">{tr('executed')}</div>
+                        <div className="text-right">{fmt(algo.lastTick.redemptionExecuted, 0)}</div>
+                        <div className="text-slate-400">{tr('mint cap')}</div>
+                        <div className="text-right">{fmt(algo.lastTick.mintCapPerTick, 0)}</div>
+                        <div className="text-slate-400">{tr('unfilled')}</div>
+                        <div className="text-right">{fmt(algo.lastTick.unfilledRedemptionNext, 0)}</div>
+                      </div>
+
+                      <div className="mt-3 text-slate-400 inline-flex items-center gap-2">
+                        {tr('LUNA minted')}
+                        <Tooltip text={tr('LUNA minted due to executed redemptions. High minting inflates supply and can crash LUNA price.')} />
+                      </div>
+                      <div className="font-mono text-slate-100">{fmt(algo.lastTick.lunaMinted, 0)}</div>
+
+                      <div className="mt-3 text-slate-400 inline-flex items-center gap-2">
                         {tr('Supply inflation')}
-                        <Tooltip text={tr('Minted backstop tokens relative to prior supply (per step). High inflation weakens the backstop price.')} />
+                        <Tooltip text={tr('Minted LUNA / prior LUNA supply (per step).')} />
                       </div>
                       <div className="font-mono text-slate-100">{pct(algo.lastTick.supplyInflation, 2)}</div>
-                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
+
+                      <div className="mt-3 text-slate-400 inline-flex items-center gap-2">
+                        {tr('Reserves (USD)')}
+                        <Tooltip text={tr('Reserves can buy UST when below peg, but depletion reduces credibility.')} />
+                      </div>
+                      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-slate-100">
+                        <div className="text-slate-400">{tr('deployed')}</div>
+                        <div className="text-right">{fmt(algo.lastTick.reserveDeployedUsd, 0)}</div>
+                        <div className="text-slate-400">{tr('left')}</div>
+                        <div className="text-right">{fmt(algo.reserveUSD, 0)}</div>
+                      </div>
+
+                      <div className="mt-3 text-slate-400 inline-flex items-center gap-2">
                         {tr('Backstop strength')}
-                        <Tooltip text={tr('0..1 proxy for how credible $1 redemptions are. Falls as inflation rises and backstop price weakens.')} />
+                        <Tooltip text={tr('Credibility proxy for the $1 redemption promise: depends on LUNA price and confidence.')} />
                       </div>
                       <div className="font-mono text-slate-100">{pct(algo.lastTick.backstopStrength, 0)}</div>
-                      <div className="mt-2 text-slate-400 inline-flex items-center gap-2">
-                        {tr('Δprice')}
-                        <Tooltip text={tr('Stablecoin price change this step (after redemptions and reflexive effects).')} />
+
+                      <div className="mt-3 text-slate-400 inline-flex items-center gap-2">
+                        {tr('Δprice (net)')}
+                        <Tooltip text={tr('UST price change this step after sells + redemption support + reserves support.')} />
                       </div>
                       <div className="font-mono text-slate-100">{fmt(algo.lastTick.stableDelta, 4)}</div>
                     </div>
@@ -2998,10 +3591,10 @@ export default function StablecoinDepegSimulation() {
                 tr={tr}
                 title={scenario === 'collateralized' ? tr('Peg vs collateral stress') : tr('Peg vs reflexive backstop (LUNA)')}
                 titleExtra={
-                  scenario === 'algorithmic' && algo.demandDecay ? (
+                  scenario === 'algorithmic' && algo.baselineDriftOn ? (
                     <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-blue-500/50 bg-blue-950/30 text-[11px] font-semibold text-blue-200">
                       <span className="h-2 w-2 rounded-full bg-blue-400" />
-                      {tr('Demand decay')}: {tr('ON')}
+                      {tr('Baseline drift')}: {tr('ON')}
                     </span>
                   ) : null
                 }

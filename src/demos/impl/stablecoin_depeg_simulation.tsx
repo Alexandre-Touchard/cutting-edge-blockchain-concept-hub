@@ -130,6 +130,9 @@ type AlgorithmicState = {
   mintCapMultiplier: number; // 1.0 = normal
   unfilledRedemption: number;
 
+  // Stability tracking (used to allow partial LUNA recovery in mild depeg scenarios)
+  pegStabilityTicks: number;
+
   // Reserves (LFG-like)
   reserveUSD: number;
   reserveDeployRateCapPerTick: number;
@@ -287,6 +290,7 @@ function initialAlgorithmic(): AlgorithmicState {
 
     mintCapMultiplier: 1.0,
     unfilledRedemption: 0,
+    pegStabilityTicks: 0,
 
     reserveUSD,
     reserveDeployRateCapPerTick: 220,
@@ -395,6 +399,71 @@ function QuestRow({ done, text, tip }: { done: boolean; text: string; tip: strin
   );
 }
 
+function RedemptionCapacityGauge({
+  requested,
+  executed,
+  cap,
+  unfilled,
+  compact = false
+}: {
+  requested: number;
+  executed: number;
+  cap: number;
+  unfilled: number;
+  compact?: boolean;
+}) {
+  const safeCap = Math.max(0, cap);
+  const safeExecuted = clamp(executed, 0, safeCap);
+  const overflow = Math.max(0, requested - safeCap);
+
+  // Normalize widths: show overflow relative to cap (up to 100% extra).
+  const base = Math.max(1e-6, safeCap);
+  const wExecuted = clamp(safeExecuted / base, 0, 1);
+  const wRemaining = clamp((safeCap - safeExecuted) / base, 0, 1);
+  const wOverflow = clamp(overflow / base, 0, 1);
+
+  const throttled = requested > executed + 1e-9;
+
+  return (
+    <div className={compact ? 'mt-0' : 'mt-2'}>
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] text-slate-400">{throttled ? 'Redemption throttled' : 'Redemption capacity'}</div>
+        {throttled ? (
+          <span className="text-[10px] px-2 py-0.5 rounded-full border border-rose-500/40 bg-rose-950/30 text-rose-200 font-semibold">
+            THROTTLED
+          </span>
+        ) : (
+          <span className="text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-950/20 text-emerald-200 font-semibold">
+            OK
+          </span>
+        )}
+      </div>
+
+      <div className={`${compact ? 'mt-1 h-2' : 'mt-1 h-3'} rounded-md overflow-hidden border border-slate-700 bg-slate-900/50`}>
+        <div className="h-full flex">
+          <div className="h-full bg-emerald-500/70" style={{ width: `${wExecuted * 100}%` }} />
+          <div className="h-full bg-slate-700/70" style={{ width: `${wRemaining * 100}%` }} />
+          {/* Overflow (requested beyond cap). */}
+          {wOverflow > 0 ? <div className="h-full bg-rose-500/70" style={{ width: `${wOverflow * 100}%` }} /> : null}
+        </div>
+      </div>
+
+      {compact ? null : (
+        <div className="mt-1 grid grid-cols-4 gap-2 text-[10px] text-slate-400">
+          <div className="truncate">executed</div>
+          <div className="truncate">cap</div>
+          <div className="truncate">overflow</div>
+          <div className="truncate">unfilled</div>
+          <div className="font-mono text-slate-200">{fmt(executed, 0)}</div>
+          <div className="font-mono text-slate-200">{fmt(cap, 0)}</div>
+          <div className="font-mono text-rose-200">{fmt(overflow, 0)}</div>
+          <div className="font-mono text-rose-200">{fmt(unfilled, 0)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type ChartMarker = {
   id: string;
   t: number;
@@ -466,7 +535,8 @@ function SimpleLineChart({
   const w = width ?? 560;
   const h = height ?? 180;
   const padLeft = 54;
-  const padRight = 10;
+  // Space for the right-side ref axis labels (e.g., LUNA price).
+  const padRight = 64;
   const padTop = 16;
   const padBottom = 34;
   const yAxis = h - padBottom;
@@ -516,6 +586,24 @@ function SimpleLineChart({
 
   const minRef = Math.min(...refYs);
   const maxRef = Math.max(...refYs);
+
+  const yRefTickCount = 5;
+  const refRange = maxRef - minRef;
+  const refLabelDecimals = refRange < 1 ? 3 : refRange < 10 ? 2 : refRange < 100 ? 1 : 0;
+  const yRefTicks = (() => {
+    if (!Number.isFinite(minRef) || !Number.isFinite(maxRef)) return [] as number[];
+    if (maxRef === minRef) return [minRef];
+
+    const raw = Array.from({ length: yRefTickCount }, (_, i) => minRef + (i / (yRefTickCount - 1)) * (maxRef - minRef));
+    const roundTo = Math.pow(10, refLabelDecimals);
+    const rounded = raw.map((v) => Math.round(v * roundTo) / roundTo);
+    return Array.from(new Set(rounded));
+  })();
+
+  const refTickLabel = (v: number) => {
+    // Use the same formatter used in the legend/value display when available.
+    return refValueFormatter ? refValueFormatter(v) : fmt(v, refLabelDecimals);
+  };
 
   function xScale(x: number) {
     if (maxX === minX) return padLeft;
@@ -618,8 +706,47 @@ function SimpleLineChart({
 
       <div className="mt-3 overflow-auto">
         <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block">
-          {/* y-axis (price) */}
+          {/* y-axis (stable price) */}
           <line x1={padLeft} x2={padLeft} y1={padTop} y2={yAxis} stroke="rgba(148,163,184,0.35)" />
+
+          {/* y-axis (ref series, right) */}
+          <line
+            x1={w - padRight}
+            x2={w - padRight}
+            y1={padTop}
+            y2={yAxis}
+            stroke="rgba(148,163,184,0.25)"
+          />
+          {yRefTicks.map((v) => (
+            <g key={`ref_${v}`}>
+              <line
+                x1={w - padRight}
+                x2={w - padRight + 4}
+                y1={yScale(v, minRef, maxRef)}
+                y2={yScale(v, minRef, maxRef)}
+                stroke="rgba(148,163,184,0.25)"
+              />
+              <text
+                x={w - padRight + 6}
+                y={yScale(v, minRef, maxRef) + 3}
+                textAnchor="start"
+                fontSize={10}
+                fill="rgba(148,163,184,0.75)"
+              >
+                {refTickLabel(v)}
+              </text>
+            </g>
+          ))}
+          <text
+            x={w - 14}
+            y={(padTop + yAxis) / 2}
+            transform={`rotate(90 ${w - 14} ${(padTop + yAxis) / 2})`}
+            textAnchor="middle"
+            fontSize={11}
+            fill="rgba(148,163,184,0.85)"
+          >
+            {refLabel}
+          </text>
           {yTicks.map((v) => (
             <g key={v}>
               <line
@@ -845,6 +972,14 @@ export default function StablecoinDepegSimulation() {
     everCollapsed: false,
     everRecovered: false,
 
+    // Terra appendix quests
+    sawAnchorBankRun: false,
+    sawMintCapBinding: false,
+    sawUnfilledRedemptions: false,
+    usedReservePolicyToggle: false,
+    deployedReserves: false,
+    depletedReserves: false,
+
     // Optimization / learning loops
     keptAbove97For10: false,
     recoveredWithMinimalInterventions: false,
@@ -994,6 +1129,14 @@ export default function StablecoinDepegSimulation() {
       everRedeemed: false,
       everCollapsed: false,
       everRecovered: false,
+
+      sawAnchorBankRun: false,
+      sawMintCapBinding: false,
+      sawUnfilledRedemptions: false,
+      usedReservePolicyToggle: false,
+      deployedReserves: false,
+      depletedReserves: false,
+
       keptAbove97For10: false,
       recoveredWithMinimalInterventions: false,
       recoveredWithoutBackstopBuy: false,
@@ -1079,7 +1222,10 @@ export default function StablecoinDepegSimulation() {
         prev.survivedCrash10StepsNoInsolvency ||
         (!crashActiveRef.current && crashTicksRef.current >= 10 && !crashInsolvencyRef.current);
 
+      // IMPORTANT: preserve any quest flags that are set by shocks/interventions (e.g., Terra appendix quests).
+      // updateQuestsFromStep runs on every step and should only update step-derived flags.
       return {
+        ...prev,
         everDepegged,
         everLiquidated,
         everRedeemed,
@@ -1172,12 +1318,13 @@ export default function StablecoinDepegSimulation() {
           next.confidence = clamp(next.confidence - 0.15, 0, 1);
         }
         if (preset === 'whale_sale') {
-          next.whaleSell += 220;
+          // A whale starts dumping UST. Keep it impactful but not instantly catastrophic on Auto-run 1x.
+          next.whaleSell += 120;
         }
         if (preset === 'death_spiral') {
           next.yieldSupport = 0.2;
           next.confidence = 0.35;
-          next.whaleSell += 520;
+          next.whaleSell += 360;
         }
         if (preset === 'shockwave') {
           // A broad market shock: confidence drops, liquidity thins, and some selling starts.
@@ -1193,10 +1340,14 @@ export default function StablecoinDepegSimulation() {
           next.withdrawalRate = Math.max(next.withdrawalRate, 0.12);
           next.confidence = clamp(next.confidence - 0.12, 0, 1);
           next.yieldSupport = clamp(next.yieldSupport - 0.1, 0, 1);
+
+          setQuestFlags((q) => ({ ...q, sawAnchorBankRun: true }));
         }
         if (preset === 'mint_cap_tightened') {
-          next.mintCapMultiplier = clamp(next.mintCapMultiplier * 0.6, 0.05, 2);
-          next.confidence = clamp(next.confidence - 0.06, 0, 1);
+          // Tighten swap capacity enough that binding can happen under moderate depeg.
+          // (After making Whale sale milder, the old 0.6x often didn't bind.)
+          next.mintCapMultiplier = clamp(next.mintCapMultiplier * 0.35, 0.05, 2);
+          next.confidence = clamp(next.confidence - 0.08, 0, 1);
         }
         if (preset === 'reserve_confidence_loss') {
           next.reserveEffectiveness = clamp(next.reserveEffectiveness * 0.65, 0.1, 1);
@@ -1311,10 +1462,13 @@ export default function StablecoinDepegSimulation() {
         if (kind === 'restore_yield') next.yieldSupport = clamp(next.yieldSupport + 0.25, 0, 1);
         if (kind === 'toggle_reserve_policy') {
           next.reservePolicy = next.reservePolicy === 'auto' ? 'manual' : 'auto';
+          setQuestFlags((q) => ({ ...q, usedReservePolicyToggle: true }));
         }
         if (kind === 'deploy_reserves_now') {
           // In manual policy, request a deployment on the next tick; in auto, this is effectively immediate.
           next.reserveManualDeployRequestUsd += next.reserveDeployRateCapPerTick;
+          // Mark quest as "used" (actual deployment is tracked on tick when reserveDeployedUsd > 0).
+          setQuestFlags((q) => ({ ...q, deployedReserves: true }));
         }
         if (kind === 'increase_mint_cap') {
           next.mintCapMultiplier = clamp(next.mintCapMultiplier * 1.4, 0.05, 2);
@@ -1565,8 +1719,11 @@ export default function StablecoinDepegSimulation() {
         s.bankRunTicksRemaining > 0 ? Math.max(s.withdrawalRate, 0.08) : s.withdrawalRate;
       const sellAnchorOutflowUST = s.anchorTVL * clamp(effectiveWithdrawalRate, 0, 0.25);
 
-      // Low-sentiment sells (teaching proxy): increases when confidence/yield fall.
-      const sellFromLowSentimentUST = (1 - sentiment) * 180;
+      // Low-sentiment sells (teaching proxy).
+      // To avoid "instant 0" crashes on Auto-run from a single shock, make this term activate more strongly
+      // once the peg is already stressed (panic is endogenous).
+      const pegStress01 = clamp(Math.abs(s.stablePrice - peg) / 0.05, 0, 1);
+      const sellFromLowSentimentUST = (1 - sentiment) * 90 * (0.15 + 0.85 * pegStress01);
 
       // Failed arb pressure: when mint cap binds, unfilled redemptions become an accelerant.
       const sellFromUnfilledRedemptionUST = clamp(s.unfilledRedemption * 0.06, 0, 320);
@@ -1612,8 +1769,19 @@ export default function StablecoinDepegSimulation() {
       const supplyInflation = lunaMinted / Math.max(1e-6, s.lunaSupply);
       const lunaDepthNow = clamp(s.lunaDepth, 0.06, 2);
 
+      // If UST is near peg for a while and minting has mostly stopped, allow partial LUNA recovery.
+      // This models mild-depeg scenarios where confidence slowly rebuilds.
+      const nearPegNow = Math.abs(stablePriceAfterSell - peg) <= 0.01;
+      const mintingLowNow = redemptionExecuted <= s.stableSupply * 0.0003; // ~0.03% of supply
+      const pegStabilityTicksNext = nearPegNow && mintingLowNow ? s.pegStabilityTicks + 1 : 0;
+
+      const recoveryGate01 = clamp((pegStabilityTicksNext - 6) / 18, 0, 1);
+      const recoveryDrift =
+        recoveryGate01 * (0.003 + 0.01 * s.confidence) * (0.6 + 0.4 * lunaDepthNow);
+
       const lunaDeltaPct = clamp(
-        -((supplyInflation * params.reflexivityK) / (0.6 + 0.8 * lunaDepthNow) + (1 - s.confidence) * 0.06),
+        -((supplyInflation * params.reflexivityK) / (0.6 + 0.8 * lunaDepthNow) + (1 - s.confidence) * 0.06) +
+          recoveryDrift,
         -0.92,
         0.08
       );
@@ -1649,7 +1817,8 @@ export default function StablecoinDepegSimulation() {
       // -----------------------------
       // 6) Final UST price update
       // -----------------------------
-      const stableDelta = clamp(sellDelta + redeemSupport + reserveSupport, -0.25, 0.14);
+      // Cap per-tick move so Auto-run doesn't look like an instant collapse.
+      const stableDelta = clamp(sellDelta + redeemSupport + reserveSupport, -0.12, 0.14);
       const stablePriceNext = clamp(s.stablePrice + stableDelta, 0.01, 1.1);
 
       // -----------------------------
@@ -1664,7 +1833,9 @@ export default function StablecoinDepegSimulation() {
         0.05
       );
 
-      const baselineDrift = s.baselineDriftOn ? 0.004 : 0;
+      // Baseline drift (teaching): slow erosion of confidence/demand even without new shocks.
+      // Make it strong enough to be visually noticeable over ~30-60 ticks when enabled.
+      const baselineDrift = s.baselineDriftOn ? 0.01 : 0;
       const confidenceNext = clamp(s.confidence + confDelta - baselineDrift, 0, 1);
 
       const yieldSupportNext = clamp(s.yieldSupport - Math.abs(stablePriceNext - peg) * 0.02 - baselineDrift, 0, 1);
@@ -1694,6 +1865,7 @@ export default function StablecoinDepegSimulation() {
         yieldSupport: yieldSupportNext,
         whaleSell: whaleSellNext,
         unfilledRedemption: unfilledRedemptionNext,
+        pegStabilityTicks: pegStabilityTicksNext,
         reserveUSD: reserveUSDNext,
         reserveManualDeployRequestUsd: s.reservePolicy === 'manual' ? 0 : s.reserveManualDeployRequestUsd,
         anchorTVL: anchorTVLNext,
@@ -1784,16 +1956,24 @@ export default function StablecoinDepegSimulation() {
       if (redemptionRequested > redemptionExecuted && s.lastTick.redemptionRequested <= s.lastTick.redemptionExecuted) {
         addEvent('warn', tr('Mint cap is binding: redemption demand exceeds execution capacity.'), next.t);
         addChartMarker('marker_mint_cap_binding', tr('Mint cap binding'), { t: next.t, stable: stablePriceNext });
+        setQuestFlags((q) => ({ ...q, sawMintCapBinding: true }));
+      }
+
+      // Unfilled redemptions rising is a key Terra appendix teaching moment.
+      if (unfilledRedemptionNext > 100 && s.unfilledRedemption <= 100) {
+        setQuestFlags((q) => ({ ...q, sawUnfilledRedemptions: true }));
       }
 
       // Reserves deployed / depleted markers
       if (reserveDeployedUsd > 0 && s.lastTick.reserveDeployedUsd <= 0) {
         addEvent('info', tr('Reserves deployed to support UST.'), next.t);
         addChartMarker('marker_reserves_deployed', tr('Reserves deployed'), { t: next.t, stable: stablePriceNext });
+        setQuestFlags((q) => ({ ...q, deployedReserves: true }));
       }
       if (reserveUSDNext <= 1e-6 && s.reserveUSD > 1e-6) {
         addEvent('error', tr('Reserves depleted: credibility drops sharply.'), next.t);
         addChartMarker('marker_reserves_depleted', tr('Reserves depleted'), { t: next.t, stable: stablePriceNext });
+        setQuestFlags((q) => ({ ...q, depletedReserves: true }));
       }
 
       setSeries((prev) => {
@@ -2652,6 +2832,22 @@ export default function StablecoinDepegSimulation() {
                         <RefreshCw size={18} />
                         <span className="text-xs font-semibold text-slate-200">{tr('Reset')}</span>
                       </button>
+
+                      {scenario === 'algorithmic' && (showFormulas || algo.lastTick.redemptionRequested > algo.lastTick.redemptionExecuted) ? (
+                        <div className="hidden sm:flex items-center gap-2 px-2.5 py-2 rounded-lg border border-slate-700 bg-slate-900/40">
+                          <span className="text-[11px] text-slate-400">{tr('Redeem')}</span>
+                          <span className="w-[160px]">
+                            <RedemptionCapacityGauge
+                              compact
+                              requested={algo.lastTick.redemptionRequested}
+                              executed={algo.lastTick.redemptionExecuted}
+                              cap={algo.lastTick.mintCapPerTick}
+                              unfilled={algo.lastTick.unfilledRedemptionNext}
+                            />
+                          </span>
+                        </div>
+                      ) : null}
+
                       <button
                         type="button"
                         onClick={() => setChartMaximized(false)}
@@ -3542,6 +3738,13 @@ export default function StablecoinDepegSimulation() {
                         <div className="text-right">{fmt(algo.lastTick.unfilledRedemptionNext, 0)}</div>
                       </div>
 
+                      <RedemptionCapacityGauge
+                        requested={algo.lastTick.redemptionRequested}
+                        executed={algo.lastTick.redemptionExecuted}
+                        cap={algo.lastTick.mintCapPerTick}
+                        unfilled={algo.lastTick.unfilledRedemptionNext}
+                      />
+
                       <div className="mt-3 text-slate-400 inline-flex items-center gap-2">
                         {tr('LUNA minted')}
                         <Tooltip text={tr('LUNA minted due to executed redemptions. High minting inflates supply and can crash LUNA price.')} />
@@ -3591,10 +3794,18 @@ export default function StablecoinDepegSimulation() {
                 tr={tr}
                 title={scenario === 'collateralized' ? tr('Peg vs collateral stress') : tr('Peg vs reflexive backstop (LUNA)')}
                 titleExtra={
-                  scenario === 'algorithmic' && algo.baselineDriftOn ? (
-                    <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-blue-500/50 bg-blue-950/30 text-[11px] font-semibold text-blue-200">
-                      <span className="h-2 w-2 rounded-full bg-blue-400" />
-                      {tr('Baseline drift')}: {tr('ON')}
+                  scenario === 'algorithmic' ? (
+                    <span className="inline-flex items-center gap-2">
+                      {algo.baselineDriftOn ? (
+                        <span className="mr-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-blue-500/50 bg-blue-950/30 text-xs font-semibold text-blue-200">
+                          <span className="h-2 w-2 rounded-full bg-blue-400" />
+                          {tr('Baseline drift')}: {tr('ON')}
+                        </span>
+                      ) : null}
+                      <span className="mr-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900/30 text-xs font-semibold text-slate-200">
+                        <span className="h-2 w-2 rounded-full bg-violet-400" />
+                        {tr('Reserve policy')}: {tr(algo.reservePolicy === 'auto' ? 'Auto' : 'Manual')}
+                      </span>
                     </span>
                   ) : null
                 }
@@ -3743,7 +3954,7 @@ export default function StablecoinDepegSimulation() {
               <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
                 <ListTodo size={18} className={questsBlink ? 'text-amber-300' : 'text-emerald-300'} />
                 {tr('Learning quests')}
-                <span className="text-xs text-slate-400">({Object.values(questFlags).filter(Boolean).length}/10)</span>
+                <span className="text-xs text-slate-400">({Object.values(questFlags).filter(Boolean).length}/16)</span>
               </div>
               <div className={`text-slate-400 ${!showQuests && questsBlink ? 'motion-safe:animate-pulse' : ''}`}>
                 {showQuests ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -3788,12 +3999,94 @@ export default function StablecoinDepegSimulation() {
                   <div className="text-xs text-slate-400 mb-2">{tr('Failure mode')}</div>
                   <div className="space-y-2">
                     <QuestRow
+
                       done={questFlags.everCollapsed}
+
                       text={tr('Push the system into collapse (< $0.80)')}
-                      tip={tr('Try the Algorithmic “Start death spiral” preset and step 5–10 times. Watch LUNA supply inflate and price fall reflexively.')}
+
+                      tip={tr('Try the Algorithmic â€œStart death spiralâ€ preset and step 5â€“10 times. Watch LUNA supply inflate and price fall reflexively.')}
+
                     />
+
+
+
+                    {scenario === 'algorithmic' ? (
+
+                      <>
+
+                        <div className="mt-2 border-t border-slate-800/60" />
+
+                        <div className="text-[11px] text-slate-400 uppercase tracking-wide mt-2">{tr('Terra appendix')}</div>
+
+                        <QuestRow
+
+                          done={questFlags.sawAnchorBankRun}
+
+                          text={tr('Trigger an Anchor bank run')}
+
+                          tip={tr('Click the Anchor bank run shock. Observe how withdrawals become explicit UST sell flow.')}
+
+                        />
+
+                        <QuestRow
+
+                          done={questFlags.sawMintCapBinding}
+
+                          text={tr('Make the mint cap bind (swap throttling)')}
+
+                          tip={tr('Use Mint cap tightened (and some sell pressure). Watch “requested” exceed “executed”.')}
+
+                        />
+
+                        <QuestRow
+
+                          done={questFlags.sawUnfilledRedemptions}
+
+                          text={tr('Create unfilled redemptions')}
+
+                          tip={tr('When the mint cap binds, unfilled redemptions rise and add extra sell pressure next ticks.')}
+
+                        />
+
+                        <QuestRow
+
+                          done={questFlags.usedReservePolicyToggle}
+
+                          text={tr('Switch reserve policy (Auto ↔ Manual)')}
+
+                          tip={tr('Use Toggle reserve policy. In Auto, reserves deploy when UST < $0.99.')}
+
+                        />
+
+                        <QuestRow
+
+                          done={questFlags.deployedReserves}
+
+                          text={tr('Deploy reserves to support UST')}
+
+                          tip={tr('Either set policy to Auto (then depeg) or click Deploy reserves now in Manual.')}
+
+                        />
+
+                        <QuestRow
+
+                          done={questFlags.depletedReserves}
+
+                          text={tr('Deplete reserves (credibility shock)')}
+
+                          tip={tr('Keep UST below peg long enough that reserves run out. Confidence drops when reserves hit 0.')}
+
+                        />
+
+                      </>
+
+                    ) : null}
+
                   </div>
+
                 </div>
+
+
 
                 <div>
                   <div className="text-xs text-slate-400 mb-2">{tr('Optimization')}</div>

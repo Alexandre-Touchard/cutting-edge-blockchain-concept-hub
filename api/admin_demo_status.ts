@@ -1,12 +1,21 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import {
-  deleteDemoStatusOverride,
-  hasSupabaseEnv,
-  upsertDemoStatusOverride
-} from './_supabase_rest';
-import { redis } from './_upstash';
+// Admin endpoint to set demo status overrides.
+// Protected via ADMIN_TOKEN (x-admin-token header or token query param).
+//
+// Self-contained to avoid Vercel FUNCTION_INVOCATION_FAILED due to module-import issues.
 
-const KEY = 'demo_status_overrides';
+type DemoStatus = 'live' | 'coming_soon';
+
+type VercelRequest = {
+  method?: string;
+  headers: Record<string, string | string[] | undefined>;
+  query: Record<string, string | string[] | undefined>;
+  body?: any;
+};
+
+type VercelResponse = {
+  status: (code: number) => VercelResponse;
+  json: (body: any) => void;
+};
 
 function mustGetAdminToken() {
   const token = process.env.ADMIN_TOKEN;
@@ -20,6 +29,75 @@ function getProvidedToken(req: VercelRequest) {
   const q = req.query.token;
   if (typeof q === 'string' && q.trim()) return q.trim();
   return '';
+}
+
+async function sbFetch(path: string, init: RequestInit) {
+  const url = (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '');
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+
+  const controller = new AbortController();
+  const timeoutMs = Number(process.env.SUPABASE_HTTP_TIMEOUT_MS ?? '8000');
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+
+  const res = await fetch(`${url}${path}`, {
+    ...init,
+    signal: controller.signal,
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      ...(init.headers ?? {})
+    }
+  }).finally(() => clearTimeout(t));
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Supabase request failed (${res.status}) on ${path}: ${text}`);
+  }
+
+  if (res.status === 204) return null;
+  const ct = res.headers.get('content-type') ?? '';
+  if (ct.includes('application/json')) return (await res.json()) as any;
+  return await res.text();
+}
+
+async function upsertOverride(demoId: string, status: DemoStatus) {
+  const q = new URLSearchParams({ on_conflict: 'demo_id' });
+  await sbFetch(`/rest/v1/demo_status_overrides?${q.toString()}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal,resolution=merge-duplicates'
+    },
+    body: JSON.stringify({ demo_id: demoId, status })
+  });
+}
+
+async function deleteOverride(demoId: string) {
+  await sbFetch(`/rest/v1/demo_status_overrides?demo_id=eq.${encodeURIComponent(demoId)}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' }
+  });
+}
+
+async function upstash(cmd: Array<string | number>) {
+  const base = (process.env.UPSTASH_REDIS_REST_URL ?? '').replace(/\/+$/, '');
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? '';
+  if (!base || !token) throw new Error('Missing UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN');
+
+  const res = await fetch(base, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(cmd)
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Upstash request failed (${res.status}): ${text}`);
+  }
+  return (await res.json()) as any;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -40,7 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) as {
       demoId?: string;
-      status?: 'live' | 'coming_soon' | null;
+      status?: DemoStatus | null;
     };
 
     const demoId = (body?.demoId ?? '').trim();
@@ -55,23 +133,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    if (hasSupabaseEnv()) {
-      if (status === null) {
-        await deleteDemoStatusOverride(demoId);
-      } else {
-        await upsertDemoStatusOverride(demoId, status);
-      }
+    const hasSupabase = !!process.env.SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    if (hasSupabase) {
+      if (status === null) await deleteOverride(demoId);
+      else await upsertOverride(demoId, status);
       res.status(200).json(wantsDebug ? { ok: true, backend: 'supabase' } : { ok: true });
       return;
     }
 
-    // Fallback: Upstash
-    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-      if (status === null) {
-        await redis(['HDEL', KEY, demoId]);
-      } else {
-        await redis(['HSET', KEY, demoId, status]);
-      }
+    if (hasUpstash) {
+      if (status === null) await upstash(['HDEL', 'demo_status_overrides', demoId]);
+      else await upstash(['HSET', 'demo_status_overrides', demoId, status]);
       res.status(200).json(wantsDebug ? { ok: true, backend: 'upstash' } : { ok: true });
       return;
     }

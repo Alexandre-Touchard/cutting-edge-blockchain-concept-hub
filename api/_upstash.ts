@@ -30,7 +30,8 @@ async function upstashFetch(path: string, body: unknown) {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`Upstash request failed (${res.status}): ${text}`);
+    // Include path to help debugging which endpoint failed (but do not include secrets).
+    throw new Error(`Upstash request failed (${res.status}) on ${path}: ${text}`);
   }
   return (await res.json()) as any;
 }

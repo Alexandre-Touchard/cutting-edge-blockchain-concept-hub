@@ -1,4 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import {
+  deleteDemoStatusOverride,
+  hasSupabaseEnv,
+  upsertDemoStatusOverride
+} from './_supabase_rest';
 import { redis } from './_upstash';
 
 const KEY = 'demo_status_overrides';
@@ -48,6 +53,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    if (hasSupabaseEnv()) {
+      if (status === null) {
+        await deleteDemoStatusOverride(demoId);
+      } else {
+        await upsertDemoStatusOverride(demoId, status);
+      }
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    // Fallback: Upstash
     if (status === null) {
       await redis(['HDEL', KEY, demoId]);
     } else {

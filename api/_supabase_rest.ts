@@ -77,6 +77,52 @@ export async function insertAnalyticsEvent(row: {
   });
 }
 
+export type DemoStatusOverrideRow = {
+  demo_id: string;
+  status: 'live' | 'coming_soon';
+  updated_at: string;
+};
+
+export async function fetchDemoStatusOverrides(): Promise<Record<string, 'live' | 'coming_soon'>> {
+  const q = new URLSearchParams({
+    select: 'demo_id,status',
+    order: 'demo_id.asc',
+    limit: '2000'
+  });
+  const data = (await sbFetch(`/rest/v1/demo_status_overrides?${q.toString()}`, {
+    method: 'GET'
+  })) as Array<{ demo_id: string; status: string }>;
+
+  const out: Record<string, 'live' | 'coming_soon'> = {};
+  for (const row of data ?? []) {
+    if (row?.demo_id && (row.status === 'live' || row.status === 'coming_soon')) {
+      out[String(row.demo_id)] = row.status;
+    }
+  }
+  return out;
+}
+
+export async function upsertDemoStatusOverride(demoId: string, status: 'live' | 'coming_soon') {
+  const q = new URLSearchParams({ on_conflict: 'demo_id' });
+  await sbFetch(`/rest/v1/demo_status_overrides?${q.toString()}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal,resolution=merge-duplicates'
+    },
+    body: JSON.stringify({ demo_id: demoId, status })
+  });
+}
+
+export async function deleteDemoStatusOverride(demoId: string) {
+  await sbFetch(`/rest/v1/demo_status_overrides?demo_id=eq.${encodeURIComponent(demoId)}`, {
+    method: 'DELETE',
+    headers: {
+      Prefer: 'return=minimal'
+    }
+  });
+}
+
 export async function fetchAnalyticsEventsRange(params: {
   startIso: string;
   endIso: string;

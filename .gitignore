@@ -41,3 +41,5 @@ coverage/
 
 # misc
 *.local
+.vercel
+.env*.local

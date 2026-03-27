@@ -557,85 +557,6 @@ const PeerDASDemo = () => {
               </div>
             ) : (
               <>
-              {/* Real-World Applications */}
-              <div className="mt-6 bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-30 rounded-lg p-6 border border-blue-700">
-                <h2 className="text-2xl font-bold mb-4 text-blue-300">🌐 {tr('Real-World Applications')}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-slate-800 bg-opacity-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-lg mb-3 text-emerald-400">{tr('Where Data Sampling Matters')}</h3>
-                    <div className="space-y-3 text-sm">
-                      <div className="bg-slate-700 rounded p-3">
-                        <div className="font-bold text-blue-300">{tr('Ethereum Danksharding (Roadmap)')}</div>
-                        <p className="text-xs text-slate-300 mb-2">{tr('PeerDAS-style sampling helps clients verify that blob data is available without downloading everything.')}</p>
-                        <a href="https://ethereum.org/en/roadmap/danksharding/" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-300 hover:text-blue-200 underline">{tr('Ethereum roadmap →')}</a>
-                      </div>
-                      <div className="bg-slate-700 rounded p-3">
-                        <div className="font-bold text-purple-300">{tr('Rollup Data Availability')}</div>
-                        <p className="text-xs text-slate-300">{tr('Rollups depend on DA to let anyone reconstruct state. Sampling makes DA scalable to many validators/nodes.')}</p>
-                      </div>
-                      <div className="bg-slate-700 rounded p-3">
-                        <div className="font-bold text-pink-300">{tr('Light Clients')}</div>
-                        <p className="text-xs text-slate-300">{tr('Light nodes can participate in DA checks, increasing decentralization while keeping bandwidth low.')}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-slate-800 bg-opacity-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-lg mb-3 text-yellow-400">{tr('Production Use Cases')}</h3>
-                    <div className="space-y-3 text-sm">
-                      <div className="bg-slate-700 rounded p-3">
-                        <div className="font-semibold text-blue-300 mb-1">📦 {tr('Large Batch Posting')}</div>
-                        <p className="text-xs text-slate-300">{tr('More blob capacity means rollups can post more transactions, reducing fees for end users.')}</p>
-                      </div>
-                      <div className="bg-slate-700 rounded p-3">
-                        <div className="font-semibold text-purple-300 mb-1">🌍 {tr('Decentralized Verification')}</div>
-                        <p className="text-xs text-slate-300">{tr('Sampling lets many nodes independently verify availability, reducing reliance on a small set of powerful nodes.')}</p>
-                      </div>
-                      <div className="bg-slate-700 rounded p-3">
-                        <div className="font-semibold text-emerald-300 mb-1">🧱 {tr('Fault Tolerance')}</div>
-                        <p className="text-xs text-slate-300">{tr('Redundant column distribution means the network can tolerate node outages while still recovering the full blob.')}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Further Reading */}
-              <div className="mt-6 bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <h2 className="text-2xl font-bold mb-4 text-blue-300">📚 {tr('Further Reading')}</h2>
-                <ul className="space-y-2 text-sm">
-                  <li>
-                    <a
-                      className="text-blue-300 hover:text-blue-200 underline"
-                      href="https://ethereum.org/en/roadmap/danksharding/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {tr('Ethereum roadmap: Danksharding →')}
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      className="text-blue-300 hover:text-blue-200 underline"
-                      href="https://notes.ethereum.org/@vbuterin/proto_danksharding_faq"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {tr('Vitalik: Proto-danksharding FAQ →')}
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      className="text-blue-300 hover:text-blue-200 underline"
-                      href="https://eips.ethereum.org/EIPS/eip-4844"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {tr('EIP-4844 (proto-danksharding) →')}
-                    </a>
-                  </li>
-                </ul>
-              </div>
-
               <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
                 <h2 className="text-xl font-semibold mb-4">{tr('How PeerDAS Works')}</h2>
                 
@@ -689,6 +610,70 @@ const PeerDASDemo = () => {
               </div>
               </>
             )}
+          </div>
+
+          {/* Real-World Applications (full width) */}
+          <div className="lg:col-span-3 bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-30 rounded-lg p-6 border border-blue-700">
+            <h2 className="text-2xl font-bold mb-4 text-blue-300">🌐 {tr('Real-World Applications')}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-slate-800 bg-opacity-50 rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3 text-emerald-400">{tr('Where Data Sampling Matters')}</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="bg-slate-700 rounded p-3">
+                    <div className="font-bold text-blue-300">{tr('Ethereum Danksharding (Roadmap)')}</div>
+                    <p className="text-xs text-slate-300 mb-2">{tr('PeerDAS-style sampling helps clients verify that blob data is available without downloading everything.')}</p>
+                    <a href="https://ethereum.org/en/roadmap/danksharding/" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-300 hover:text-blue-200 underline">{tr('Ethereum roadmap →')}</a>
+                  </div>
+                  <div className="bg-slate-700 rounded p-3">
+                    <div className="font-bold text-purple-300">{tr('Rollup Data Availability')}</div>
+                    <p className="text-xs text-slate-300">{tr('Rollups depend on DA to let anyone reconstruct state. Sampling makes DA scalable to many validators/nodes.')}</p>
+                  </div>
+                  <div className="bg-slate-700 rounded p-3">
+                    <div className="font-bold text-pink-300">{tr('Light Clients')}</div>
+                    <p className="text-xs text-slate-300">{tr('Light nodes can participate in DA checks, increasing decentralization while keeping bandwidth low.')}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-slate-800 bg-opacity-50 rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3 text-yellow-400">{tr('Production Use Cases')}</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="bg-slate-700 rounded p-3">
+                    <div className="font-semibold text-blue-300 mb-1">📦 {tr('Large Batch Posting')}</div>
+                    <p className="text-xs text-slate-300">{tr('More blob capacity means rollups can post more transactions, reducing fees for end users.')}</p>
+                  </div>
+                  <div className="bg-slate-700 rounded p-3">
+                    <div className="font-semibold text-purple-300 mb-1">🌍 {tr('Decentralized Verification')}</div>
+                    <p className="text-xs text-slate-300">{tr('Sampling lets many nodes independently verify availability, reducing reliance on a small set of powerful nodes.')}</p>
+                  </div>
+                  <div className="bg-slate-700 rounded p-3">
+                    <div className="font-semibold text-emerald-300 mb-1">🧱 {tr('Fault Tolerance')}</div>
+                    <p className="text-xs text-slate-300">{tr('Redundant column distribution means the network can tolerate node outages while still recovering the full blob.')}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        {/* Further Reading */}
+        <div className="mt-6 bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <h2 className="text-2xl font-bold mb-4 text-blue-300">📚 {tr('Further Reading')}</h2>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <a className="text-blue-300 hover:text-blue-200 underline" href="https://ethereum.org/en/roadmap/danksharding/" target="_blank" rel="noopener noreferrer">
+                  {tr('Ethereum roadmap: Danksharding →')}
+                </a>
+              </li>
+              <li>
+                <a className="text-blue-300 hover:text-blue-200 underline" href="https://notes.ethereum.org/@vbuterin/proto_danksharding_faq" target="_blank" rel="noopener noreferrer">
+                  {tr('Vitalik: Proto-danksharding FAQ →')}
+                </a>
+              </li>
+              <li>
+                <a className="text-blue-300 hover:text-blue-200 underline" href="https://eips.ethereum.org/EIPS/eip-4844" target="_blank" rel="noopener noreferrer">
+                  {tr('EIP-4844 (proto-danksharding) →')}
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
       </div>

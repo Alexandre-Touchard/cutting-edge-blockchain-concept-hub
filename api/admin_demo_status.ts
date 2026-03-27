@@ -36,6 +36,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    const wantsDebug = String(req.query.debug ?? '') === '1';
+
     const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) as {
       demoId?: string;
       status?: 'live' | 'coming_soon' | null;
@@ -59,18 +61,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         await upsertDemoStatusOverride(demoId, status);
       }
-      res.status(200).json({ ok: true });
+      res.status(200).json(wantsDebug ? { ok: true, backend: 'supabase' } : { ok: true });
       return;
     }
 
     // Fallback: Upstash
-    if (status === null) {
-      await redis(['HDEL', KEY, demoId]);
-    } else {
-      await redis(['HSET', KEY, demoId, status]);
+    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+      if (status === null) {
+        await redis(['HDEL', KEY, demoId]);
+      } else {
+        await redis(['HSET', KEY, demoId, status]);
+      }
+      res.status(200).json(wantsDebug ? { ok: true, backend: 'upstash' } : { ok: true });
+      return;
     }
 
-    res.status(200).json({ ok: true });
+    res.status(500).json({
+      error:
+        'No backend configured. Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (recommended) or UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN.'
+    });
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? 'Failed to update demo status' });
   }

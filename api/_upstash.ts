@@ -9,6 +9,10 @@ function mustGetEnv(name: string): string {
   return v;
 }
 
+export function hasUpstashEnv(): boolean {
+  return !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+}
+
 function upstashBaseUrl(): string {
   // e.g. https://us1-something.upstash.io
   return mustGetEnv('UPSTASH_REDIS_REST_URL').replace(/\/+$/, '');

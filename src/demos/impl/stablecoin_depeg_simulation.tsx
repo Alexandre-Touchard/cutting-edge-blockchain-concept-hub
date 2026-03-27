@@ -863,6 +863,16 @@ function SimpleLineChart({
   );
 }
 
+function useWindowHeight() {
+  const [h, setH] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 900));
+  useEffect(() => {
+    const onResize = () => setH(window.innerHeight);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return h;
+}
+
 export default function StablecoinDepegSimulation() {
   const { tr } = useDemoI18n('stablecoin-depeg');
 
@@ -871,6 +881,7 @@ export default function StablecoinDepegSimulation() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [chartMaximized, setChartMaximized] = useState(false);
   const [maxControlsOpen, setMaxControlsOpen] = useState(true);
+  const windowH = useWindowHeight();
   const [isAutoRunning, setIsAutoRunning] = useState(true);
   const [autoRunSpeed, setAutoRunSpeed] = useState<1 | 2>(1);
   const [showPlayHint, setShowPlayHint] = useState(true);
@@ -2792,7 +2803,7 @@ export default function StablecoinDepegSimulation() {
           <div className="space-y-6 min-w-0">
             {chartMaximized ? (
               <div
-                className="fixed inset-0 z-[200] bg-black/80 p-3 sm:p-6"
+                className="fixed inset-0 z-[200] bg-black/80 p-2 sm:p-3"
                 role="dialog"
                 aria-modal="true"
                 aria-label={tr('Maximized chart')}
@@ -2800,7 +2811,7 @@ export default function StablecoinDepegSimulation() {
                   if (e.target === e.currentTarget) setChartMaximized(false);
                 }}
               >
-                <div id="maximized_modal" className="h-full w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 shadow-2xl flex flex-col">
+                <div id="maximized_modal" className="h-full w-full rounded-2xl border border-slate-700 bg-slate-950 p-3 shadow-2xl flex flex-col">
                   <div className="flex items-start justify-between gap-3">
                     <div className="text-sm font-semibold text-slate-200 truncate flex items-center gap-2">
                       <BarChart3 size={18} className="text-blue-300 shrink-0" />
@@ -2859,8 +2870,8 @@ export default function StablecoinDepegSimulation() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex-1 min-h-0 flex flex-col">
-                    <div className="flex-1 min-h-0 overflow-hidden relative">
+                  <div className="mt-2 flex-1 min-h-0 flex flex-col">
+                    <div className="min-h-0 overflow-hidden relative">
                       {!maxControlsOpen ? (
                         <div className="absolute left-1/2 -translate-x-1/2 bottom-3 z-20">
                           <button
@@ -2869,7 +2880,7 @@ export default function StablecoinDepegSimulation() {
                             className="flex items-center justify-center p-2 rounded-lg border border-slate-700 bg-slate-900/90 hover:bg-slate-800"
                             aria-label={tr('Controls')}
                           >
-                            <ChevronDown size={18} className="text-slate-200" />
+                            <ChevronUp size={18} className="text-slate-200" />
                           </button>
                         </div>
                       ) : null}
@@ -3100,7 +3111,13 @@ export default function StablecoinDepegSimulation() {
                       refLabel={scenario === 'collateralized' ? tr('Collateral index') : tr('LUNA price')}
                       refIsIndex={scenario === 'collateralized'}
                       width={1100}
-                      height={maxControlsOpen ? 360 : 520}
+                      height={
+                        // Responsive: fill available viewport. Keep minimums so it stays readable.
+                        Math.max(
+                          380,
+                          maxControlsOpen ? Math.floor(windowH * 0.52) : Math.floor(windowH * 0.7)
+                        )
+                      }
                       legendExtra={
                         <span className="inline-flex flex-wrap items-center gap-2">
                           <button
@@ -3190,7 +3207,10 @@ export default function StablecoinDepegSimulation() {
 
                     {/* Scenario, shocks & interventions (horizontal layout in maximized mode) */}
                     {maxControlsOpen ? (
-                      <div className="shrink-0 mt-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 max-h-[42vh] overflow-auto" id="controls_section">
+                      <div
+                        className="mt-2 flex-1 min-h-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3 overflow-auto"
+                        id="controls_section"
+                      >
                         <button
                           type="button"
                           onClick={() => setMaxControlsOpen(false)}
@@ -3200,7 +3220,7 @@ export default function StablecoinDepegSimulation() {
                         >
                           <div className="text-xs font-semibold text-slate-200">{tr('Controls')}</div>
                           <div className="text-slate-400">
-                            <ChevronUp size={18} />
+                            <ChevronDown size={18} />
                           </div>
                         </button>
 
@@ -3793,6 +3813,7 @@ export default function StablecoinDepegSimulation() {
               <SimpleLineChart
                 tr={tr}
                 title={scenario === 'collateralized' ? tr('Peg vs collateral stress') : tr('Peg vs reflexive backstop (LUNA)')}
+                height={280}
                 titleExtra={
                   scenario === 'algorithmic' ? (
                     <span className="inline-flex items-center gap-2">

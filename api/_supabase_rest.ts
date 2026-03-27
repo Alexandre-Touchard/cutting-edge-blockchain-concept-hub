@@ -30,18 +30,25 @@ export type SupabaseEventRow = {
 
 async function sbFetch(path: string, init: RequestInit) {
   const key = serviceRoleKey();
+
+  // Avoid Vercel function hard timeouts when Supabase is misconfigured or unreachable.
+  const controller = new AbortController();
+  const timeoutMs = Number(process.env.SUPABASE_HTTP_TIMEOUT_MS ?? '8000');
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+
   const res = await fetch(`${supabaseUrl()}${path}`, {
     ...init,
+    signal: controller.signal,
     headers: {
       apikey: key,
       Authorization: `Bearer ${key}`,
       ...(init.headers ?? {})
     }
-  });
+  }).finally(() => clearTimeout(t));
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`Supabase request failed (${res.status}): ${text}`);
+    throw new Error(`Supabase request failed (${res.status}) on ${path}: ${text}`);
   }
 
   // Some requests use Prefer: return=minimal

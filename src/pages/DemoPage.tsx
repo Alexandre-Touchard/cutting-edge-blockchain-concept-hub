@@ -54,6 +54,19 @@ export default function DemoPage() {
     if (demoId) trackEvent('demo_view', { demoId, path: `/demo/${demoId}` });
   }, [demoId]);
 
+  // IMPORTANT: keep hook order stable across renders.
+  // demo availability can change after fetching status overrides (coming_soon -> live),
+  // so we must not introduce new hooks only after early returns.
+  const DemoComponent = useMemo(
+    () =>
+      React.lazy(async (): Promise<{ default: React.ComponentType<any> }> => {
+        if (!demo) return { default: () => null };
+        const mod = await demo.load();
+        return { default: mod.default as React.ComponentType<any> };
+      }),
+    [demo?.sourcePath]
+  );
+
   if (!demo) {
     return (
       <div className="min-h-screen bg-slate-950 text-white p-6">
@@ -82,15 +95,6 @@ export default function DemoPage() {
       </div>
     );
   }
-
-  const DemoComponent = useMemo(
-    () =>
-      React.lazy(async () => {
-        const mod = await demo.load();
-        return { default: mod.default };
-      }),
-    [demo.sourcePath]
-  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">

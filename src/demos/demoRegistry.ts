@@ -217,7 +217,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
       'Collateral crashes can trigger liquidations that sell collateral into markets, worsening the cascade',
       'Algorithmic pegs can fail reflexively: redemptions mint supply, collapsing the backstop token and the stablecoin'
     ],
-    tags: ['Coming soon', 'Stablecoins', 'Depeg', 'Systemic risk', 'Cascades'],
+    tags: ['Stablecoins', 'Depeg', 'Systemic risk', 'Cascades'],
     status: 'coming_soon'
   },
 
@@ -226,10 +226,10 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
     title: 'EVM vs SVM',
     thumbnail: demo13Thumb,
     description:
-      'Coming soon: a more realistic, beginner-friendly and developer-accurate simulation of sequential (EVM-style) execution vs parallel (Solana-style) scheduling.',
+      'A simulation of sequential (EVM-style) execution vs parallel (Solana-style) scheduling, and why parallel scheduling increases throughput when transactions do not conflict.',
     category: 'execution',
     difficulty: 'Beginner',
-    tags: ['Coming soon'],
+    tags: [],
     concepts: ['Sequential execution', 'Parallel scheduling', 'Account locks', 'Read/write conflicts'],
     learningQuestsTotal: 8,
     keyTakeaways: ['Why parallel scheduling increases throughput when transactions do not conflict'],

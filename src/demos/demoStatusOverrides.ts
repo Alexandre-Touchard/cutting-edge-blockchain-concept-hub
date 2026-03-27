@@ -21,7 +21,15 @@ export function applyDemoStatusOverrides(demos: DemoMeta[], overrides: DemoStatu
   if (!overrides || Object.keys(overrides).length === 0) return demos;
   return demos.map((d) => {
     const ov = overrides[d.id];
-    // Allow overriding status explicitly.
-    return ov ? { ...d, status: ov } : d;
+    if (!ov) return d;
+
+    // UI treats absence of status as "available". So an override to `live` should clear coming_soon.
+    if (ov === 'live') {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { status: _prev, ...rest } = d;
+      return { ...rest, status: undefined };
+    }
+
+    return { ...d, status: 'coming_soon' };
   });
 }

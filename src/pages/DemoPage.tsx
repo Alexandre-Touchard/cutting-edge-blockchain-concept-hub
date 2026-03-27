@@ -1,4 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import { applyDemoStatusOverrides, fetchDemoStatusOverrides, type DemoStatusOverrides } from '../demos/demoStatusOverrides';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, ChevronUp, ListTodo, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +20,21 @@ export default function DemoPage() {
   // Recompute translated demo metadata whenever the language changes.
   const demos = useMemo(() => loadDemos(), [i18n.resolvedLanguage]);
 
-  const demo = demos.find((d) => d.meta.id === demoId);
+  const [statusOverrides, setStatusOverrides] = useState<DemoStatusOverrides>({});
+  useEffect(() => {
+    fetchDemoStatusOverrides().then(setStatusOverrides).catch(() => setStatusOverrides({}));
+  }, []);
+
+  const demosWithOverrides = useMemo(
+    () =>
+      demos.map((d) => ({
+        ...d,
+        meta: applyDemoStatusOverrides([d.meta], statusOverrides)[0]!
+      })),
+    [demos, statusOverrides]
+  );
+
+  const demo = demosWithOverrides.find((d) => d.meta.id === demoId);
 
   const [questsFolded, setQuestsFolded] = useState(true);
   const [questsBlink, setQuestsBlink] = useState(false);

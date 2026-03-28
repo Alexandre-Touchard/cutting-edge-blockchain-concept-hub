@@ -202,6 +202,25 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
     ],
     tags: ['Lightning', 'Raiden', 'Micropayments', 'Scaling']
   },
+  'mev-pbs-simulation': {
+    id: 'mev-pbs',
+    title: 'MEV & PBS (MEV-Boost) simulator',
+    description:
+      'Interactive simulator for MEV (sandwiching, backrun arbitrage), bundles/private transactions, and proposer-builder separation (PBS).',
+    thumbnail: new URL('../public/photo/MEV_boost.png', import.meta.url).href,
+    category: 'execution',
+    difficulty: 'Intermediate',
+    status: 'coming_soon',
+    tags: ['MEV', 'PBS', 'Mempool', 'Bundles', 'MEV-Boost'],
+    concepts: ['Ordering', 'Mempool'],
+    keyTakeaways: [
+      'MEV comes from transaction ordering power, not just “high gas”.',
+      'Private bundles can reduce your sandwich exposure by hiding intent from the public mempool.',
+      'PBS turns MEV into a block-building auction: builders bid, proposers pick the highest bid.'
+    ],
+    learningQuestsTotal: 5
+  },
+
   'stablecoin-depeg-simulation': {
     id: 'stablecoin-depeg',
     title: 'Stablecoin Depeg Cascade',

@@ -45,6 +45,24 @@
     "showFilters": "Show filters"
   },
   "demos": {
+    "mev-pbs": {
+      "title": "MEV & PBS (MEV-Boost) simulator",
+      "description": "Interactive simulator for MEV (sandwiching, backrun arbitrage), bundles/private transactions, and proposer-builder separation (PBS).",
+      "keyTakeaways": {
+        "0": "MEV comes from transaction ordering power, not just ‘high gas’.",
+        "1": "Private bundles can reduce your sandwich exposure by hiding intent from the public mempool.",
+        "2": "PBS turns MEV into a block-building auction: builders bid, proposers pick the highest bid."
+      },
+      "tags": {
+        "0": "MEV",
+        "1": "PBS",
+        "2": "Mempool",
+        "3": "Bundles",
+        "4": "MEV-Boost"
+      },
+      "auto": {}
+    },
+
     "stablecoin-depeg": {
       "title": "Stablecoin Depeg Cascade",
       "description": "Simulate two depeg cascades: (1) collateralized stablecoin liquidations and liquidity drains, and (2) Terra-style algorithmic reflexive collapse.",

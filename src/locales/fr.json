@@ -1244,6 +1244,24 @@
         "_oracle_consensus_achieved_1215_node_ycslpw": "🤝 Consensus des oracles atteint (12/15 nœuds)"
       }
     },
+    "mev-pbs": {
+      "title": "Simulateur MEV & PBS (MEV-Boost)",
+      "description": "Simulateur interactif de MEV (sandwich, arbitrage backrun), bundles / transactions privées et séparation proposer-builder (PBS).",
+      "keyTakeaways": {
+        "0": "Le MEV vient du pouvoir d'ordonner les transactions, pas seulement d'un ‘gas’ élevé.",
+        "1": "Les bundles privés peuvent réduire le risque de sandwich en cachant l'intention dans le mempool public.",
+        "2": "PBS transforme le MEV en enchère de construction de bloc : les builders enchérissent, le proposer choisit la meilleure offre."
+      },
+      "tags": {
+        "0": "MEV",
+        "1": "PBS",
+        "2": "Mempool",
+        "3": "Bundles",
+        "4": "MEV-Boost"
+      },
+      "auto": {}
+    },
+
     "stablecoin-depeg": {
       "title": "Cascade de depeg d’un stablecoin",
       "description": "Simulez deux cascades de depeg : (1) stablecoin collatéralisé (liquidations + fuite de liquidité) et (2) stablecoin algorithmique (effondrement réflexif style Terra).",

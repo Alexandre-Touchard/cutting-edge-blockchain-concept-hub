@@ -99,6 +99,24 @@
         "2": "LayerZero requiere el acuerdo de un Oracle y un Relayer independientes"
       }
     },
+    "mev-pbs": {
+      "title": "Simulador de MEV y PBS (MEV-Boost)",
+      "description": "Simulador interactivo de MEV (sandwich, arbitraje backrun), bundles/transacciones privadas y separación proposer-builder (PBS).",
+      "keyTakeaways": {
+        "0": "El MEV viene del poder de ordenar transacciones, no solo de ‘gas’ alto.",
+        "1": "Los bundles privados pueden reducir el riesgo de sandwich ocultando la intención del mempool público.",
+        "2": "PBS convierte el MEV en una subasta de construcción de bloques: los builders pujan y el proposer elige la mejor oferta."
+      },
+      "tags": {
+        "0": "MEV",
+        "1": "PBS",
+        "2": "Mempool",
+        "3": "Bundles",
+        "4": "MEV-Boost"
+      },
+      "auto": {}
+    },
+
     "stablecoin-depeg": {
       "title": "Cascada de depeg de un stablecoin",
       "description": "Simula dos cascadas de depeg: (1) stablecoin colateralizado (liquidaciones + drenaje de liquidez) y (2) stablecoin algorítmico (colapso reflexivo estilo Terra).",

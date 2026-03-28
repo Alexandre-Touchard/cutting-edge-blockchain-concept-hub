@@ -35,6 +35,14 @@ export type GlossaryKey =
   | 'Mining'
   | 'State Machine'
   | 'Transaction Pool'
+  | 'MEV'
+  | 'PBS'
+  | 'Searcher'
+  | 'Sandwich'
+  | 'Bundle'
+  | 'Builder'
+  | 'Relay'
+  | 'Proposer'
   | 'Light Clients'
   | 'Oracle Networks'
   | 'Stablecoin'
@@ -210,6 +218,25 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
     'A system where transactions are inputs that deterministically transition the global state to a new state.',
   'Transaction Pool':
     'The set of pending transactions waiting to be included in a block (often called the mempool).',
+
+  // MEV & PBS
+  MEV:
+    'Maximal Extractable Value: profit extracted by reordering, inserting, or censoring transactions in a block (beyond normal fees).',
+  PBS:
+    'Proposer-Builder Separation: builders construct blocks and bid; proposers choose a winning bid without seeing full contents (blinded header), then payload is revealed.',
+  Searcher:
+    'An actor/bot that monitors the mempool for profitable opportunities (arbitrage, liquidations, sandwiches) and submits transactions or private bundles to capture them.',
+  Sandwich:
+    'A 3-transaction MEV pattern: front-run (move price), victim swap executes at worse price, then back-run to unwind and extract profit.',
+  Bundle:
+    'An ordered, atomic list of transactions sent privately to a builder/relay (e.g., Flashbots). Either all txs land in order, or none do.',
+  Builder:
+    'In PBS, a builder constructs a candidate block (including MEV transactions/bundles) and submits a sealed header plus a bid.',
+  Relay:
+    'A trusted routing service in MEV-Boost/PBS that receives builder bids, validates them, and forwards the best bids to proposers.',
+  Proposer:
+    'The validator selected to propose the next block. In PBS/MEV-Boost, the proposer chooses the highest-paying builder bid.',
+
   'Light Clients':
     'Clients that verify chain correctness using only headers and cryptographic proofs, without downloading full blocks/state.',
   'Oracle Networks':
@@ -402,6 +429,28 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
     'Percentage change from the initial price. Larger price movements generally increase impermanent loss.',
   'IL Formula':
     'IL formula: 2×√(price_ratio) / (1 + price_ratio) − 1. Example: at 2× price change, IL ≈ −5.7%; at 5×, IL ≈ −25.5%. Fees can offset IL over time.',
+
+  // MEV & PBS
+  MEV:
+    'Maximal Extractable Value: profit extracted by reordering, inserting, or censoring transactions in a block (beyond normal fees).',
+  Searcher:
+    'An actor/bot that monitors the mempool for profitable opportunities (arbitrage, liquidations, sandwiches) and submits transactions or private bundles to capture them.',
+  Sandwich:
+    'A 3-transaction MEV pattern: front-run (move price), victim swap executes at worse price, then back-run to unwind and extract profit.',
+  Bundle:
+    'An ordered, atomic list of transactions sent privately to a builder/relay (e.g., Flashbots). Either all txs land in order, or none do.',
+  PBS:
+    'Proposer-Builder Separation: builders construct blocks and bid; proposers choose a winning bid without seeing full contents (blinded header), then payload is revealed.',
+  Builder:
+    'In PBS, a builder constructs a candidate block (including MEV transactions/bundles) and submits a sealed header plus a bid.',
+  Relay:
+    'A trusted routing service in MEV-Boost/PBS that receives builder bids, validates them, and forwards the best bids to proposers.',
+  Proposer:
+    'The validator selected to propose the next block. In PBS/MEV-Boost, the proposer chooses the highest-paying builder bid.',
+  Mempool:
+    'The set of pending transactions broadcast to the network but not yet included in a block. Public mempools enable reactive MEV.',
+  Ordering:
+    'The rule/process that decides which transactions execute first. Ordering impacts fairness, MEV, and the final state.',
 
   // PeerDAS
   'Network Nodes':

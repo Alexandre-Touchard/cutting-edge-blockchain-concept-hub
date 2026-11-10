@@ -4,6 +4,7 @@ import EduTooltip from '../../ui/EduTooltip';
 import LinkWithCopy from '../../ui/LinkWithCopy';
 import { define } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
+import { amountAfterFee, impermanentLossPercent, priceImpactPercent, swapOutput } from './amm/math';
 
 // Backwards-compatible alias so we don't have to rewrite all usages.
 const Tooltip = EduTooltip;
@@ -31,28 +32,16 @@ const AMMDemo = () => {
       return;
     }
 
-    const amountWithFee = inputAmount * (1 - feePercent / 100);
-    let output, newReserveIn;
-
-    if (inputToken === 'A') {
-      newReserveIn = reserveA + amountWithFee;
-      output = reserveB - (k / newReserveIn);
-    } else {
-      newReserveIn = reserveB + amountWithFee;
-      output = reserveA - (k / newReserveIn);
-    }
+    const [reserveIn, reserveOut] = inputToken === 'A' ? [reserveA, reserveB] : [reserveB, reserveA];
+    const output = swapOutput(reserveIn, reserveOut, inputAmount, feePercent);
 
     setOutputAmount(output);
-
-    const executionPrice = inputAmount / output;
-    const spotPrice = inputToken === 'A' ? currentPrice : 1 / currentPrice;
-    const impact = ((executionPrice - spotPrice) / spotPrice) * 100;
-    setPriceImpact(Math.abs(impact));
+    setPriceImpact(priceImpactPercent(reserveIn, reserveOut, inputAmount, output));
   }, [inputAmount, inputToken, reserveA, reserveB, feePercent]);
 
   const executeSwap = () => {
     if (outputAmount <= 0) return;
-    const amountWithFee = inputAmount * (1 - feePercent / 100);
+    const amountWithFee = amountAfterFee(inputAmount, feePercent);
     
     if (inputToken === 'A') {
       setReserveA(reserveA + amountWithFee);
@@ -76,7 +65,7 @@ const AMMDemo = () => {
   };
 
   const priceRatio = currentPrice / initialPrice;
-  const il = (2 * Math.sqrt(priceRatio) / (1 + priceRatio) - 1) * 100;
+  const il = impermanentLossPercent(priceRatio);
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">

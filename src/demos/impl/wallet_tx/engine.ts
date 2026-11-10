@@ -268,143 +268,156 @@ export function mineBlock(state: WalletTxState): MineResult {
   const dropped: Tx[] = [];
   let blockGasUsed = 0;
 
-  for (const c of candidates) {
-    // Include as many transactions as fit in the block gas limit.
-    // (Avoid arbitrary caps so users don't see "stuck" txs just because of a demo limit.)
-    if (blockGasUsed >= blockMaxGas) break;
-    const t = c.t;
-    if (t.nonce !== expectedNonce[t.from]) continue;
+  // Like geth, order by tip but respect each sender's nonce order: a tx skipped because
+  // its sender's earlier nonce wasn't processed yet gets another chance in a later pass,
+  // so a filled nonce gap is mined in the same block. Stop when a pass makes no progress.
+  const processed = new Set<string>();
+  let progressed = true;
 
-    const needed = requiredGas(t.type);
-    const outOfGas = t.gasLimit < needed;
-    const gasUsed = outOfGas ? t.gasLimit : needed;
+  passes: while (progressed) {
+    progressed = false;
+    for (const c of candidates) {
+      // Include as many transactions as fit in the block gas limit.
+      // (Avoid arbitrary caps so users don't see "stuck" txs just because of a demo limit.)
+      if (blockGasUsed >= blockMaxGas) break passes;
+      const t = c.t;
+      if (processed.has(t.hash)) continue;
+      if (t.nonce !== expectedNonce[t.from]) continue;
 
-    // If the block is already close to full, skip this tx.
-    if (blockGasUsed + gasUsed > blockMaxGas) continue;
+      const needed = requiredGas(t.type);
+      const outOfGas = t.gasLimit < needed;
+      const gasUsed = outOfGas ? t.gasLimit : needed;
 
-    const feePaidEth = gweiGasToEth(c.eff, gasUsed);
-    const burnedEth = gweiGasToEth(baseFee, gasUsed);
-    const tipPaidEth = gweiGasToEth(c.tip, gasUsed);
+      // If the block is already close to full, skip this tx.
+      if (blockGasUsed + gasUsed > blockMaxGas) continue;
 
-    const sender = nextAccounts[t.from];
-    const value = t.type === 'eth_transfer' ? t.valueEth : 0;
+      const feePaidEth = gweiGasToEth(c.eff, gasUsed);
+      const burnedEth = gweiGasToEth(baseFee, gasUsed);
+      const tipPaidEth = gweiGasToEth(c.tip, gasUsed);
 
-    // Dev-accurate precheck (EIP-1559): must be able to cover (value + gasLimit * maxFee).
-    const upfrontMaxCostEth = value + gweiGasToEth(t.maxFeeGwei, t.gasLimit);
+      const sender = nextAccounts[t.from];
+      const value = t.type === 'eth_transfer' ? t.valueEth : 0;
 
-    if (sender.eth < upfrontMaxCostEth) {
-      const invalid: Tx = {
-        ...t,
-        status: 'dropped',
-        error: 'Dropped: insufficient ETH to cover value + (gasLimit × maxFee).'
-      };
-      dropped.push(invalid);
-      continue;
-    }
+      // Dev-accurate precheck (EIP-1559): must be able to cover (value + gasLimit * maxFee).
+      const upfrontMaxCostEth = value + gweiGasToEth(t.maxFeeGwei, t.gasLimit);
+
+      if (sender.eth < upfrontMaxCostEth) {
+        const invalid: Tx = {
+          ...t,
+          status: 'dropped',
+          error: 'Dropped: insufficient ETH to cover value + (gasLimit × maxFee).'
+        };
+        dropped.push(invalid);
+        processed.add(t.hash);
+        continue;
+      }
 
 
-    // Fees are paid regardless of revert
-    sender.eth -= feePaidEth;
-    nextAccounts.Miner.eth += tipPaidEth;
+      // Fees are paid regardless of revert
+      sender.eth -= feePaidEth;
+      nextAccounts.Miner.eth += tipPaidEth;
 
-    let status: TxStatus = 'executed_success';
-    let error: string | undefined;
+      let status: TxStatus = 'executed_success';
+      let error: string | undefined;
 
-    if (outOfGas) {
-      status = 'executed_revert';
-      error = 'Out of gas: gas limit too low; execution reverted and full gas limit was charged.';
-    } else if (t.type === 'eth_transfer') {
-      if (sender.eth < value) {
+      if (outOfGas) {
         status = 'executed_revert';
-        error = 'Reverted: insufficient ETH balance to transfer value.';
-      } else {
-        sender.eth -= value;
-        nextAccounts[t.to].eth += value;
-      }
-    } else if (t.type === 'erc20_approve') {
-      // Use Infinity to represent unlimited allowance.
-      nextAllowance[t.from] = t.daiAmount;
-    } else if (t.type === 'dex_swap' || t.type === 'dex_swap_permit') {
-      const need = t.daiAmount;
-      const hasBalance = nextAccounts[t.from].dai;
-
-      // If this is swap+permit, validate and apply permit first (toy EIP-2612).
-      let stagedPermit: { owner: EOA; valueDai: number } | null = null;
-
-      if (t.type === 'dex_swap_permit') {
-        const sig = t.permitSig;
-        if (!sig) {
+        error = 'Out of gas: gas limit too low; execution reverted and full gas limit was charged.';
+      } else if (t.type === 'eth_transfer') {
+        if (sender.eth < value) {
           status = 'executed_revert';
-          error = 'Reverted: missing permit signature.';
-        } else if (sig.owner !== t.from || sig.spender !== 'DEX') {
-          status = 'executed_revert';
-          error = 'Reverted: invalid permit (owner/spender mismatch).';
-        } else if (sig.deadlineBlock < newBlockNumber) {
-          status = 'executed_revert';
-          error = 'Reverted: permit expired (deadline passed).';
-        } else if (sig.nonce !== nextPermitNonce[t.from]) { /* ok */
-          status = 'executed_revert';
-          error = `Reverted: invalid permit nonce (have ${nextPermitNonce[t.from]}, got ${sig.nonce}).`;
-        } else if (sig.valueDai < need) {
-          status = 'executed_revert';
-          error = `Reverted: permit value too low (permit ${sig.valueDai} DAI, need ${need} DAI).`;
-        } else if (sig.sig !== makeToyPermitSig(sig.owner, sig.valueDai, sig.nonce, sig.deadlineBlock)) {
-          status = 'executed_revert';
-          error = 'Reverted: permit signature invalid (toy check).';
+          error = 'Reverted: insufficient ETH balance to transfer value.';
         } else {
-          // Stage permit effects (atomicity): only commit if the swap succeeds.
-          // Real permit happens inside the token contract call and reverts with the tx.
-          stagedPermit = { owner: t.from, valueDai: sig.valueDai };
+          sender.eth -= value;
+          nextAccounts[t.to].eth += value;
         }
-      }
+      } else if (t.type === 'erc20_approve') {
+        // Use Infinity to represent unlimited allowance.
+        nextAllowance[t.from] = t.daiAmount;
+      } else if (t.type === 'dex_swap' || t.type === 'dex_swap_permit') {
+        const need = t.daiAmount;
+        const hasBalance = nextAccounts[t.from].dai;
 
-      // For swap+permit, simulate the permit by staging an allowance increase.
-      const allowBefore = nextAllowance[t.from];
-      const allowAfterPermit = stagedPermit
-        ? Math.max(allowBefore, stagedPermit.valueDai)
-        : allowBefore;
+        // If this is swap+permit, validate and apply permit first (toy EIP-2612).
+        let stagedPermit: { owner: EOA; valueDai: number } | null = null;
 
-      const hasAllowance = allowAfterPermit === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : allowAfterPermit;
-
-      if (status === 'executed_success') {
-        if (hasAllowance !== Number.POSITIVE_INFINITY && hasAllowance < need) {
-          status = 'executed_revert';
-          error = `Reverted: ERC-20 insufficient allowance (have ${allowAfterPermit.toFixed(2)} DAI, need ${need.toFixed(2)} DAI).`;
-        } else if (hasBalance < need) {
-          status = 'executed_revert';
-          error = `Reverted: ERC-20 insufficient token balance (have ${hasBalance.toFixed(2)} DAI, need ${need.toFixed(2)} DAI).`;
-        } else {
-          // Commit staged permit effects now that we know the tx succeeds.
-          if (stagedPermit) {
-            nextAllowance[t.from] = allowAfterPermit;
-            nextPermitNonce = { ...nextPermitNonce, [t.from]: nextPermitNonce[t.from] + 1 };
+        if (t.type === 'dex_swap_permit') {
+          const sig = t.permitSig;
+          if (!sig) {
+            status = 'executed_revert';
+            error = 'Reverted: missing permit signature.';
+          } else if (sig.owner !== t.from || sig.spender !== 'DEX') {
+            status = 'executed_revert';
+            error = 'Reverted: invalid permit (owner/spender mismatch).';
+          } else if (sig.deadlineBlock < newBlockNumber) {
+            status = 'executed_revert';
+            error = 'Reverted: permit expired (deadline passed).';
+          } else if (sig.nonce !== nextPermitNonce[t.from]) { /* ok */
+            status = 'executed_revert';
+            error = `Reverted: invalid permit nonce (have ${nextPermitNonce[t.from]}, got ${sig.nonce}).`;
+          } else if (sig.valueDai < need) {
+            status = 'executed_revert';
+            error = `Reverted: permit value too low (permit ${sig.valueDai} DAI, need ${need} DAI).`;
+          } else if (sig.sig !== makeToyPermitSig(sig.owner, sig.valueDai, sig.nonce, sig.deadlineBlock)) {
+            status = 'executed_revert';
+            error = 'Reverted: permit signature invalid (toy check).';
+          } else {
+            // Stage permit effects (atomicity): only commit if the swap succeeds.
+            // Real permit happens inside the token contract call and reverts with the tx.
+            stagedPermit = { owner: t.from, valueDai: sig.valueDai };
           }
+        }
 
-          if (hasAllowance !== Number.POSITIVE_INFINITY) nextAllowance[t.from] -= need;
-          nextAccounts[t.from].dai -= need;
-          nextAccounts.Bob.dai += need; // toy output
+        // For swap+permit, simulate the permit by staging an allowance increase.
+        const allowBefore = nextAllowance[t.from];
+        const allowAfterPermit = stagedPermit
+          ? Math.max(allowBefore, stagedPermit.valueDai)
+          : allowBefore;
+
+        const hasAllowance = allowAfterPermit === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : allowAfterPermit;
+
+        if (status === 'executed_success') {
+          if (hasAllowance !== Number.POSITIVE_INFINITY && hasAllowance < need) {
+            status = 'executed_revert';
+            error = `Reverted: ERC-20 insufficient allowance (have ${allowAfterPermit.toFixed(2)} DAI, need ${need.toFixed(2)} DAI).`;
+          } else if (hasBalance < need) {
+            status = 'executed_revert';
+            error = `Reverted: ERC-20 insufficient token balance (have ${hasBalance.toFixed(2)} DAI, need ${need.toFixed(2)} DAI).`;
+          } else {
+            // Commit staged permit effects now that we know the tx succeeds.
+            if (stagedPermit) {
+              nextAllowance[t.from] = allowAfterPermit;
+              nextPermitNonce = { ...nextPermitNonce, [t.from]: nextPermitNonce[t.from] + 1 };
+            }
+
+            if (hasAllowance !== Number.POSITIVE_INFINITY) nextAllowance[t.from] -= need;
+            nextAccounts[t.from].dai -= need;
+            nextAccounts.Bob.dai += need; // toy output
+          }
         }
       }
+
+      expectedNonce[t.from] += 1;
+      nextAccounts[t.from].nonce = expectedNonce[t.from];
+
+      const executed: Tx = {
+        ...t,
+        status,
+        includedBlockNumber: newBlockNumber,
+        baseFeeGwei: baseFee,
+        effectiveGasPriceGwei: c.eff,
+        gasUsed,
+        feePaidEth,
+        burnedEth,
+        tipPaidEth,
+        error
+      };
+
+      included.push(executed);
+      blockGasUsed += gasUsed;
+      processed.add(t.hash);
+      progressed = true;
     }
-
-    expectedNonce[t.from] += 1;
-    nextAccounts[t.from].nonce = expectedNonce[t.from];
-
-    const executed: Tx = {
-      ...t,
-      status,
-      includedBlockNumber: newBlockNumber,
-      baseFeeGwei: baseFee,
-      effectiveGasPriceGwei: c.eff,
-      gasUsed,
-      feePaidEth,
-      burnedEth,
-      tipPaidEth,
-      error
-    };
-
-    included.push(executed);
-    blockGasUsed += gasUsed;
   }
 
   // Update state

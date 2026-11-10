@@ -43,3 +43,6 @@ coverage/
 *.local
 .vercel
 .env*.local
+
+# specification
+specification/

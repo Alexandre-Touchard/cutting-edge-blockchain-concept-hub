@@ -43,6 +43,8 @@ export type GlossaryKey =
   | 'Builder'
   | 'Relay'
   | 'Proposer'
+  | 'Mempool'
+  | 'Ordering'
   | 'Light Clients'
   | 'Oracle Networks'
   | 'Stablecoin'
@@ -120,6 +122,11 @@ export type GlossaryKey =
   | 'Nonce'
   | 'Parallel Execution'
   | 'Conflict Rate'
+  // EVM vs SVM
+  | 'Sequential execution'
+  | 'Parallel scheduling'
+  | 'Account locks'
+  | 'Read/write conflicts'
   // AMM
   | 'Pool TVL'
   | 'Price'
@@ -392,6 +399,16 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
   'Conflict Rate':
     'The fraction of transactions that conflict (touch overlapping state). High conflict rates reduce the benefit of parallel execution, especially for optimistic strategies.',
 
+  // EVM vs SVM
+  'Sequential execution':
+    'Transactions run one after another in block order (EVM-style). Simple and deterministic, but throughput is capped by a single execution thread.',
+  'Parallel scheduling':
+    'Transactions that touch disjoint state are run at the same time on multiple cores (Solana/SVM-style). Conflicting transactions are queued until their accounts are free.',
+  'Account locks':
+    'On Solana, each transaction declares upfront which accounts it reads and writes. The runtime locks those accounts: many readers can share a lock, but a writer needs it exclusively.',
+  'Read/write conflicts':
+    'Two transactions conflict when one writes an account the other reads or writes. Conflicting transactions must run in order; two reads of the same account do not conflict.',
+
   // AMM
   'Pool TVL':
     'Total Value Locked (TVL) is the total dollar value of all tokens currently deposited in this liquidity pool.',
@@ -430,23 +447,7 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
   'IL Formula':
     'IL formula: 2×√(price_ratio) / (1 + price_ratio) − 1. Example: at 2× price change, IL ≈ −5.7%; at 5×, IL ≈ −25.5%. Fees can offset IL over time.',
 
-  // MEV & PBS
-  MEV:
-    'Maximal Extractable Value: profit extracted by reordering, inserting, or censoring transactions in a block (beyond normal fees).',
-  Searcher:
-    'An actor/bot that monitors the mempool for profitable opportunities (arbitrage, liquidations, sandwiches) and submits transactions or private bundles to capture them.',
-  Sandwich:
-    'A 3-transaction MEV pattern: front-run (move price), victim swap executes at worse price, then back-run to unwind and extract profit.',
-  Bundle:
-    'An ordered, atomic list of transactions sent privately to a builder/relay (e.g., Flashbots). Either all txs land in order, or none do.',
-  PBS:
-    'Proposer-Builder Separation: builders construct blocks and bid; proposers choose a winning bid without seeing full contents (blinded header), then payload is revealed.',
-  Builder:
-    'In PBS, a builder constructs a candidate block (including MEV transactions/bundles) and submits a sealed header plus a bid.',
-  Relay:
-    'A trusted routing service in MEV-Boost/PBS that receives builder bids, validates them, and forwards the best bids to proposers.',
-  Proposer:
-    'The validator selected to propose the next block. In PBS/MEV-Boost, the proposer chooses the highest-paying builder bid.',
+  // MEV & PBS (additional terms)
   Mempool:
     'The set of pending transactions broadcast to the network but not yet included in a block. Public mempools enable reactive MEV.',
   Ordering:

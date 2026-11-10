@@ -1,5 +1,6 @@
 import { parseRedisHgetall, parseRedisInt, redisPipeline } from './_upstash.js';
 import { fetchAnalyticsEventsRange, hasSupabaseEnv } from './_supabase_rest.js';
+import { createHash, timingSafeEqual } from 'crypto';
 
 export const config = { runtime: 'nodejs' };
 
@@ -14,6 +15,14 @@ function unauthorized(res: any) {
   res.statusCode = 401;
   res.setHeader('WWW-Authenticate', 'Basic realm="Analytics"');
   json(res, 401, { ok: false, error: 'Unauthorized' });
+}
+
+// Constant-time string comparison. Hashing first gives equal-length buffers,
+// so neither the content nor the length of the secret leaks through timing.
+function safeEqual(a: string, b: string): boolean {
+  const ha = createHash('sha256').update(a).digest();
+  const hb = createHash('sha256').update(b).digest();
+  return timingSafeEqual(ha, hb);
 }
 
 function getBasicAuth(req: any): { user: string; pass: string } | null {
@@ -64,14 +73,25 @@ export default async function handler(req: any, res: any) {
     const expectedPass = process.env.ANALYTICS_PASS ?? '';
     const expectedSlug = process.env.ANALYTICS_SLUG ?? '';
 
+    // Refuse access when credentials are not configured; otherwise empty
+    // credentials (Basic ":") would match the empty expected values.
+    if (!expectedUser || !expectedPass) {
+      console.error('stats: ANALYTICS_USER / ANALYTICS_PASS env vars are not set');
+      json(res, 503, { ok: false, error: 'Analytics is not configured' });
+      return;
+    }
+
     const auth = getBasicAuth(req);
     const slug = String(req.headers['x-analytics-slug'] ?? '');
 
-    if (!auth || auth.user !== expectedUser || auth.pass !== expectedPass) {
+    // Evaluate both comparisons (no short-circuit) to keep timing uniform.
+    const userOk = !!auth && safeEqual(auth.user, expectedUser);
+    const passOk = !!auth && safeEqual(auth.pass, expectedPass);
+    if (!userOk || !passOk) {
       unauthorized(res);
       return;
     }
-    if (expectedSlug && slug !== expectedSlug) {
+    if (expectedSlug && !safeEqual(slug, expectedSlug)) {
       unauthorized(res);
       return;
     }

@@ -254,4 +254,21 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
     keyTakeaways: ['Why parallel scheduling increases throughput when transactions do not conflict'],
     status: 'coming_soon'
   },
+  'arkea-heist-tracing': {
+    id: 'arkea-heist',
+    title: 'Follow the Money: the Crédit Mutuel Arkéa Heist',
+    description:
+      'Step through a real 2026 bank heist, from a compromised supplier to instant transfers, crypto laundering and Monero, and see how on-chain analysts traced it. Every claim shows its confidence level and sources.',
+    thumbnail: '🕵️',
+    category: 'security',
+    difficulty: 'Beginner',
+    tags: ['Forensics', 'On-chain analytics', 'Stablecoins', 'Monero', 'Incident response'],
+    concepts: ['On-chain Analytics', 'Peeling Chain', 'Stablecoin Freeze', 'Instant Exchange', 'Cross-Chain Bridge', 'Monero', 'Instant Payment', 'Third-Party Risk'],
+    keyTakeaways: [
+      'Stolen money was turned into crypto within hours to outrun freezes by banks, exchanges and stablecoin issuers.',
+      'Public blockchains let independent analysts detect and trace a theft before the victim announces it, until funds reach privacy coins like Monero.',
+      'In a live incident, separate what is confirmed, reported and unverified, and always cite who said what.'
+    ],
+    learningQuestsTotal: 5
+  },
 };

@@ -127,6 +127,15 @@ export type GlossaryKey =
   | 'Parallel scheduling'
   | 'Account locks'
   | 'Read/write conflicts'
+  // On-chain forensics (Arkéa heist)
+  | 'Peeling Chain'
+  | 'Instant Payment'
+  | 'Stablecoin Freeze'
+  | 'Cross-Chain Bridge'
+  | 'Instant Exchange'
+  | 'Monero'
+  | 'On-chain Analytics'
+  | 'Third-Party Risk'
   // AMM
   | 'Pool TVL'
   | 'Price'
@@ -408,6 +417,24 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
     'On Solana, each transaction declares upfront which accounts it reads and writes. The runtime locks those accounts: many readers can share a lock, but a writer needs it exclusively.',
   'Read/write conflicts':
     'Two transactions conflict when one writes an account the other reads or writes. Conflicting transactions must run in order; two reads of the same account do not conflict.',
+
+  // On-chain forensics (Arkéa heist)
+  'Peeling Chain':
+    'A laundering pattern where a wallet sends a small amount to a new address at each hop while the remainder moves to a fresh change address. Repeated thousands of times, it hides a large sum among many small transfers. Analysts undo it by clustering the change addresses into one owner.',
+  'Instant Payment':
+    'A bank transfer (in the EU, SEPA Instant) that settles in about ten seconds, 24/7. Speed helps customers but leaves little time to detect and stop fraudulent transfers.',
+  'Stablecoin Freeze':
+    'Centralised stablecoin issuers such as Circle (USDC) and Tether (USDT) can blacklist an address so its tokens cannot move. It only works while stolen funds are still held in that stablecoin.',
+  'Cross-Chain Bridge':
+    'A protocol that moves value from one blockchain to another, usually by locking or burning tokens on the source chain and releasing them on the destination. Tracing must then continue on the other chain.',
+  'Instant Exchange':
+    'A swap service that converts one crypto asset into another without an account, often with light identity checks. Popular for quickly changing assets and chains during laundering.',
+  'Monero':
+    'A privacy-focused cryptocurrency (XMR) that hides senders, receivers and amounts by default. Once funds are converted to Monero, public on-chain tracing effectively stops.',
+  'On-chain Analytics':
+    'Investigating public blockchain data: following transfers, clustering addresses that belong to the same owner, and labelling exchanges and services, so stolen funds can be traced and flagged.',
+  'Third-Party Risk':
+    'The risk that a supplier or service provider connected to an organisation becomes the way in for an attacker. EU rules such as DORA require financial firms to manage it.',
 
   // AMM
   'Pool TVL':

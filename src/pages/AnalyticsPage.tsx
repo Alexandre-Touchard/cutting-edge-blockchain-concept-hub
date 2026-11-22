@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
+import type { LearningRow } from '../../api/_learning';
 
 type StatsResponse =
   | { ok: false; error: string }
@@ -12,6 +13,8 @@ type StatsResponse =
       topPaths: Array<{ key: string; count: number }>;
       topDemos: Array<{ key: string; count: number }>;
       topEvents: Array<{ key: string; count: number }>;
+      /** Per-demo learning funnel (absent on older deployments). */
+      learning?: LearningRow[];
     };
 
 function basicAuthHeader(user: string, pass: string): string {
@@ -218,10 +221,60 @@ export default function AnalyticsPage() {
               <TopList title="Top demos" items={okData.topDemos.map((x) => ({ ...x, key: `/demo/${x.key}` }))} />
               <TopList title="Top events" items={okData.topEvents} />
             </div>
+
+            <LearningTable rows={okData.learning ?? []} />
             </>
           );
         })()}
       </div>
+    </div>
+  );
+}
+
+function pct(n: number, d: number) {
+  return d > 0 ? `${Math.round((n / d) * 100)}%` : "—";
+}
+
+/** Demo views → visitors who completed ≥1 quest → all quests, with the drop-off per quest. */
+function LearningTable({ rows }: { rows: LearningRow[] }) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900 p-5">
+      <div className="text-lg font-semibold">Learning completion</div>
+      <div className="mt-1 text-xs text-slate-400">
+        Each browser reports each quest milestone once. &quot;Started&quot; = completed at least one quest. Views are demo pageviews, so rates are approximate.
+      </div>
+      {rows.length === 0 ? (
+        <div className="mt-3 text-sm text-slate-500">No data yet</div>
+      ) : (
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-slate-400">
+              <tr className="text-left">
+                <th className="py-2 pr-4">Demo</th>
+                <th className="py-2 pr-4">Views</th>
+                <th className="py-2 pr-4">Started</th>
+                <th className="py-2 pr-4">Completed</th>
+                <th className="py-2 pr-4">Start rate</th>
+                <th className="py-2 pr-4">Completion rate</th>
+                <th className="py-2 pr-4">Visitors reaching quest 1 → n</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.demoId} className="border-t border-slate-800">
+                  <td className="py-2 pr-4 font-mono text-slate-300">{r.demoId}</td>
+                  <td className="py-2 pr-4">{r.views.toLocaleString()}</td>
+                  <td className="py-2 pr-4">{r.started.toLocaleString()}</td>
+                  <td className="py-2 pr-4">{r.completed.toLocaleString()}</td>
+                  <td className="py-2 pr-4">{pct(r.started, r.views)}</td>
+                  <td className="py-2 pr-4">{pct(r.completed, r.started)}</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-slate-400">{r.reached.length ? r.reached.join(" → ") : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

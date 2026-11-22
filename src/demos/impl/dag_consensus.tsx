@@ -6,9 +6,28 @@ import { useDemoI18n } from '../useDemoI18n';
 const T = EduTooltip;
 import { Plus, Play, RefreshCw, Zap, GitBranch, CheckCircle } from 'lucide-react';
 
+type DagNode = {
+  id: string;
+  x: number;
+  y: number;
+  parents: string[];
+  validator: string;
+  weight: number;
+  confirmed: boolean;
+  timestamp: number;
+  // Transaction details (set by the richer presets)
+  type?: string;
+  amount?: number;
+  from?: string;
+  to?: string;
+  /** Kept as a formatted string by the presets (e.g. "0.0010"). */
+  fee?: string | number;
+  nonce?: number;
+};
+
 const DAGConsensus = () => {
   const { tr } = useDemoI18n('dag-consensus');
-  const [nodes, setNodes] = useState([
+  const [nodes, setNodes] = useState<DagNode[]>([
     { id: 'A', x: 400, y: 100, parents: [], validator: 'Alice', weight: 1, confirmed: true, timestamp: Date.now() - 5000 },
     { id: 'B', x: 250, y: 200, parents: ['A'], validator: 'Bob', weight: 1, confirmed: true, timestamp: Date.now() - 4500 },
     { id: 'C', x: 400, y: 200, parents: ['A'], validator: 'Charlie', weight: 1, confirmed: true, timestamp: Date.now() - 4300 },

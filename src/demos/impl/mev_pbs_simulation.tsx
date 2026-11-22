@@ -1426,7 +1426,7 @@ export default function MevPbsSimulation() {
                   onQuest={() => setQuest((q) => ({ ...q, sawPbsWinner: true }))}
                 />
               </div>
-            ) : module !== 'primer' && module !== 'sandwich' && module !== 'arbitrage' && module !== 'bundles' ? (
+            ) : module === 'advanced' ? (
               <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
                 <SectionTitle icon={<Circle size={18} />} title={tr('More scenarios coming soon')} />
                 <div className="mt-3 text-sm text-slate-300">

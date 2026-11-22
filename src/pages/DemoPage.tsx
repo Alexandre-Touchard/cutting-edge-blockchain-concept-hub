@@ -9,6 +9,7 @@ import EduTooltip from '../ui/EduTooltip';
 import { getConceptChip } from '../ui/concepts';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
 import { trackEvent } from '../analytics/client';
+import { loadDemoTranslations } from '../i18n';
 
 export default function DemoPage() {
   const { t, i18n } = useTranslation();
@@ -64,7 +65,8 @@ export default function DemoPage() {
     () =>
       React.lazy(async (): Promise<{ default: React.ComponentType<any> }> => {
         if (!demo) return { default: () => null };
-        const mod = await demo.load();
+        // Code and this demo's strings load in parallel; the demo renders once both are ready.
+        const [mod] = await Promise.all([demo.load(), loadDemoTranslations(demo.meta.id).catch(() => undefined)]);
         return { default: mod.default as React.ComponentType<any> };
       }),
     [demo?.sourcePath]

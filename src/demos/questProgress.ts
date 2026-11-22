@@ -2,6 +2,8 @@
 // a progress summary per demo (shown on hub cards), and recently visited demos.
 // Nothing leaves the browser. All functions degrade to no-ops when storage is unavailable.
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { trackEvent } from '../analytics/client';
+import { completedEventName, questEventName } from '../../api/_learning';
 
 const FLAGS_PREFIX = 'quests:';
 const SUMMARY_KEY = 'quest-progress';
@@ -91,14 +93,29 @@ export function readQuestSummaries(): Record<string, QuestSummary> {
   return readJson<Record<string, QuestSummary>>(SUMMARY_KEY, {});
 }
 
-export function reportQuestProgress(demoId: string, done: number, total: number, now = Date.now()) {
+export type TrackFn = (event: string, demoId: string) => void;
+
+const defaultTrack: TrackFn = (event, demoId) =>
+  trackEvent(event, { demoId, path: typeof window !== 'undefined' ? window.location.pathname : undefined });
+
+/**
+ * Records a demo's quest count. When the visitor beats their best, sends one analytics event
+ * per newly reached quest count, plus a completion event the first time all are done.
+ * Each browser therefore reports each milestone once (see api/_learning.ts).
+ */
+export function reportQuestProgress(demoId: string, done: number, total: number, now = Date.now(), track: TrackFn = defaultTrack) {
   if (!(total > 0)) return;
   const all = readQuestSummaries();
   const prev = all[demoId];
   const clamped = Math.max(0, Math.min(total, done));
   if (prev && prev.done === clamped && prev.total === total) return;
-  all[demoId] = { done: clamped, total, best: Math.max(prev?.best ?? 0, clamped), updatedAt: now };
+  const prevBest = prev?.best ?? 0;
+  const best = Math.max(prevBest, clamped);
+  all[demoId] = { done: clamped, total, best, updatedAt: now };
   writeJson(SUMMARY_KEY, all);
+
+  for (let n = prevBest + 1; n <= best; n++) track(questEventName(demoId, n, total), demoId);
+  if (best === total && prevBest < total) track(completedEventName(demoId), demoId);
 }
 
 /** Call from a demo with its own count of completed quests. */

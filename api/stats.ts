@@ -1,5 +1,6 @@
 import { parseRedisHgetall, parseRedisInt, redisPipeline } from './_upstash.js';
 import { fetchAnalyticsEventsRange, hasSupabaseEnv } from './_supabase_rest.js';
+import { learningFunnel } from './_learning.js';
 import { createHash, timingSafeEqual } from 'crypto';
 
 export const config = { runtime: 'nodejs' };
@@ -170,7 +171,8 @@ export default async function handler(req: any, res: any) {
         series,
         topPaths: topN(topPathsAgg, 15),
         topDemos: topN(topDemosAgg, 15),
-        topEvents: topN(topEventsAgg, 15)
+        topEvents: topN(topEventsAgg, 15),
+        learning: learningFunnel(topEventsAgg, topDemosAgg)
       });
       return;
     }
@@ -242,7 +244,8 @@ export default async function handler(req: any, res: any) {
       series,
       topPaths: topN(topPathsAgg, 15),
       topDemos: topN(topDemosAgg, 15),
-      topEvents: topN(topEventsAgg, 15)
+      topEvents: topN(topEventsAgg, 15),
+      learning: learningFunnel(topEventsAgg, topDemosAgg)
     });
   } catch (e: any) {
     const msg = e?.message ?? 'Internal error';

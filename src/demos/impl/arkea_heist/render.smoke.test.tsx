@@ -3,13 +3,14 @@
 import { describe, expect, it } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import i18n from '../../../i18n';
+import i18n, { loadDemoTranslations } from '../../../i18n';
 import Demo from '../arkea_heist_tracing';
 
 describe('Arkéa demo renders', () => {
   for (const lng of ['en', 'fr']) {
     it(`renders in ${lng}`, async () => {
       await i18n.changeLanguage(lng);
+      await loadDemoTranslations('arkea-heist');
       const html = renderToString(<Demo />);
       expect(html.length).toBeGreaterThan(10_000);
       if (lng === 'en') {

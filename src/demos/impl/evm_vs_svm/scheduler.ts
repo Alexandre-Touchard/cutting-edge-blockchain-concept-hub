@@ -9,7 +9,7 @@ export type Tx = {
   label: string;
   computeUnits: number;
   // What the tx really touches at runtime (EVM: implicit)
-  actual: Record<AccountId, AccessMode>;
+  actual: Partial<Record<AccountId, AccessMode>>;
   // What the tx declares ahead of time (Solana-style account locks)
   declared: Partial<Record<AccountId, AccessMode>>;
 };

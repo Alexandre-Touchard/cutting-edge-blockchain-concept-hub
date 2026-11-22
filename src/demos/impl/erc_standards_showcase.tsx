@@ -2072,7 +2072,7 @@ function ERC865Demo() {
 
         <div className="mt-4 bg-slate-900 rounded p-4 border border-slate-700">
           <div className="text-sm text-slate-200">
-            {tr('Signed status phrase', {
+            {tr('Signed: {{signed}}; executed on-chain: {{executed}}', {
               signed: signed ? tr('yes') : tr('no'),
               executed: executed ? tr('yes') : tr('no')
             })}

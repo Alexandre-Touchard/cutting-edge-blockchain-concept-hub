@@ -15,7 +15,7 @@ import {
   type WalletTxState
 } from './model';
 
-function makeToyPermitSig(owner: 'Alice' | 'Bob', valueDai: number, nonce: number, deadlineBlock: number): string {
+function makeToyPermitSig(owner: EOA, valueDai: number, nonce: number, deadlineBlock: number): string {
   // Not real cryptography; just a deterministic-looking string for UI.
   return `permit(${owner},${valueDai},nonce=${nonce},dl=${deadlineBlock})`;
 }

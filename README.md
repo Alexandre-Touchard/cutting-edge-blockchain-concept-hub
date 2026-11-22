@@ -76,7 +76,8 @@ src/
     impl/                One file per demo (auto-discovered)
     demoRegistry.ts      Demo metadata: title, category, difficulty, takeaways, tags
     glossary.ts          Glossary terms used by tooltips and "Key concepts" chips
-  locales/               en / fr / es translations
+  locales/               en / fr / es shared strings (hub, glossary, demo titles)
+    demos/<lang>/<id>.json each demo's own strings, loaded with the demo
   pages/                 Hub, demo page, admin, analytics
   ui/                    Shared components (hub grid, tooltips, modals, language switcher)
 ```
@@ -85,11 +86,12 @@ src/
 
 1. **Create the component** in `src/demos/impl/<your_demo>.tsx` with a default export. Files in this folder are discovered automatically; the route becomes `/demo/<id>`.
 2. **Register metadata** in `src/demos/demoRegistry.ts`, keyed by the file name in kebab-case: title, description, category, difficulty, thumbnail, concepts, key takeaways, tags.
-3. **Make the UI translatable**: get `tr` from `useDemoI18n('<id>')` and wrap every user-facing string in `tr('...')`. Add translations under `demos.<id>` in `src/locales/fr.json` and `es.json`. English is the source text and the fallback.
+3. **Make the UI translatable**: get `tr` from `useDemoI18n('<id>')` and wrap every user-facing string in `tr('...')`. Put the demo's translations in `src/locales/demos/fr/<id>.json` and `src/locales/demos/es/<id>.json` (keys: the `slug_hash` part of `makeAutoKey`), and its title/description/takeaways under `demos.<id>` in `src/locales/fr.json` and `es.json`. English is the source text and the fallback. The test `translationCoverage.test.ts` lists any string left untranslated.
 4. **Back every concept with the glossary**: add new terms to `GlossaryKey` and `EN_GLOSSARY` in `src/demos/glossary.ts`, plus `glossary.<Term>` in the locale files.
 5. **Teach, don't just show**: add a 60-second tour, `EduTooltip`s on actions and ambiguous labels, learning quests (`learningQuestsTotal` in the registry), a real-world applications section, and further reading.
-6. **Keep simulation logic testable**: put the math/state logic in a plain `.ts` module next to the demo (see `impl/amm/`, `impl/wallet_tx/`, `impl/evm_vs_svm/`) and add a `*.test.ts` file beside it.
-7. Run `npm run typecheck`, `npm test` and `npm run build` before opening a PR.
+6. **Keep simulation logic testable**: put the math/state logic in a plain `.ts` module next to the demo (see `impl/amm/`, `impl/wallet_tx/`, `impl/evm_vs_svm/`, `impl/stablecoin_depeg/`) and add a `*.test.ts` file beside it.
+7. Add the demo's title and description to `DEMO_PREVIEWS` in `api/demo_preview.ts` (link previews; a test checks it matches the registry).
+8. Run `npm run typecheck`, `npm test` and `npm run build` before opening a PR. GitHub Actions runs the same checks on every push and pull request.
 
 ## Deployment & environment variables
 

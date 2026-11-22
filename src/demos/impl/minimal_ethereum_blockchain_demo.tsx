@@ -7,7 +7,13 @@ import { Plus, Pickaxe, Link, CheckCircle, AlertCircle, Wallet, ArrowRight, Zap 
 
 // Simulating the Rust blockchain in JavaScript for the demo
 class Transaction {
-  constructor(from, to, value, nonce) {
+  from: string;
+  to: string;
+  value: number;
+  nonce: number;
+  hash: string;
+
+  constructor(from: string, to: string, value: number, nonce: number) {
     this.from = from;
     this.to = to;
     this.value = value;
@@ -31,8 +37,29 @@ class Transaction {
   }
 }
 
-class Block {
-  constructor(number, transactions, previousHash, difficulty, miner) {
+/** Shape shared by mined blocks and the plain genesis object kept in state. */
+type ChainBlock = {
+  number: number;
+  timestamp: number;
+  transactions: Transaction[];
+  previousHash: string;
+  hash: string;
+  nonce: number;
+  difficulty: number;
+  miner: string;
+};
+
+class Block implements ChainBlock {
+  number: number;
+  timestamp: number;
+  transactions: Transaction[];
+  previousHash: string;
+  difficulty: number;
+  miner: string;
+  nonce: number;
+  hash: string;
+
+  constructor(number: number, transactions: Transaction[], previousHash: string, difficulty: number, miner: string) {
     this.number = number;
     this.timestamp = Date.now();
     this.transactions = transactions;
@@ -71,7 +98,7 @@ const EthereumBlockchainDemo = () => {
     'Charlie': { balance: 1000, nonce: 0 }
   });
 
-  const [chain, setChain] = useState([
+  const [chain, setChain] = useState<ChainBlock[]>([
     {
       number: 0,
       timestamp: Date.now() - 10000,

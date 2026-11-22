@@ -471,7 +471,7 @@ export default function EvmVsSvmDemo() {
     for (const t of wave.txs) {
       if (!declaredCoversActual(t)) {
         const missing = missingDeclarations(t);
-        patch[t.id] = {
+        const failed: Extract<Outcome, { status: 'failed' }> = {
           status: 'failed',
           reason: 'MissingAccountDeclaration',
           summary:
@@ -480,11 +480,8 @@ export default function EvmVsSvmDemo() {
               : tr('Missing declaration for at least one actual account'),
           missing
         };
-        appendLog(
-          'SOLANA',
-          'error',
-          `${tr('FAILED')} — #${t.id}: ${patch[t.id].summary}`
-        );
+        patch[t.id] = failed;
+        appendLog('SOLANA', 'error', `${tr('FAILED')} — #${t.id}: ${failed.summary}`);
       } else {
         patch[t.id] = { status: 'ok', summary: tr('Executed') };
         appendLog('SOLANA', 'success', `${tr('OK')} — #${t.id}: ${tr(t.label)}`);
@@ -646,7 +643,8 @@ export default function EvmVsSvmDemo() {
               <RefreshCw size={16} />
               {tr('Reset')}
             </button>
-            <LinkWithCopy text="EVM vs Solana-style demo" copyText={typeof window !== 'undefined' ? window.location.href : ''} />
+            {/* Was passing text/copyText, which LinkWithCopy doesn't accept: the link rendered empty. */}
+            <LinkWithCopy label="EVM vs Solana-style demo" href={typeof window !== 'undefined' ? window.location.href : ''} />
           </div>
         </div>
 

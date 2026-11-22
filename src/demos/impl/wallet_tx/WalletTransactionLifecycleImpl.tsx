@@ -27,6 +27,7 @@ import { define } from '../../glossary';
 import { useDemoI18n } from '../../useDemoI18n';
 import { makeInitialWalletTxState, type Address, type Tx, type TxType, effectiveGasPriceGwei, gweiGasToEth, requiredGas, tipGwei } from './model';
 import { broadcast, mineBlock, reorgLastBlock, txFromDraft, type Draft } from './engine';
+import { usePersistedQuests, useReportQuestProgress } from '../../questProgress';
 
 function nonceGapInfo(state: ReturnType<typeof makeInitialWalletTxState>, tx: Tx): { blocked: boolean; waitingForNonce?: number } {
   // For externally-owned accounts in this demo, the next expected nonce is the account nonce.
@@ -236,7 +237,7 @@ export default function WalletTransactionLifecycleImpl() {
   }, [allTxs]);
 
   // Make quest completion monotonic: once completed, it stays completed until Reset.
-  const [questsDone, setQuestsDone] = useState(() => ({ q1: false, q2: false, q3: false, q4: false, q5: false }));
+  const [questsDone, setQuestsDone] = usePersistedQuests('wallet-tx-lifecycle', () => ({ q1: false, q2: false, q3: false, q4: false, q5: false }));
 
   function markQuestDone(patch: Partial<typeof questsDone>) {
     setQuestsDone((prev) => ({
@@ -265,6 +266,7 @@ export default function WalletTransactionLifecycleImpl() {
   }, [questProgress.q1, questProgress.q2, questProgress.q3, questProgress.q4, questProgress.q5]);
 
   const questsCompletedCount = Object.values(questsDone).filter(Boolean).length;
+  useReportQuestProgress('wallet-tx-lifecycle', questsCompletedCount, 5);
 
   function statusPill(status: Tx['status']) {
     switch (status) {

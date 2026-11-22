@@ -55,6 +55,7 @@ function WhaleIcon({ size = 16, className = '' }: { size?: number; className?: s
   );
 }
 import { useDemoI18n } from '../useDemoI18n';
+import { usePersistedQuests, useReportQuestProgress } from '../questProgress';
 
 // Backwards-compatible alias so we don't have to rewrite all usages.
 const Tooltip = EduTooltip;
@@ -976,7 +977,7 @@ export default function StablecoinDepegSimulation() {
   const [collat, setCollat] = useState<CollateralizedState>(() => initialCollateralized());
   const [algo, setAlgo] = useState<AlgorithmicState>(() => initialAlgorithmic());
 
-  const [questFlags, setQuestFlags] = useState(() => ({
+  const [questFlags, setQuestFlags] = usePersistedQuests('stablecoin-depeg', () => ({
     everDepegged: false,
     everLiquidated: false,
     everRedeemed: false,
@@ -998,6 +999,7 @@ export default function StablecoinDepegSimulation() {
     regainedConfidence: false,
     survivedCrash10StepsNoInsolvency: false
   }));
+  useReportQuestProgress('stablecoin-depeg', Object.values(questFlags).filter(Boolean).length, 16);
 
   const currentT = scenario === 'collateralized' ? collat.t : algo.t;
 

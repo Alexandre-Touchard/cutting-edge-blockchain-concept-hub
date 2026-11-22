@@ -116,7 +116,6 @@
       },
       "auto": {}
     },
-
     "stablecoin-depeg": {
       "title": "Cascada de depeg de un stablecoin",
       "description": "Simula dos cascadas de depeg: (1) stablecoin colateralizado (liquidaciones + drenaje de liquidez) y (2) stablecoin algorítmico (colapso reflexivo estilo Terra).",
@@ -589,7 +588,9 @@
     "comingSoon": "Próximamente",
     "copiedLink": "Enlace copiado",
     "copyLink": "Copiar enlace",
-    "copied": "¡Copiado!"
+    "copied": "¡Copiado!",
+    "less": "Menos",
+    "more": "Más"
   },
   "lang": {
     "label": "Idioma",
@@ -606,6 +607,73 @@
     "noDemosFound": "No se encontraron demos",
     "tryAdjustingSearch": "Prueba ajustando tu búsqueda o filtros",
     "hideFilters": "Ocultar filtros",
-    "showFilters": "Mostrar filtros"
+    "showFilters": "Mostrar filtros",
+    "pitch": "Entiende de verdad las blockchains jugando con ellas: {{count}} simulaciones gratis y sin registro.",
+    "ctaStart": "Empezar por lo básico",
+    "ctaNew": "Nuevo: {{title}}",
+    "stats": {
+      "demos": "{{count}} demos interactivas",
+      "quests": "{{count}} misiones de aprendizaje",
+      "languages": "English · Français · Español",
+      "free": "Gratis, sin registro"
+    },
+    "filterByCategory": "Filtrar por categoría",
+    "categories": {
+      "all": "Todas las demos",
+      "consensus": "Consenso y validación",
+      "scaling": "Capa 2 y escalabilidad",
+      "execution": "Ejecución y rendimiento",
+      "data": "Disponibilidad de datos",
+      "interop": "Cross-chain y puentes",
+      "security": "Seguridad y criptografía",
+      "defi": "Mecanismos DeFi"
+    },
+    "continueTitle": "Continúa donde lo dejaste",
+    "progressNote": "Tu progreso se guarda solo en este navegador.",
+    "new": "Nuevo",
+    "start": "Empezar",
+    "details": "Detalles",
+    "questsCount": "{{count}} misiones",
+    "questsProgress": "{{done}}/{{total}} misiones",
+    "pathsTitle": "Rutas de aprendizaje",
+    "pathsSubtitle": "¿No sabes por dónde empezar? Sigue una ruta, una demo tras otra.",
+    "paths": {
+      "basics": {
+        "title": "Fundamentos de blockchain",
+        "description": "Empieza aquí: cómo funcionan realmente los bloques, las transacciones, las wallets y los tokens."
+      },
+      "defi": {
+        "title": "Fundamentos de DeFi",
+        "description": "Intercambios sin libro de órdenes, stablecoins bajo presión y quién se beneficia del orden de las transacciones."
+      },
+      "scaling": {
+        "title": "Escalar Ethereum",
+        "description": "Rollups, pruebas de fraude, muestreo de disponibilidad de datos y canales de pago."
+      },
+      "security": {
+        "title": "Seguridad y cross-chain",
+        "description": "Puentes, seguridad compartida, consensos alternativos y rastreo de fondos robados on-chain."
+      }
+    },
+    "allDemos": "Todas las demos",
+    "comingSoonTitle": "Próximamente",
+    "comingSoonSubtitle": "En preparación. Dale una estrella al proyecto en GitHub para enterarte cuando se publiquen.",
+    "footer": {
+      "createdBy": "Creado por",
+      "linkedin": "Conecta en LinkedIn",
+      "support": "Apoya el Blockchain Learning Hub",
+      "donations": "Donaciones en cripto (ETH / USDC)",
+      "star": "Dale una estrella en GitHub",
+      "share": "Comparte el sitio",
+      "copyright": "© {{year}} Alexandre Touchard. Demos interactivas para aprender blockchain.",
+      "ethAddress": "Dirección de Ethereum",
+      "copyAddress": "Copiar dirección",
+      "donateHint": "Envía ETH o USDC en la red principal de Ethereum para apoyar el proyecto.",
+      "addressCopied": "Dirección copiada",
+      "linkCopied": "Enlace copiado",
+      "close": "Cerrar"
+    },
+    "hidePaths": "Ocultar las rutas",
+    "showPaths": "Mostrar las rutas"
   }
 }

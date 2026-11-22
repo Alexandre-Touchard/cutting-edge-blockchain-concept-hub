@@ -2069,7 +2069,9 @@
     "comingSoon": "Bientôt disponible",
     "copiedLink": "Lien copié",
     "copyLink": "Copier le lien",
-    "copied": "Copié !"
+    "copied": "Copié !",
+    "less": "Moins",
+    "more": "Plus"
   },
   "lang": {
     "label": "Langue",
@@ -2086,6 +2088,73 @@
     "noDemosFound": "Aucune démo trouvée",
     "tryAdjustingSearch": "Essayez d’ajuster votre recherche ou vos filtres",
     "hideFilters": "Masquer les filtres",
-    "showFilters": "Afficher les filtres"
+    "showFilters": "Afficher les filtres",
+    "pitch": "Comprenez vraiment les blockchains en les manipulant : {{count}} simulations gratuites, sans inscription.",
+    "ctaStart": "Commencer par les bases",
+    "ctaNew": "Nouveau : {{title}}",
+    "stats": {
+      "demos": "{{count}} démos interactives",
+      "quests": "{{count}} quêtes d’apprentissage",
+      "languages": "English · Français · Español",
+      "free": "Gratuit, sans inscription"
+    },
+    "filterByCategory": "Filtrer par catégorie",
+    "categories": {
+      "all": "Toutes les démos",
+      "consensus": "Consensus & validation",
+      "scaling": "Layer 2 & passage à l’échelle",
+      "execution": "Exécution & performance",
+      "data": "Disponibilité des données",
+      "interop": "Inter-chaînes & bridges",
+      "security": "Sécurité & cryptographie",
+      "defi": "Mécanismes DeFi"
+    },
+    "continueTitle": "Reprendre là où vous en étiez",
+    "progressNote": "Votre progression est enregistrée uniquement dans ce navigateur.",
+    "new": "Nouveau",
+    "start": "Lancer",
+    "details": "Détails",
+    "questsCount": "{{count}} quêtes",
+    "questsProgress": "{{done}}/{{total}} quêtes",
+    "pathsTitle": "Parcours d’apprentissage",
+    "pathsSubtitle": "Vous ne savez pas par où commencer ? Suivez un parcours, une démo après l’autre.",
+    "paths": {
+      "basics": {
+        "title": "Les bases de la blockchain",
+        "description": "Commencez ici : comment fonctionnent vraiment les blocs, les transactions, les portefeuilles et les jetons."
+      },
+      "defi": {
+        "title": "Les fondamentaux de la DeFi",
+        "description": "Des échanges sans carnet d’ordres, des stablecoins sous pression, et qui profite de l’ordre des transactions."
+      },
+      "scaling": {
+        "title": "Faire passer Ethereum à l’échelle",
+        "description": "Rollups, preuves de fraude, échantillonnage de disponibilité des données et canaux de paiement."
+      },
+      "security": {
+        "title": "Sécurité & inter-chaînes",
+        "description": "Bridges, sécurité partagée, consensus alternatifs, et traçage de fonds volés on-chain."
+      }
+    },
+    "allDemos": "Toutes les démos",
+    "comingSoonTitle": "Bientôt disponible",
+    "comingSoonSubtitle": "En préparation. Ajoutez une étoile au projet sur GitHub pour être informé de leur sortie.",
+    "footer": {
+      "createdBy": "Créé par",
+      "linkedin": "Me suivre sur LinkedIn",
+      "support": "Soutenir le Blockchain Learning Hub",
+      "donations": "Dons en crypto (ETH / USDC)",
+      "star": "Ajouter une étoile sur GitHub",
+      "share": "Partager le site",
+      "copyright": "© {{year}} Alexandre Touchard. Démos interactives pour apprendre la blockchain.",
+      "ethAddress": "Adresse Ethereum",
+      "copyAddress": "Copier l’adresse",
+      "donateHint": "Envoyez des ETH ou des USDC sur le réseau principal Ethereum pour soutenir le projet.",
+      "addressCopied": "Adresse copiée",
+      "linkCopied": "Lien copié",
+      "close": "Fermer"
+    },
+    "hidePaths": "Masquer les parcours",
+    "showPaths": "Afficher les parcours"
   }
 }

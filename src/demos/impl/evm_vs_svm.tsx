@@ -31,6 +31,7 @@ import {
   type Tx,
   type Wave
 } from './evm_vs_svm/scheduler';
+import { usePersistedQuests, useReportQuestProgress } from '../questProgress';
 
 
 function MissingDeclBox({ out }: { out: Outcome | undefined }) {
@@ -143,7 +144,7 @@ export default function EvmVsSvmDemo() {
     return () => window.clearTimeout(t);
   }, []);
 
-  const [questFlags, setQuestFlags] = useState(() => ({
+  const [questFlags, setQuestFlags] = usePersistedQuests('evm-vs-svm', () => ({
     loadedOrderingPreset: false,
     swappedOrder: false,
     viewedLocks: false,
@@ -215,6 +216,7 @@ export default function EvmVsSvmDemo() {
       locksViewed
     };
   }, [txs, evmIndex, svmWaveIndex, waves, speedup, threads, questFlags]);
+  useReportQuestProgress('evm-vs-svm', Object.values(quests).filter(Boolean).length, 8);
 
   function onTxListChanged(reason: string) {
     resetExecution(true);

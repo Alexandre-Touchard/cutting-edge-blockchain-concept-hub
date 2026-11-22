@@ -16,6 +16,7 @@ import EduTooltip from '../../ui/EduTooltip';
 import LearningQuestsPortal from '../../ui/LearningQuestsPortal';
 import { define } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
+import { usePersistedQuests, useReportQuestProgress } from '../questProgress';
 
 const Tooltip = EduTooltip;
 
@@ -387,7 +388,7 @@ export default function MevPbsSimulation() {
   const [tStep, setTStep] = useState(0);
   const [events, setEvents] = useState<SimEvent[]>([]);
 
-  const [quest, setQuest] = useState(() => ({
+  const [quest, setQuest] = usePersistedQuests('mev-pbs', () => ({
     sawSandwichProfit: false,
     sawVictimRevert: false,
     sawArbProfit: false,
@@ -414,6 +415,7 @@ export default function MevPbsSimulation() {
   }
 
   const questsDone = Object.values(quest).filter(Boolean).length;
+  useReportQuestProgress('mev-pbs', questsDone, 5);
 
   const questsUi = (
     <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">

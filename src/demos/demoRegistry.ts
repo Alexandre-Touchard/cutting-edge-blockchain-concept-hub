@@ -230,7 +230,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
     description:
       'Simulate two depeg cascades: (1) collateralized stablecoin liquidations and liquidity drains, and (2) Terra-style algorithmic reflexive collapse.',
     concepts: ['Stablecoin', 'Depeg', 'Liquidity', 'Slippage', 'Price Impact', 'Oracle Networks', 'Liquidation', 'Reflexivity'],
-    learningQuestsTotal: 10,
+    learningQuestsTotal: 16,
     keyTakeaways: [
       'Low liquidity amplifies price moves: the same sell pressure causes more slippage and faster depegs',
       'Collateral crashes can trigger liquidations that sell collateral into markets, worsening the cascade',
@@ -269,6 +269,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
       'Public blockchains let independent analysts detect and trace a theft before the victim announces it, until funds reach privacy coins like Monero.',
       'In a live incident, separate what is confirmed, reported and unverified, and always cite who said what.'
     ],
-    learningQuestsTotal: 5
+    learningQuestsTotal: 5,
+    addedAt: '2026-11-22'
   },
 };

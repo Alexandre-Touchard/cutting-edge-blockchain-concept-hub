@@ -47,6 +47,7 @@ import { CONTENT_AS_OF, REVIEW_BY, SCENARIO, TIMELINE_END, TIMELINE_START } from
 import { ATTENTION_CLASSES, ConfidenceBadge, SourceList, useAttentionHint, type Tr } from './arkea_heist/ui';
 import KnownFigures from './arkea_heist/KnownFigures';
 import DispersalView from './arkea_heist/DispersalView';
+import { usePersistedQuests, useReportQuestProgress } from '../questProgress';
 
 const DEMO_ID = 'arkea-heist';
 const DETAILS_HINT_KEY = 'arkea-heist:details-hint-done';
@@ -199,7 +200,7 @@ export default function ArkeaHeistTracing() {
     }
   }, []);
 
-  const [quest, setQuest] = useState({
+  const [quest, setQuest] = usePersistedQuests(DEMO_ID, {
     reachedEnd: false,
     openedUnverified: false,
     usedFilter: false,
@@ -207,6 +208,7 @@ export default function ArkeaHeistTracing() {
     jumpedByKeyboard: false
   });
   const questsDone = Object.values(quest).filter(Boolean).length;
+  useReportQuestProgress(DEMO_ID, questsDone, 5);
 
   const step = steps[current];
   const shownIndex = selected ?? current;

@@ -1,4 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import { recordDemoVisit } from '../demos/questProgress';
 import { applyDemoStatusOverrides, fetchDemoStatusOverrides, type DemoStatusOverrides } from '../demos/demoStatusOverrides';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, ChevronUp, ListTodo, X } from 'lucide-react';
@@ -51,7 +52,9 @@ export default function DemoPage() {
   }, [demo?.meta?.id]);
 
   useEffect(() => {
-    if (demoId) trackEvent('demo_view', { demoId, path: `/demo/${demoId}` });
+    if (!demoId) return;
+    trackEvent('demo_view', { demoId, path: `/demo/${demoId}` });
+    recordDemoVisit(demoId);
   }, [demoId]);
 
   // IMPORTANT: keep hook order stable across renders.

@@ -25,7 +25,9 @@
     "comingSoon": "Coming soon",
     "copiedLink": "Copied link",
     "copyLink": "Copy link",
-    "copied": "Copied!"
+    "copied": "Copied!",
+    "less": "Less",
+    "more": "More"
   },
   "lang": {
     "label": "Language",
@@ -42,7 +44,74 @@
     "noDemosFound": "No demos found",
     "tryAdjustingSearch": "Try adjusting your search or filters",
     "hideFilters": "Hide filters",
-    "showFilters": "Show filters"
+    "showFilters": "Show filters",
+    "pitch": "Learn how blockchains really work by playing with them: {{count}} hands-on simulations, free, no sign-up.",
+    "ctaStart": "Start with the basics",
+    "ctaNew": "New: {{title}}",
+    "stats": {
+      "demos": "{{count}} interactive demos",
+      "quests": "{{count}} learning quests",
+      "languages": "English · Français · Español",
+      "free": "Free, no sign-up"
+    },
+    "filterByCategory": "Filter by category",
+    "categories": {
+      "all": "All Demos",
+      "consensus": "Consensus & Validation",
+      "scaling": "Layer 2 & Scaling",
+      "execution": "Execution & Performance",
+      "data": "Data Availability",
+      "interop": "Cross-Chain & Bridges",
+      "security": "Security & Cryptography",
+      "defi": "DeFi Mechanisms"
+    },
+    "continueTitle": "Continue where you left off",
+    "progressNote": "Your progress is saved in this browser only.",
+    "new": "New",
+    "start": "Start",
+    "details": "Details",
+    "questsCount": "{{count}} quests",
+    "questsProgress": "{{done}}/{{total}} quests",
+    "pathsTitle": "Learning paths",
+    "pathsSubtitle": "Not sure where to start? Follow a path, one demo after another.",
+    "paths": {
+      "basics": {
+        "title": "Blockchain basics",
+        "description": "Start here: how blocks, transactions, wallets and tokens actually work."
+      },
+      "defi": {
+        "title": "DeFi fundamentals",
+        "description": "Exchanges without order books, stablecoins under stress, and who profits from transaction ordering."
+      },
+      "scaling": {
+        "title": "Scaling Ethereum",
+        "description": "Rollups, fraud proofs, data availability sampling and payment channels."
+      },
+      "security": {
+        "title": "Security & cross-chain",
+        "description": "Bridges, shared security, alternative consensus, and following stolen funds on-chain."
+      }
+    },
+    "allDemos": "All demos",
+    "comingSoonTitle": "Coming soon",
+    "comingSoonSubtitle": "In the works. Star the project on GitHub to hear when they go live.",
+    "footer": {
+      "createdBy": "Created by",
+      "linkedin": "Connect on LinkedIn",
+      "support": "Support Blockchain Learning Hub",
+      "donations": "Crypto donations (ETH / USDC)",
+      "star": "Star the project on GitHub",
+      "share": "Share the site",
+      "copyright": "© {{year}} Alexandre Touchard. Interactive blockchain education demos.",
+      "ethAddress": "Ethereum address",
+      "copyAddress": "Copy address",
+      "donateHint": "Send ETH or USDC on Ethereum mainnet to support the project.",
+      "addressCopied": "Address copied",
+      "linkCopied": "Link copied",
+      "close": "Close"
+    },
+    "hidePaths": "Hide learning paths",
+    "showPaths": "Show learning paths"
   },
   "demos": {
     "mev-pbs": {
@@ -62,7 +131,6 @@
       },
       "auto": {}
     },
-
     "stablecoin-depeg": {
       "title": "Stablecoin Depeg Cascade",
       "description": "Simulate two depeg cascades: (1) collateralized stablecoin liquidations and liquidity drains, and (2) Terra-style algorithmic reflexive collapse.",

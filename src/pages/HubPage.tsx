@@ -42,7 +42,14 @@ export default function HubPage() {
   return (
     <>
       <div className="min-h-screen bg-slate-950 text-white">
-        <Hub demos={demoMetas} onOpenDemo={(demo) => setSelectedId(demo.id)} />
+        <Hub
+          demos={demoMetas}
+          onOpenDemo={(demo) => setSelectedId(demo.id)}
+          onStartDemo={(demoId) => {
+            trackEvent('demo_start', { demoId, path: '/' });
+            navigate(`/demo/${demoId}`);
+          }}
+        />
 
       </div>
 

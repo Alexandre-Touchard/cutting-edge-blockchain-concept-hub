@@ -42,7 +42,7 @@ function inferDefaultsFromPath(
   sourcePath: string
 ): Pick<
   DemoMeta,
-  'id' | 'title' | 'thumbnail' | 'description' | 'tags' | 'concepts' | 'keyTakeaways' | 'category' | 'difficulty' | 'status' | 'learningQuestsTotal'
+  'id' | 'title' | 'thumbnail' | 'description' | 'tags' | 'concepts' | 'keyTakeaways' | 'category' | 'difficulty' | 'status' | 'learningQuestsTotal' | 'addedAt'
 > {
   const filename = sourcePath.split('/').pop() ?? sourcePath;
   const inferredId = filenameToId(filename);
@@ -62,7 +62,8 @@ function inferDefaultsFromPath(
     category: (registry?.category as DemoMeta['category']) ?? 'execution',
     difficulty: (registry?.difficulty as DemoMeta['difficulty']) ?? 'Intermediate',
     learningQuestsTotal: registry?.learningQuestsTotal,
-    status: registry?.status
+    status: registry?.status,
+    addedAt: registry?.addedAt
   };
 }
 

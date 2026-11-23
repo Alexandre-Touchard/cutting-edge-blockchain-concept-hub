@@ -5,6 +5,7 @@ import LinkWithCopy from '../../ui/LinkWithCopy';
 import { defineMaybe } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
 import { ERC_STANDARDS, type StandardId, type Standard } from '../ercStandardsConfig';
+import { NextQuestCard, QuestList, useDemoQuests, type DemoQuests } from '../quests/DemoQuests';
 
 type TrFn = (english: string, opts?: Record<string, unknown>) => string;
 
@@ -34,6 +35,43 @@ function def(term: string): string {
 }
 
 const STANDARDS: Standard[] = ERC_STANDARDS;
+
+/** Translated display name for a standard (the config keeps the English). */
+function standardName(tr: TrFn, s: Standard): string {
+  switch (s.id) {
+    case 'erc20': return tr('ERC-20 (Fungible Tokens)');
+    case 'erc721': return tr('ERC-721 (NFTs)');
+    case 'erc1155': return tr('ERC-1155 (Multi-Token)');
+    case 'erc1400': return tr('ERC-1400 (Security Tokens)');
+    case 'erc4337': return tr('ERC-4337 (Account Abstraction)');
+    case 'erc6551': return tr('ERC-6551 (Token Bound Accounts)');
+    case 'erc1132': return tr('ERC-1132 (Token Locking)');
+    case 'erc1203': return tr('ERC-1203 (Multi-class tokens)');
+    default: return s.name;
+  }
+}
+
+/** Translated one-line summary for a standard (the config keeps the English). */
+function standardSummary(tr: TrFn, s: Standard): string {
+  switch (s.id) {
+    case 'erc20': return tr('Balances + allowance-based spending (approve/transferFrom).');
+    case 'erc721': return tr('Unique token IDs + ownership + approvals.');
+    case 'erc1155': return tr('Many token IDs (fungible and NFT-like) in one contract.');
+    case 'erc1400': return tr('Partially-fungible security tokens with compliance partitions.');
+    case 'erc777': return tr('Fungible tokens with hooks and operators.');
+    case 'erc998': return tr('Composable NFTs (NFTs owning other assets).');
+    case 'erc4626': return tr('Tokenized vaults (shares <-> assets) standard.');
+    case 'erc223': return tr('Safer token transfers to contracts.');
+    case 'erc827': return tr('ERC-20 extensions enabling call data on transfers.');
+    case 'erc4337': return tr('UserOperations, bundlers, paymasters.');
+    case 'erc864': return tr('Delegated token transfers / reusable approvals.');
+    case 'erc865': return tr('Meta-transactions for ERC-20 transfers.');
+    case 'erc6551': return tr('NFTs own smart accounts.');
+    case 'erc1132': return tr('Locking and unlocking token balances.');
+    case 'erc1203': return tr('Tokens with multiple classes/attributes.');
+    default: return s.summary;
+  }
+}
 
 function Card({ children }: { children: React.ReactNode }) {
   return <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">{children}</div>;
@@ -205,7 +243,7 @@ function ImplementationSection(props: ImplementationSectionProps) {
   );
 }
 
-function ERC20Demo() {
+function ERC20Demo({ q }: { q: DemoQuests }) {
   const { tr } = useDemoI18n('erc-standards');
   const [balances, setBalances] = useState<Record<Address, number>>({ Alice: 1000, Bob: 250, Carol: 0, Dex: 0 });
   const [allowances, setAllowances] = useState<Record<Address, Record<Address, number>>>(() => ({
@@ -226,6 +264,7 @@ function ERC20Demo() {
     if (owner === to) return;
     if (balances[owner] < amount) return;
     setBalances((b) => ({ ...b, [owner]: b[owner] - amount, [to]: b[to] + amount }));
+    if (amount > 0) q.markDone('erc20-transfer');
   }
 
   function approve() {
@@ -239,6 +278,7 @@ function ERC20Demo() {
 
     setBalances((b) => ({ ...b, [owner]: b[owner] - amount, [to]: b[to] + amount }));
     setAllowances((a) => ({ ...a, [owner]: { ...a[owner], [spender]: (a[owner]?.[spender] ?? 0) - amount } }));
+    if (amount > 0) q.markDone('erc20-allowance');
   }
 
   return (
@@ -256,7 +296,7 @@ function ERC20Demo() {
         <ImplementationSection
           items={[
             {
-              title: 'Core interface + events',
+              title: tr('Core interface + events'),
               body: (
                 <>
                   <div><code>balanceOf(address)</code>, <code>totalSupply()</code>, <code>transfer(to, value)</code></div>
@@ -305,10 +345,10 @@ function ERC20Demo() {
           <AmountInput value={amount} onChange={setAmount} label={tr('Amount')} />
 
           <div className="md:col-span-4 flex flex-wrap gap-3 mt-2">
-            <button onClick={transfer} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-semibold">
+            <button onClick={transfer} data-hint="erc20-transfer" className={`px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-semibold ${q.pulse('erc20-transfer')}`}>
               {tr('transfer')} <T text={def('transfer')} />
             </button>
-            <button onClick={approve} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded font-semibold">
+            <button onClick={approve} data-hint="erc20-approve" className={`px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded font-semibold ${q.pulse('erc20-approve')}`}>
               {tr('approve')} <T text={def('approve')} />
             </button>
             <button onClick={transferFrom} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded font-semibold">
@@ -376,7 +416,7 @@ function ERC20Demo() {
   );
 }
 
-function ERC721Demo() {
+function ERC721Demo({ q }: { q: DemoQuests }) {
   const { tr } = useDemoI18n('erc-standards');
   const [owners, setOwners] = useState<Record<number, Address>>({ 1: 'Alice', 2: 'Bob' });
   const [approved, setApproved] = useState<Record<number, Address | null>>({ 1: null, 2: null });
@@ -412,6 +452,7 @@ function ERC721Demo() {
 
     setOwners((o) => ({ ...o, [selectedId]: to }));
     setApproved((a) => ({ ...a, [selectedId]: null }));
+    if (!isOwner && isApproved) q.markDone('erc721-approved');
   }
 
   return (
@@ -492,7 +533,7 @@ function ERC721Demo() {
             <button onClick={mint} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded font-semibold inline-flex items-center gap-2">
               <Plus size={16} /> {tr('mint')} <T text={def('mint')} />
             </button>
-            <button onClick={approve} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded font-semibold">
+            <button onClick={approve} data-hint="erc721-approve" className={`px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded font-semibold ${q.pulse('erc721-approve')}`}>
               {tr('approve')} <T text={def('approve')} />
             </button>
             <button onClick={transfer} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-semibold">
@@ -540,7 +581,7 @@ function ERC721Demo() {
   );
 }
 
-function ERC1155Demo() {
+function ERC1155Demo({ q }: { q: DemoQuests }) {
   const { tr } = useDemoI18n('erc-standards');
   const [balances, setBalances] = useState<Record<Address, Record<number, number>>>(() => ({
     Alice: { 1: 100, 2: 1 },
@@ -572,6 +613,7 @@ function ERC1155Demo() {
 
   function mint() {
     setBal(to, tokenId, getBal(to, tokenId) + amount);
+    if (amount > 0 && tokenId !== 1 && tokenId !== 2) q.markDone('erc1155-new-id');
   }
 
   function burn() {
@@ -601,7 +643,7 @@ function ERC1155Demo() {
         <ImplementationSection
           items={[
             {
-              title: 'Core interface + events',
+              title: tr('Core interface + events'),
               body: (
                 <>
                   <div><code>balanceOf(account, id)</code>, <code>balanceOfBatch(accounts, ids)</code></div>
@@ -648,7 +690,7 @@ function ERC1155Demo() {
 
           <label className="text-sm text-slate-300 flex flex-col gap-1">
             <span className="text-slate-400">{tr('Token ID')} <T text={def('Token ID')} /></span>
-            <select value={tokenId} onChange={(e) => setTokenId(Number(e.target.value))} className="bg-slate-900 border border-slate-700 rounded px-3 py-2">
+            <select value={tokenId} onChange={(e) => setTokenId(Number(e.target.value))} data-hint="erc1155-token-id" className={`bg-slate-900 border border-slate-700 rounded px-3 py-2 ${q.pulse('erc1155-token-id')}`}>
               {tokenIds.map((id) => (
                 <option key={id} value={id}>#{id}</option>
               ))}
@@ -707,7 +749,7 @@ function ERC1155Demo() {
 }
 
 
-function ERC1400Demo() {
+function ERC1400Demo({ q }: { q: DemoQuests }) {
   const { tr } = useDemoI18n('erc-standards');
   type Partition = 'COMMON' | 'RESTRICTED';
   const [balances, setBalances] = useState<Record<Partition, Record<Address, number>>>(() => ({
@@ -748,6 +790,7 @@ function ERC1400Demo() {
 
     setBal(partition, from, bal(partition, from) - amount);
     setBal(partition, to, bal(partition, to) + amount);
+    if (partition === 'RESTRICTED' && to === 'Carol' && amount > 0) q.markDone('erc1400-compliance');
   }
 
   return (
@@ -842,7 +885,8 @@ function ERC1400Demo() {
             <select
               value={partition}
               onChange={(e) => setPartition(e.target.value as Partition)}
-              className="bg-slate-900 border border-slate-700 rounded px-3 py-2"
+              data-hint="erc1400-partition"
+              className={`bg-slate-900 border border-slate-700 rounded px-3 py-2 ${q.pulse('erc1400-partition')}`}
             >
               <option value="COMMON">COMMON</option>
               <option value="RESTRICTED">RESTRICTED</option>
@@ -890,22 +934,22 @@ function ERC1400Demo() {
       <FurtherReading
         links={[
           {
-            label: 'EIP-1400: Security Tokens',
+            label: tr('EIP-1400: Security Tokens'),
             href: 'https://eips.ethereum.org/EIPS/eip-1400',
             summary:
-              'Defines a family of interfaces for security tokens: partitions, issuance/redemption hooks, and compliance-friendly transfer workflows.'
+              tr('Defines a family of interfaces for security tokens: partitions, issuance/redemption hooks, and compliance-friendly transfer workflows.')
           },
           {
-            label: 'Ethereum.org enterprise overview',
+            label: tr('Ethereum.org enterprise overview'),
             href: 'https://ethereum.org/en/enterprise/',
             summary:
-              'A broad overview of enterprise/regulated use-cases for Ethereum, including permissioning, privacy, and integration considerations.'
+              tr('A broad overview of enterprise/regulated use-cases for Ethereum, including permissioning, privacy, and integration considerations.')
           },
           {
-            label: 'BIS: tokenisation in financial markets (overview)',
+            label: tr('BIS: tokenisation in financial markets (overview)'),
             href: 'https://www.bis.org/publ/othp72.htm',
             summary:
-              'Background on tokenisation, market structure impacts, and key risks (settlement, custody, compliance) in traditional finance.'
+              tr('Background on tokenisation, market structure impacts, and key risks (settlement, custody, compliance) in traditional finance.')
           }
         ]}
       />
@@ -1237,7 +1281,7 @@ function ERC998Demo() {
               {ids.map((id) => (
                 <div key={id} className="bg-slate-800 rounded p-3 border border-slate-700">
                   <div className="flex items-center justify-between">
-                    <div className="font-semibold">{nodes[id].name}</div>
+                    <div className="font-semibold">{tr(nodes[id].name)}</div>
                     <div className="text-xs text-slate-400">{tr('owner')}: <span className="font-bold text-slate-200">{nodes[id].owner}</span></div>
                   </div>
                   <div className="text-xs text-slate-400 mt-2">{tr('children')}: {nodes[id].children.length === 0 ? tr('none') : nodes[id].children.map((c) => `#${c}`).join(', ')}</div>
@@ -1393,14 +1437,14 @@ function ERC4626Demo() {
           title="How the Standard Works (Implementation)"
           bullets={[
             tr('Vault is an ERC-20 share token; it holds an underlying ERC-20 asset.'),
-            'Core entrypoints: deposit(assets, receiver), mint(shares, receiver), withdraw(assets, receiver, owner), redeem(shares, receiver, owner).',
+            tr('Core entrypoints: deposit(assets, receiver), mint(shares, receiver), withdraw(assets, receiver, owner), redeem(shares, receiver, owner).'),
             tr('Conversion helpers: convertToShares, convertToAssets + previewDeposit/previewWithdraw for quoting.'),
             tr('Events: Deposit(sender, owner, assets, shares) and Withdraw(sender, receiver, owner, assets, shares).')
           ]}
           api={[
-            { label: 'State', value: 'asset() address, totalAssets() uint256, totalSupply() shares' },
-            { label: 'Core', value: 'deposit/mint/withdraw/redeem' },
-            { label: 'Views', value: 'convertToShares/convertToAssets, preview*' }
+            { label: tr('State'), value: 'asset() address, totalAssets() uint256, totalSupply() shares' },
+            { label: tr('Core'), value: 'deposit/mint/withdraw/redeem' },
+            { label: tr('Views'), value: 'convertToShares/convertToAssets, preview*' }
           ]}
         />
 
@@ -1425,8 +1469,8 @@ function ERC4626Demo() {
             {ADDRESSES.map((a) => (
               <div key={a} className="bg-slate-800 rounded p-2 border border-slate-700">
                 <div className="text-xs text-slate-400">{a}</div>
-                <div className="text-sm">assets: <span className="font-bold">{assets[a]}</span></div>
-                <div className="text-sm">shares: <span className="font-bold">{shares[a]}</span></div>
+                <div className="text-sm">{tr('assets')}: <span className="font-bold">{assets[a]}</span></div>
+                <div className="text-sm">{tr('shares')}: <span className="font-bold">{shares[a]}</span></div>
               </div>
             ))}
           </div>
@@ -1449,25 +1493,25 @@ function ERC4626Demo() {
       <RealWorldApplications
         items={[
           {
-            title: 'Vault ecosystems (Yearn / Beefy / similar)',
+            title: tr('Vault ecosystems (Yearn / Beefy / similar)'),
             href: 'https://docs.yearn.fi/',
             color: 'text-blue-300',
             body:
-              'Benefits: standardized share accounting and deposit/withdraw UX makes integrations easier for dashboards and routers. Adoption: strong at the interface level across many modern vault designs. Drawbacks: vault risks are strategy-dependent (smart contract + market + oracle), not removed by the standard.'
+              tr('Benefits: standardized share accounting and deposit/withdraw UX makes integrations easier for dashboards and routers. Adoption: strong at the interface level across many modern vault designs. Drawbacks: vault risks are strategy-dependent (smart contract + market + oracle), not removed by the standard.')
           },
           {
-            title: 'Tokenized yield positions',
+            title: tr('Tokenized yield positions'),
             href: 'https://ethereum.org/en/defi/',
             color: 'text-purple-300',
             body:
-              'Shares can be used as composable building blocks (collateral, accounting, portfolio tracking). Known issues: rounding + donation/inflation attacks in naive implementations; preview functions reduce integration mistakes but do not eliminate risk.'
+              tr('Shares can be used as composable building blocks (collateral, accounting, portfolio tracking). Known issues: rounding + donation/inflation attacks in naive implementations; preview functions reduce integration mistakes but do not eliminate risk.')
           },
           {
-            title: 'Integrators (wallets, aggregators, risk tools)',
+            title: tr('Integrators (wallets, aggregators, risk tools)'),
             href: 'https://eips.ethereum.org/EIPS/eip-4626',
             color: 'text-pink-300',
             body:
-              'Improvement needed: more consistent fee modeling and clearer edge-case guidance (limits, slippage, rounding) so UIs can quote expected shares/assets reliably. The standard helps, but integrations still require per-vault due diligence.'
+              tr('Improvement needed: more consistent fee modeling and clearer edge-case guidance (limits, slippage, rounding) so UIs can quote expected shares/assets reliably. The standard helps, but integrations still require per-vault due diligence.')
           }
         ]}
       />
@@ -1478,7 +1522,7 @@ function ERC4626Demo() {
             label: tr('EIP-4626: Tokenized Vault Standard'),
             href: 'https://eips.ethereum.org/EIPS/eip-4626',
             summary:
-              'Defines the vault interface (deposit/mint/withdraw/redeem), conversion helpers (convertToShares/convertToAssets), and preview functions. The goal is consistent integration for vaults across the ecosystem.'
+              tr('Defines the vault interface (deposit/mint/withdraw/redeem), conversion helpers (convertToShares/convertToAssets), and preview functions. The goal is consistent integration for vaults across the ecosystem.')
           },
           {
             label: tr('OpenZeppelin ERC-4626 guide'),
@@ -1487,16 +1531,16 @@ function ERC4626Demo() {
               tr('Practical implementation reference. Discusses rounding behavior, limits, and extension points. Useful when comparing how real vaults implement fees and how integrators should call preview functions.')
           },
           {
-            label: 'Yearn documentation',
+            label: tr('Yearn documentation'),
             href: 'https://docs.yearn.fi/',
             summary:
-              'A real vault ecosystem showing the share model in practice. Good for seeing why standardized share accounting (ERC-4626) reduces bespoke integration code and quoting mistakes.'
+              tr('A real vault ecosystem showing the share model in practice. Good for seeing why standardized share accounting (ERC-4626) reduces bespoke integration code and quoting mistakes.')
           },
           {
-            label: 'Ethereum.org DeFi overview',
+            label: tr('Ethereum.org DeFi overview'),
             href: 'https://ethereum.org/en/defi/',
             summary:
-              'High-level context for yield strategies and DeFi risk. Helps interpret why vault standards matter but do not guarantee safety.'
+              tr('High-level context for yield strategies and DeFi risk. Helps interpret why vault standards matter but do not guarantee safety.')
           }
         ]}
       />
@@ -1533,15 +1577,15 @@ function ERC223Demo() {
         <ImplementationSection
           title="How the Standard Works (Implementation)"
           bullets={[
-            'transfer(to,value,data) triggers a recipient callback if `to` is a contract.',
-            'Recipient contracts implement tokenFallback(address from, uint value, bytes data).',
-            'If the callback reverts, the transfer should revert (avoiding stuck tokens).',
-            'Requires reliable contract detection (extcodesize) which has edge-cases (during construction, proxies).'
+            tr('transfer(to,value,data) triggers a recipient callback if `to` is a contract.'),
+            tr('Recipient contracts implement tokenFallback(address from, uint value, bytes data).'),
+            tr('If the callback reverts, the transfer should revert (avoiding stuck tokens).'),
+            tr('Requires reliable contract detection (extcodesize) which has edge-cases (during construction, proxies).')
           ]}
           api={[
-            { label: 'Core', value: 'transfer(to,value[,data])' },
-            { label: 'Receiver', value: 'tokenFallback(from,value,data)' },
-            { label: 'Events', value: 'Transfer(from,to,value[,data])' }
+            { label: tr('Core'), value: 'transfer(to,value[,data])' },
+            { label: tr('Receiver'), value: 'tokenFallback(from,value,data)' },
+            { label: tr('Events'), value: 'Transfer(from,to,value[,data])' }
           ]}
         />
 
@@ -1624,7 +1668,7 @@ function ERC223Demo() {
               tr('Defines tokenFallback and the idea that transfers to contracts should call a receiver hook (or revert). Good to understand why "stuck tokens" was a persistent ERC-20 UX issue.')
           },
           {
-            label: 'Ethereum.org ERC-20 overview (contrast)',
+            label: tr('Ethereum.org ERC-20 overview (contrast)'),
             href: 'https://ethereum.org/en/developers/docs/standards/tokens/erc-20/',
             summary:
               tr('Baseline ERC-20 semantics: transfer does not distinguish EOAs vs contracts. Helps compare why later standards added explicit receiver interfaces.')
@@ -1680,9 +1724,9 @@ function ERC827Demo() {
 
         <ImplementationSection
           bullets={[
-            'Adds methods like transferAndCall / approveAndCall that perform an ERC-20 action then execute an extra call.',
-            'Because it introduces external calls inside token logic, it increases reentrancy risk and auditing complexity.',
-            'Most production systems prefer routers/multicall + minimal ERC-20 tokens for compatibility.'
+            tr('Adds methods like transferAndCall / approveAndCall that perform an ERC-20 action then execute an extra call.'),
+            tr('Because it introduces external calls inside token logic, it increases reentrancy risk and auditing complexity.'),
+            tr('Most production systems prefer routers/multicall + minimal ERC-20 tokens for compatibility.')
           ]}
           api={[
             { kind: 'function', sig: 'transferAndCall(address to, uint256 value, bytes data) -> bool' },
@@ -1693,14 +1737,14 @@ function ERC827Demo() {
         <ImplementationSection
           title="How the Standard Works (Implementation)"
           bullets={[
-            'Adds methods like transferAndCall(to, value, data) and approveAndCall(spender, value, data).',
-            'After state updates, the token executes an external call using provided calldata.',
-            'This couples token transfer logic with arbitrary execution; auditing and reentrancy considerations increase.',
-            'Many integrations prefer explicit router contracts + ERC-20 approvals for clearer separation.'
+            tr('Adds methods like transferAndCall(to, value, data) and approveAndCall(spender, value, data).'),
+            tr('After state updates, the token executes an external call using provided calldata.'),
+            tr('This couples token transfer logic with arbitrary execution; auditing and reentrancy considerations increase.'),
+            tr('Many integrations prefer explicit router contracts + ERC-20 approvals for clearer separation.')
           ]}
           api={[
-            { label: 'Core', value: 'transferAndCall / transferFromAndCall / approveAndCall' },
-            { label: 'Risks', value: 'external calls, reentrancy, unexpected execution paths' }
+            { label: tr('Core'), value: 'transferAndCall / transferFromAndCall / approveAndCall' },
+            { label: tr('Risks'), value: tr('external calls, reentrancy, unexpected execution paths') }
           ]}
         />
 
@@ -1750,11 +1794,11 @@ function ERC827Demo() {
               tr('Idea: attach calldata to transfer/approve so the token contract can call another contract as part of the action (transferAndCall / approveAndCall). Benefit: fewer user transactions. Drawbacks: larger attack surface and unexpected execution paths.')
           },
           {
-            title: 'Real-world pattern: routers',
+            title: tr('Real-world pattern: routers'),
             href: 'https://docs.uniswap.org/',
             color: 'text-purple-300',
             body:
-              'Adoption note: the dominant ecosystem pattern kept ERC-20 tokens minimal and pushed complex execution into routers (DEX routers, permit flows, multicalls). This improves compatibility across wallets and infra.'
+              tr('Adoption note: the dominant ecosystem pattern kept ERC-20 tokens minimal and pushed complex execution into routers (DEX routers, permit flows, multicalls). This improves compatibility across wallets and infra.')
           },
           {
             title: tr('Security + audit complexity'),
@@ -1775,16 +1819,16 @@ function ERC827Demo() {
               tr('Proposes adding calldata parameters to ERC-20 operations so the token can execute an additional call. Good for learning why bundling was attractive and why it is risky inside token logic.')
           },
           {
-            label: 'Uniswap docs (router pattern)',
+            label: tr('Uniswap docs (router pattern)'),
             href: 'https://docs.uniswap.org/',
             summary:
-              'Concrete example of the ecosystem approach: keep tokens simple, put complex interactions into routers. This maximizes compatibility with wallets, exchanges, and indexers.'
+              tr('Concrete example of the ecosystem approach: keep tokens simple, put complex interactions into routers. This maximizes compatibility with wallets, exchanges, and indexers.')
           },
           {
-            label: 'ConsenSys Diligence (security resources)',
+            label: tr('ConsenSys Diligence (security resources)'),
             href: 'https://consensys.io/diligence/',
             summary:
-              'Security education and audit writeups. Useful to understand why "tokens that call arbitrary contracts" increases risk (reentrancy, approvals, unexpected callbacks).' 
+              tr('Security education and audit writeups. Useful to understand why "tokens that call arbitrary contracts" increases risk (reentrancy, approvals, unexpected callbacks).') 
           }
         ]}
       />
@@ -1878,22 +1922,22 @@ function ERC4337Demo() {
       <RealWorldApplications
         items={[
           {
-            title: 'Smart wallets (Safe, Argent)',
+            title: tr('Smart wallets (Safe, Argent)'),
             href: 'https://eips.ethereum.org/EIPS/eip-4337',
             color: 'text-blue-300',
-            body: 'Programmable accounts enable batched actions, recovery, and flexible authentication. Adoption is growing via L2s and wallet providers.'
+            body: tr('Programmable accounts enable batched actions, recovery, and flexible authentication. Adoption is growing via L2s and wallet providers.')
           },
           {
-            title: 'Gas sponsorship',
+            title: tr('Gas sponsorship'),
             href: 'https://docs.alchemy.com/docs/account-abstraction-overview',
             color: 'text-purple-300',
-            body: 'Paymasters can sponsor fees so users can onboard without holding ETH. Drawback: paymasters add trust/complexity and need careful abuse controls.'
+            body: tr('Paymasters can sponsor fees so users can onboard without holding ETH. Drawback: paymasters add trust/complexity and need careful abuse controls.')
           },
           {
-            title: 'Session keys for apps',
+            title: tr('Session keys for apps'),
             href: 'https://docs.zerodev.app/',
             color: 'text-pink-300',
-            body: 'Apps can grant limited permissions (time, targets, spending limits) for smoother UX. Risk: authorization bugs or overly-permissive sessions.'
+            body: tr('Apps can grant limited permissions (time, targets, spending limits) for smoother UX. Risk: authorization bugs or overly-permissive sessions.')
           }
         ]}
       />
@@ -1901,22 +1945,22 @@ function ERC4337Demo() {
       <FurtherReading
         links={[
           {
-            label: 'EIP-4337: Account Abstraction',
+            label: tr('EIP-4337: Account Abstraction'),
             href: 'https://eips.ethereum.org/EIPS/eip-4337',
             summary:
-              'The canonical spec: defines UserOperation, bundlers, EntryPoint and paymasters. Best for understanding the architecture and why it avoids protocol changes.'
+              tr('The canonical spec: defines UserOperation, bundlers, EntryPoint and paymasters. Best for understanding the architecture and why it avoids protocol changes.')
           },
           {
-            label: 'Alchemy AA overview',
+            label: tr('Alchemy AA overview'),
             href: 'https://docs.alchemy.com/docs/account-abstraction-overview',
             summary:
-              'Practical guide to deploying AA wallets, using paymasters, and integrating with dapps. Good adoption snapshot and engineering trade-offs.'
+              tr('Practical guide to deploying AA wallets, using paymasters, and integrating with dapps. Good adoption snapshot and engineering trade-offs.')
           },
           {
-            label: 'ZeroDev docs (AA SDK)',
+            label: tr('ZeroDev docs (AA SDK)'),
             href: 'https://docs.zerodev.app/',
             summary:
-              'A production SDK perspective: kernel accounts, session keys, and paymasters. Shows what real integrations look like.'
+              tr('A production SDK perspective: kernel accounts, session keys, and paymasters. Shows what real integrations look like.')
           }
         ]}
       />
@@ -1942,12 +1986,12 @@ function ERC864Demo() {
 
         <ImplementationSection
           bullets={[
-            'Defines delegation objects and a transferFrom-like flow that checks delegation constraints.',
-            'The goal is richer, safer approvals than raw ERC-20 allowance (e.g., one-time or bounded permissions).',
-            'Not widely adopted - apps commonly rely on ERC-20 permit (EIP-2612) or custom signatures.'
+            tr('Defines delegation objects and a transferFrom-like flow that checks delegation constraints.'),
+            tr('The goal is richer, safer approvals than raw ERC-20 allowance (e.g., one-time or bounded permissions).'),
+            tr('Not widely adopted - apps commonly rely on ERC-20 permit (EIP-2612) or custom signatures.')
           ]}
           api={[
-            { kind: 'concept', sig: 'Delegation { owner, delegate, token, maxAmount, expiry, nonce, signature }' },
+            { kind: tr('concept'), sig: 'Delegation { owner, delegate, token, maxAmount, expiry, nonce, signature }' },
             { kind: 'function', sig: 'transferFromDelegation(Delegation, to, amount) -> bool' }
           ]}
         />
@@ -2037,7 +2081,7 @@ function ERC865Demo() {
             tr('Modern ecosystems often use permit (EIP-2612) + relayers, or ERC-4337 paymasters instead.')
           ]}
           api={[
-            { kind: 'concept', sig: 'SignedTransfer { from, to, value, fee, nonce, signature }' },
+            { kind: tr('concept'), sig: 'SignedTransfer { from, to, value, fee, nonce, signature }' },
             { kind: 'function', sig: 'transferPreSigned(bytes signature, address to, uint256 value, uint256 fee, uint256 nonce)' }
           ]}
         />
@@ -2140,10 +2184,10 @@ function ComingSoon({ standard, tr }: { standard: Standard; tr: TrFn }) {
     <Card>
       <SectionTitle>
         <span className="inline-flex items-center gap-2">
-          <Icon size={18} /> {standard.name}
+          <Icon size={18} /> {standardName(tr, standard)}
         </span>
       </SectionTitle>
-      <p className="text-sm text-slate-300">{standard.summary}</p>
+      <p className="text-sm text-slate-300">{standardSummary(tr, standard)}</p>
       <div className="mt-4 bg-blue-900 bg-opacity-20 border border-blue-700 rounded-lg p-4">
         <div className="text-sm font-semibold text-blue-300 mb-1">{tr('Coming soon')}</div>
         <p className="text-sm text-slate-300">{tr('This interactive demo will be added next. For now, you can still explore the EIP/spec.')}</p>
@@ -2163,6 +2207,41 @@ export default function ERCStandardsShowcase() {
 
   const selectedStandard = STANDARDS.find((s) => s.id === selected) ?? STANDARDS[0];
 
+  // Point at the control inside the standard's panel, or at the standard's picker card when another one is open.
+  const hintIn = (id: StandardId, key: string) => (selected === id ? key : `std-${id}`);
+  const q = useDemoQuests('erc-standards', [
+    {
+      id: 'erc20-transfer',
+      text: tr('Send ERC-20 tokens with transfer'),
+      tip: tr('In ERC-20, keep Alice as Owner (from), pick a different Recipient (to) and click transfer. Watch both balances change.'),
+      target: hintIn('erc20', 'erc20-transfer')
+    },
+    {
+      id: 'erc20-allowance',
+      text: tr('Approve a spender, then use transferFrom'),
+      tip: tr('Click approve to give the Spender an allowance, then click transferFrom: the spender moves the owner’s tokens and the allowance drops. Without approve, transferFrom does nothing.'),
+      target: hintIn('erc20', 'erc20-approve')
+    },
+    {
+      id: 'erc1155-new-id',
+      text: tr('Mint a brand-new token ID in ERC-1155'),
+      tip: tr('Open ERC-1155, set Token ID to #999 (new) and click mint. A #999 row appears for every account: one contract, many tokens.'),
+      target: hintIn('erc1155', 'erc1155-token-id')
+    },
+    {
+      id: 'erc721-approved',
+      text: tr('Move an NFT as the approved address, not the owner'),
+      tip: tr('Open ERC-721. As the owner (Caller), click approve to approve the To address. Then set Caller to that approved address and click safeTransferFrom.'),
+      target: hintIn('erc721', 'erc721-approve')
+    },
+    {
+      id: 'erc1400-compliance',
+      text: tr('Get RESTRICTED security tokens to Carol'),
+      tip: tr('Open ERC-1400, set Partition to RESTRICTED and To to Carol, then click transferByPartition: nothing moves because she is Blocked. Click her tile under Whitelist (KYC) and try again.'),
+      target: hintIn('erc1400', 'erc1400-partition')
+    }
+  ]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -2180,6 +2259,9 @@ export default function ERCStandardsShowcase() {
             </span>
             <T text={def('ERC Standards')} />
           </div>
+
+          <NextQuestCard q={q} className="mt-4" />
+          <QuestList q={q} />
         </div>
 
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 mb-6">
@@ -2192,13 +2274,14 @@ export default function ERCStandardsShowcase() {
                 <button
                   key={s.id}
                   onClick={() => setSelected(s.id)}
+                  data-hint={`std-${s.id}`}
                   className={`text-left p-4 rounded-lg border transition-colors ${
                     isActive ? 'bg-blue-900/30 border-blue-600' : 'bg-slate-900 border-slate-700 hover:border-slate-500'
-                  }`}
+                  } ${q.pulse(`std-${s.id}`)}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="inline-flex items-center gap-2 font-semibold">
-                      <Icon size={18} /> {s.name}
+                      <Icon size={18} /> {standardName(tr, s)}
                     </div>
                     {s.status === 'coming_soon' ? (
                       <span className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-200">{tr('Coming soon')}</span>
@@ -2206,7 +2289,7 @@ export default function ERCStandardsShowcase() {
                       <span className="text-xs px-2 py-1 rounded bg-emerald-700/40 text-emerald-200">{tr('Ready')}</span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400 mt-1">{s.summary}</div>
+                  <div className="text-xs text-slate-400 mt-1">{standardSummary(tr, s)}</div>
                 </button>
               );
             })}
@@ -2214,13 +2297,13 @@ export default function ERCStandardsShowcase() {
         </div>
 
         {selectedStandard.id === 'erc20' ? (
-          <ERC20Demo />
+          <ERC20Demo q={q} />
         ) : selectedStandard.id === 'erc721' ? (
-          <ERC721Demo />
+          <ERC721Demo q={q} />
         ) : selectedStandard.id === 'erc1155' ? (
-          <ERC1155Demo />
+          <ERC1155Demo q={q} />
         ) : selectedStandard.id === 'erc1400' ? (
-          <ERC1400Demo />
+          <ERC1400Demo q={q} />
         ) : selectedStandard.id === 'erc777' ? (
           <ERC777Demo />
         ) : selectedStandard.id === 'erc998' ? (

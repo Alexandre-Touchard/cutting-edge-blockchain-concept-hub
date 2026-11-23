@@ -22,6 +22,15 @@ describe('learning paths', () => {
   });
 });
 
+describe('learning quests', () => {
+  it('every demo declares how many quests it has (shown on hub cards and in the header widget)', () => {
+    const missing = Object.values(demoMetaRegistry)
+      .filter((m) => !(m.learningQuestsTotal && m.learningQuestsTotal > 0))
+      .map((m) => m.id);
+    expect(missing).toEqual([]);
+  });
+});
+
 describe('isNewDemo', () => {
   const now = new Date('2026-12-01T00:00:00Z');
   it('is true within the window and false outside or without a date', () => {

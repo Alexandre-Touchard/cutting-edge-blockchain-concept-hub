@@ -126,10 +126,10 @@ type LogEntry = {
 };
 
 
-function OutcomePill({ out }: { out: Outcome | undefined }) {
-  if (!out || out.status === 'pending') return <span className="text-xs text-slate-400">pending</span>;
-  if (out.status === 'ok') return <span className="text-xs text-emerald-300">ok</span>;
-  return <span className="text-xs text-red-300">failed</span>;
+function OutcomePill({ out, tr }: { out: Outcome | undefined; tr: (s: string) => string }) {
+  if (!out || out.status === 'pending') return <span className="text-xs text-slate-400">{tr('pending')}</span>;
+  if (out.status === 'ok') return <span className="text-xs text-emerald-300">{tr('ok')}</span>;
+  return <span className="text-xs text-red-300">{tr('failed')}</span>;
 }
 
 export default function EvmVsSvmDemo() {
@@ -1389,7 +1389,7 @@ export default function EvmVsSvmDemo() {
                         )}
                       </div>
                       <div className="mt-1 text-xs text-slate-400">
-                        {tr('EVM')}: <OutcomePill out={evmOut[tx.id]} /> &nbsp;|&nbsp; {tr('Solana-style')}: <OutcomePill out={svmOut[tx.id]} />
+                        {tr('EVM')}: <OutcomePill out={evmOut[tx.id]} tr={tr} /> &nbsp;|&nbsp; {tr('Solana-style')}: <OutcomePill out={svmOut[tx.id]} tr={tr} />
                       </div>
 
                       <MissingDeclBox out={svmOut[tx.id]} tr={tr} />

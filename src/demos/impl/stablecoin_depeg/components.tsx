@@ -85,6 +85,7 @@ import {
 const Tooltip = EduTooltip;
 
 export function EventPill({ type }: { type: EventType }) {
+  const { tr } = useDemoI18n('stablecoin-depeg');
   const cls =
     type === 'success'
       ? 'border-emerald-700 bg-emerald-900/20 text-emerald-100'
@@ -93,7 +94,8 @@ export function EventPill({ type }: { type: EventType }) {
         : type === 'error'
           ? 'border-red-700 bg-red-900/25 text-red-100'
           : 'border-blue-700 bg-blue-900/20 text-blue-100';
-  const label = type === 'warn' ? 'warning' : type;
+  const label =
+    type === 'warn' ? tr('warning') : type === 'success' ? tr('success') : type === 'error' ? tr('error') : tr('info');
   return <span className={`px-2 py-0.5 rounded border text-[11px] ${cls}`}>{label}</span>;
 }
 
@@ -137,6 +139,7 @@ export function RedemptionCapacityGauge({
   unfilled: number;
   compact?: boolean;
 }) {
+  const { tr } = useDemoI18n('stablecoin-depeg');
   const safeCap = Math.max(0, cap);
   const safeExecuted = clamp(executed, 0, safeCap);
   const overflow = Math.max(0, requested - safeCap);
@@ -152,14 +155,14 @@ export function RedemptionCapacityGauge({
   return (
     <div className={compact ? 'mt-0' : 'mt-2'}>
       <div className="flex items-center justify-between">
-        <div className="text-[11px] text-slate-400">{throttled ? 'Redemption throttled' : 'Redemption capacity'}</div>
+        <div className="text-[11px] text-slate-400">{throttled ? tr('Redemption throttled') : tr('Redemption capacity')}</div>
         {throttled ? (
           <span className="text-[10px] px-2 py-0.5 rounded-full border border-rose-500/40 bg-rose-950/30 text-rose-200 font-semibold">
-            THROTTLED
+            {tr('THROTTLED')}
           </span>
         ) : (
           <span className="text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-950/20 text-emerald-200 font-semibold">
-            OK
+            {tr('OK')}
           </span>
         )}
       </div>
@@ -175,10 +178,10 @@ export function RedemptionCapacityGauge({
 
       {compact ? null : (
         <div className="mt-1 grid grid-cols-4 gap-2 text-[10px] text-slate-400">
-          <div className="truncate">executed</div>
-          <div className="truncate">cap</div>
-          <div className="truncate">overflow</div>
-          <div className="truncate">unfilled</div>
+          <div className="truncate">{tr('executed')}</div>
+          <div className="truncate">{tr('cap')}</div>
+          <div className="truncate">{tr('overflow')}</div>
+          <div className="truncate">{tr('unfilled')}</div>
           <div className="font-mono text-slate-200">{fmt(executed, 0)}</div>
           <div className="font-mono text-slate-200">{fmt(cap, 0)}</div>
           <div className="font-mono text-rose-200">{fmt(overflow, 0)}</div>

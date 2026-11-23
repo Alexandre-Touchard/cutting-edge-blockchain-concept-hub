@@ -1440,7 +1440,9 @@ export default function StablecoinDepegSimulation() {
             </div>
             <div className={`text-2xl font-bold ${stablePriceColor(stableNow)}`}>${fmt(stableNow, 3)}</div>
             <div className="text-xs text-slate-500 mt-1">
-              {tr('Outcome')}: <span className="font-semibold">{tr(outcome)}</span>
+              {tr('Outcome')}: <span className="font-semibold">
+                {outcome === 'peg' ? tr('peg') : outcome === 'depeg' ? tr('depeg') : tr('collapse')}
+              </span>
             </div>
           </div>
 
@@ -2051,7 +2053,7 @@ export default function StablecoinDepegSimulation() {
                       {scenario === 'algorithmic' ? (
                         <span className="mr-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900/30 text-xs font-semibold text-slate-200">
                           <span className="h-2 w-2 rounded-full bg-violet-400" />
-                          {tr('Reserve policy')}: {tr(algo.reservePolicy === 'auto' ? 'Auto' : 'Manual')}
+                          {tr('Reserve policy')}: {algo.reservePolicy === 'auto' ? tr('Auto') : tr('Manual')}
                         </span>
                       ) : null}
                       <button
@@ -3045,7 +3047,7 @@ export default function StablecoinDepegSimulation() {
                       ) : null}
                       <span className="mr-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-slate-700 bg-slate-900/30 text-xs font-semibold text-slate-200">
                         <span className="h-2 w-2 rounded-full bg-violet-400" />
-                        {tr('Reserve policy')}: {tr(algo.reservePolicy === 'auto' ? 'Auto' : 'Manual')}
+                        {tr('Reserve policy')}: {algo.reservePolicy === 'auto' ? tr('Auto') : tr('Manual')}
                       </span>
                     </span>
                   ) : null
@@ -3407,14 +3409,14 @@ export default function StablecoinDepegSimulation() {
             <li>
               <LinkWithCopy
                 href="https://docs.makerdao.com/"
-                label={<>MakerDAO documentation (vaults & liquidations) →</>}
+                label={<>{tr('MakerDAO documentation (vaults & liquidations)')} →</>}
                 className="text-blue-300 hover:text-blue-200 underline"
               />
             </li>
             <li>
               <LinkWithCopy
                 href="https://www.terra.money/"
-                label={<>Terra (historical context) →</>}
+                label={<>{tr('Terra (historical context)')} →</>}
                 className="text-blue-300 hover:text-blue-200 underline"
               />
             </li>

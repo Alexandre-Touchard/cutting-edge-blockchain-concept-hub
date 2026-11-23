@@ -3,6 +3,8 @@ import { Download, Upload, CheckCircle, XCircle, AlertCircle, Users, Database, Z
 import EduTooltip from '../../ui/EduTooltip';
 import { define } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
+import { useDemoQuests, QuestList, NextQuestCard } from '../quests/DemoQuests';
+import { assignCustody, columnCustodians, coverageStats, detectionProbability, pickWithheldColumns, runSampling } from './peerdas/sampling';
 
 // Backwards-compatible alias so we don't have to rewrite all usages.
 const Tooltip = EduTooltip;
@@ -15,19 +17,74 @@ const PeerDASDemo = () => {
   const [numColumns, setNumColumns] = useState(64);
   const [columnsPerNode, setColumnsPerNode] = useState(16);
   const [samplingTarget, setSamplingTarget] = useState(16);
-  
-  // Blob data
+  // Columns the block producer refuses to send out (simulated data-withholding attack).
+  const [withheldCount, setWithheldCount] = useState(0);
+
+  // Blob data: { id, size } once created, plus { custodians, withheld } once published.
   const [blobData, setBlobData] = useState(null);
   const [blobSubmitted, setBlobSubmitted] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isSampling, setIsSampling] = useState(false);
-  
+
   // Sampling state
   const [samplingResults, setSamplingResults] = useState([]);
   const [selectedNode, setSelectedNode] = useState(null);
   const [availabilityConfirmed, setAvailabilityConfirmed] = useState(false);
-  
+
   const [events, setEvents] = useState([]);
+
+  const withheldColumns: number[] = blobData?.withheld ?? [];
+  const samplingDone = samplingResults.length > 0 && !isSampling;
+
+  // Learning quests
+  const inspectedNode = selectedNode !== null ? nodes.find(n => n.id === selectedNode) : undefined;
+  const lastSamplesPerNode = samplingResults.length > 0 ? samplingResults[0].sampledColumns.length : 0;
+  const blobStepTarget = blobSubmitted ? 'sample' : blobData ? 'publish' : 'create-blob';
+  const q = useDemoQuests('peerdas-demo', [
+    {
+      id: 'publish',
+      text: tr('Create a blob and publish it'),
+      tip: tr('Click Create Blob, then Publish to Network: each node takes custody of its own share of the columns.'),
+      done: blobSubmitted,
+      target: blobData ? 'publish' : 'create-blob'
+    },
+    {
+      id: 'sample',
+      text: tr('Confirm availability by sampling'),
+      tip: tr('Click Start Sampling: every node fetches random columns from its peers; when all succeed, Availability shows ✓ Confirmed.'),
+      done: availabilityConfirmed,
+      target: 'sample'
+    },
+    {
+      id: 'inspect-node',
+      text: tr('Inspect a node after sampling'),
+      tip: tr('Click a node under Network Nodes: it lists the columns it stores and, for each sampled column, the peer that served it.'),
+      done: !!inspectedNode && inspectedNode.sampledColumns.length > 0,
+      target: 'node-grid'
+    },
+    {
+      id: 'more-samples',
+      text: tr('Confirm availability with 24+ samples per node'),
+      tip: tr('Drag Samples Per Node to 24 or more, then click Start Sampling again: more random checks per node give more confidence, at the cost of more bandwidth.'),
+      done: availabilityConfirmed && lastSamplesPerNode >= 24,
+      target: samplingTarget >= 24 ? 'sample' : 'samples-slider'
+    },
+    {
+      id: 'lean-custody',
+      text: tr('Confirm availability with 8 columns per node'),
+      tip: tr('Click Reset Network, drag Columns Per Node to 8, then Create Blob, Publish to Network and Start Sampling: each node stores only 1/8 of the blob, yet availability is still confirmed.'),
+      done: availabilityConfirmed && columnsPerNode === 8,
+      target: columnsPerNode !== 8 ? (blobSubmitted ? 'reset-network' : 'columns-slider') : blobStepTarget
+    },
+    {
+      id: 'detect-withholding',
+      text: tr('Make sampling detect missing data'),
+      tip: tr('Click Reset Network, drag Withheld Columns above 0, then Create Blob, Publish to Network and Start Sampling: nodes that sample a withheld column get no answer, so availability is not confirmed.'),
+      done: samplingDone && withheldColumns.length > 0 && !availabilityConfirmed,
+      target:
+        withheldColumns.length > 0 ? 'sample' : blobSubmitted ? 'reset-network' : withheldCount === 0 ? 'withheld-slider' : blobStepTarget
+    }
+  ]);
 
   // Initialize network
   useEffect(() => {
@@ -43,74 +100,73 @@ const PeerDASDemo = () => {
     }, ...prev].slice(0, 12));
   };
 
+  /** Fresh nodes for the current configuration (nothing published, nothing sampled). */
   const initializeNetwork = () => {
-    const newNodes = [];
-    for (let i = 0; i < numNodes; i++) {
-      // Each node is assigned a subset of columns to custody
-      const assignedColumns = [];
-      for (let j = 0; j < columnsPerNode; j++) {
-        const columnIndex = (i * columnsPerNode + j) % numColumns;
-        assignedColumns.push(columnIndex);
-      }
-      
-      newNodes.push({
-        id: i,
-        name: `Node ${i}`,
-        assignedColumns,
-        hasData: {},
-        sampledColumns: [],
-        samplingSuccess: null
-      });
-    }
-    setNodes(newNodes);
+    const custody = assignCustody(numNodes, numColumns, columnsPerNode);
+    setNodes(custody.map((assignedColumns, i) => ({
+      id: i,
+      name: `Node ${i}`,
+      assignedColumns,
+      hasData: {},
+      sampledColumns: [],
+      samplingSuccess: null
+    })));
     setBlobSubmitted(false);
     setAvailabilityConfirmed(false);
     setSamplingResults([]);
+    setSelectedNode(prev => (prev !== null && prev < numNodes ? prev : null));
+  };
+
+  /** Reset Network: fresh nodes AND no blob, so the next run starts from a clean state. */
+  const resetNetwork = () => {
+    initializeNetwork();
+    setBlobData(null);
   };
 
   const createBlob = () => {
     // Simulate blob data being split into columns
     const blob = {
       id: `blob_${Date.now()}`,
-      size: 128, // KB
-      columns: Array(numColumns).fill(null).map((_, i) => ({
-        index: i,
-        data: `col_${i}_data`,
-        custody: []
-      }))
+      size: 128 // KB
     };
-    
+
     setBlobData(blob);
     addEvent(tr('Blob created: {{columns}} columns, {{size}}KB', { columns: numColumns, size: blob.size }), 'success');
   };
 
   const publishBlob = async () => {
     if (!blobData) return;
-    
+
     setIsPublishing(true);
     addEvent(tr('Publishing blob to network...'), 'info');
-    
+
     // Simulate column distribution
     await new Promise(resolve => setTimeout(resolve, 800));
-    
+
+    // Custody is computed from scratch on every publish (never accumulated across runs).
+    const withheld = pickWithheldColumns(numColumns, withheldCount);
+    const hidden = new Set(withheld);
+    const custodians = columnCustodians(nodes.map(n => n.assignedColumns), numColumns, withheld);
     const updatedNodes = nodes.map(node => {
       const nodeData = {};
       node.assignedColumns.forEach(colIndex => {
-        nodeData[colIndex] = true;
-        blobData.columns[colIndex].custody.push(node.id);
+        if (!hidden.has(colIndex)) nodeData[colIndex] = true;
       });
-      
+
       return {
         ...node,
-        hasData: nodeData
+        hasData: nodeData,
+        sampledColumns: [],
+        samplingSuccess: null
       };
     });
-    
+
+    setBlobData({ ...blobData, custodians, withheld });
     setNodes(updatedNodes);
     setBlobSubmitted(true);
     setIsPublishing(false);
-    
-    const totalCustodians = blobData.columns.reduce((sum, col) => sum + col.custody.length, 0);
+
+    const totalCustodians = custodians.reduce((sum, col) => sum + col.length, 0);
     addEvent(
       tr('Blob published! {{assignments}} column assignments across {{nodes}} nodes', {
         assignments: totalCustodians,
@@ -118,82 +174,54 @@ const PeerDASDemo = () => {
       }),
       'success'
     );
+    if (withheld.length > 0) {
+      addEvent(
+        tr('Block producer withheld {{count}} columns: no node received them', { count: withheld.length }),
+        'error'
+      );
+    }
   };
 
   const performSampling = async () => {
-    if (!blobSubmitted) return;
-    
+    if (!blobSubmitted || !blobData?.custodians) return;
+
     setIsSampling(true);
     setAvailabilityConfirmed(false);
     setSamplingResults([]);
     addEvent(tr('Starting random sampling...'), 'info');
-    
-    // Each node samples random columns
-    const results = [];
-    
-    for (let i = 0; i < nodes.length; i++) {
+
+    // Each node samples random columns; a sample fails when no peer holds that column.
+    const round = runSampling(blobData.custodians, nodes.length, samplingTarget);
+
+    for (const result of round.results) {
       await new Promise(resolve => setTimeout(resolve, 150));
-      
-      const node = nodes[i];
-      const sampledColumns = [];
-      const alreadySampled = new Set();
-      
-      // Sample random columns (avoid duplicates)
-      while (sampledColumns.length < samplingTarget) {
-        const randomCol = Math.floor(Math.random() * numColumns);
-        if (!alreadySampled.has(randomCol)) {
-          alreadySampled.add(randomCol);
-          
-          // Find a node that has this column
-          const custodians = blobData.columns[randomCol].custody;
-          const success = custodians.length > 0;
-          const provider = success ? custodians[Math.floor(Math.random() * custodians.length)] : null;
-          
-          sampledColumns.push({
-            columnIndex: randomCol,
-            success,
-            provider
-          });
-        }
-      }
-      
-      const successRate = sampledColumns.filter(s => s.success).length / sampledColumns.length;
-      
-      results.push({
-        nodeId: node.id,
-        sampledColumns,
-        successRate,
-        allSuccess: successRate === 1.0
-      });
-      
+
       // Update node state
-      setNodes(prev => prev.map(n => 
-        n.id === node.id ? { ...n, sampledColumns, samplingSuccess: successRate === 1.0 } : n
+      setNodes(prev => prev.map(n =>
+        n.id === result.nodeId ? { ...n, sampledColumns: result.sampledColumns, samplingSuccess: result.allSuccess } : n
       ));
-      
+
       addEvent(
         tr('Node {{id}} sampled {{count}} columns - {{pct}}% success', {
-          id: node.id,
-          count: samplingTarget,
-          pct: (successRate * 100).toFixed(0)
+          id: result.nodeId,
+          count: result.sampledColumns.length,
+          pct: (result.successRate * 100).toFixed(0)
         }),
-        successRate === 1.0 ? 'success' : 'error'
+        result.allSuccess ? 'success' : 'error'
       );
     }
-    
-    setSamplingResults(results);
+
+    setSamplingResults(round.results);
     setIsSampling(false);
-    
-    // Check if data is available (all nodes succeeded)
-    const allNodesSucceeded = results.every(r => r.allSuccess);
-    setAvailabilityConfirmed(allNodesSucceeded);
-    
-    if (allNodesSucceeded) {
+
+    // Data is available only if every node got every sample it asked for
+    setAvailabilityConfirmed(round.available);
+
+    if (round.available) {
       addEvent(tr('✓ Data availability CONFIRMED - All nodes successfully sampled'), 'success');
     } else {
-      const failedNodes = results.filter(r => !r.allSuccess).length;
       addEvent(
-        tr('⚠ Data availability UNCERTAIN - {{count}} nodes had sampling failures', { count: failedNodes }),
+        tr('⚠ Data availability UNCERTAIN - {{count}} nodes had sampling failures', { count: round.failedNodes }),
         'error'
       );
     }
@@ -215,14 +243,9 @@ const PeerDASDemo = () => {
   };
 
   const getCoverageStats = () => {
-    if (!blobData) return { min: 0, max: 0, avg: 0 };
-    
-    const custodyCounts = blobData.columns.map(col => col.custody.length);
-    return {
-      min: Math.min(...custodyCounts),
-      max: Math.max(...custodyCounts),
-      avg: (custodyCounts.reduce((a, b) => a + b, 0) / custodyCounts.length).toFixed(1)
-    };
+    if (!blobData?.custodians) return { min: 0, max: 0, avg: '0' };
+    const stats = coverageStats(blobData.custodians);
+    return { ...stats, avg: stats.avg.toFixed(1) };
   };
 
   const getEventColor = (type) => {
@@ -234,9 +257,13 @@ const PeerDASDemo = () => {
   };
 
   const coverage = getCoverageStats();
-  const samplingSuccessRate = samplingResults.length > 0 
+  const samplingSuccessRate = samplingResults.length > 0
     ? (samplingResults.filter(r => r.allSuccess).length / samplingResults.length * 100).toFixed(0)
     : 0;
+  const failedNodeCount = samplingResults.filter(r => !r.allSuccess).length;
+  // Withheld columns that apply to the published blob (or to the next publish)
+  const effectiveWithheld = blobSubmitted ? withheldColumns.length : withheldCount;
+  const detectPct = (detectionProbability(numColumns, effectiveWithheld, samplingTarget) * 100).toFixed(1);
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
@@ -244,8 +271,10 @@ const PeerDASDemo = () => {
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">{tr('PeerDAS: Peer Data Availability Sampling')}</h1>
           <p className="text-slate-300">
-            {tr("Ethereum's scalable data availability layer - nodes sample random columns instead of downloading everything")}
+            {tr('Ethereum\'s scalable data availability layer - nodes sample random columns instead of downloading everything')}
           </p>
+          <NextQuestCard q={q} className="mt-4" />
+          <QuestList q={q} />
         </div>
 
         {/* Stats Dashboard */}
@@ -291,13 +320,15 @@ const PeerDASDemo = () => {
                 <Tooltip text={define('Coverage')} />
               </span>
             </div>
-            <div className="text-lg font-bold">{coverage.avg}x avg</div>
+            <div className="text-lg font-bold">{tr('{{avg}}x avg', { avg: coverage.avg })}</div>
           </div>
 
           <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-2">
               {availabilityConfirmed ? (
                 <CheckCircle size={20} className="text-emerald-400" />
+              ) : samplingDone ? (
+                <XCircle size={20} className="text-red-400" />
               ) : (
                 <AlertCircle size={20} className="text-yellow-400" />
               )}
@@ -309,10 +340,15 @@ const PeerDASDemo = () => {
             <div className="text-lg font-bold">
               {availabilityConfirmed
                   ? tr('✓ Confirmed')
-                  : samplingResults.length > 0
-                    ? `${samplingSuccessRate}%`
+                  : samplingDone
+                    ? <span className="text-red-400">{tr('✗ Not confirmed')}</span>
                     : tr('N/A')}
             </div>
+            {samplingDone && !availabilityConfirmed && (
+              <div className="text-xs text-slate-400 mt-1">
+                {tr('{{pct}}% of nodes passed', { pct: samplingSuccessRate })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -334,7 +370,7 @@ const PeerDASDemo = () => {
                     max="50"
                     value={numNodes}
                     onChange={(e) => setNumNodes(parseInt(e.target.value))}
-                    disabled={blobSubmitted}
+                    disabled={blobSubmitted || isPublishing}
                     className="w-full"
                   />
                 </div>
@@ -349,8 +385,9 @@ const PeerDASDemo = () => {
                     max="32"
                     value={columnsPerNode}
                     onChange={(e) => setColumnsPerNode(parseInt(e.target.value))}
-                    disabled={blobSubmitted}
-                    className="w-full"
+                    disabled={blobSubmitted || isPublishing}
+                    data-hint="columns-slider"
+                    className={`w-full ${q.pulse('columns-slider')}`}
                   />
                 </div>
 
@@ -365,8 +402,36 @@ const PeerDASDemo = () => {
                     value={samplingTarget}
                     onChange={(e) => setSamplingTarget(parseInt(e.target.value))}
                     disabled={isSampling}
-                    className="w-full"
+                    data-hint="samples-slider"
+                    className={`w-full ${q.pulse('samples-slider')}`}
                   />
+                </div>
+
+                <div>
+                  <label className="text-sm text-slate-400 mb-2 block">
+                    {tr('Withheld Columns')}: {blobSubmitted ? withheldColumns.length : withheldCount}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max={numColumns}
+                    value={blobSubmitted ? withheldColumns.length : withheldCount}
+                    onChange={(e) => setWithheldCount(parseInt(e.target.value))}
+                    disabled={blobSubmitted || isPublishing}
+                    data-hint="withheld-slider"
+                    className={`w-full ${q.pulse('withheld-slider')}`}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    {tr('Columns a dishonest block producer never sends out, so no node can serve them.')}
+                  </p>
+                  {effectiveWithheld > 0 && (
+                    <p className="text-xs text-red-300 mt-1">
+                      {tr('Chance that one node catches it with {{samples}} samples: {{pct}}%', {
+                        samples: samplingTarget,
+                        pct: detectPct
+                      })}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -378,8 +443,9 @@ const PeerDASDemo = () => {
               <div className="space-y-3">
                 <button
                   onClick={createBlob}
-                  disabled={blobData && !blobSubmitted}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 rounded font-semibold flex items-center justify-center gap-2"
+                  disabled={!!blobData}
+                  data-hint="create-blob"
+                  className={`w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 rounded font-semibold flex items-center justify-center gap-2 ${q.pulse('create-blob')}`}
                 >
                   <Database size={18} />
                   {tr('Create Blob ({{count}} columns)', { count: numColumns })}
@@ -388,7 +454,8 @@ const PeerDASDemo = () => {
                 <button
                   onClick={publishBlob}
                   disabled={!blobData || blobSubmitted || isPublishing}
-                  className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold flex items-center justify-center gap-2"
+                  data-hint="publish"
+                  className={`w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold flex items-center justify-center gap-2 ${q.pulse('publish')}`}
                 >
                   <Upload size={18} />
                   {isPublishing ? tr('Publishing...') : tr('Publish to Network')}
@@ -397,15 +464,18 @@ const PeerDASDemo = () => {
                 <button
                   onClick={performSampling}
                   disabled={!blobSubmitted || isSampling}
-                  className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold flex items-center justify-center gap-2"
+                  data-hint="sample"
+                  className={`w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold flex items-center justify-center gap-2 ${q.pulse('sample')}`}
                 >
                   <Zap size={18} />
                   {isSampling ? tr('Sampling...') : tr('Start Sampling')}
                 </button>
 
                 <button
-                  onClick={initializeNetwork}
-                  className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded font-semibold"
+                  onClick={resetNetwork}
+                  disabled={isPublishing || isSampling}
+                  data-hint="reset-network"
+                  className={`w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed rounded font-semibold ${q.pulse('reset-network')}`}
                 >
                   {tr('Reset Network')}
                 </button>
@@ -427,7 +497,37 @@ const PeerDASDemo = () => {
                       <span className="text-slate-400">{tr('Redundancy')}:</span>
                       <span className="font-semibold">{coverage.avg}x</span>
                     </div>
+                    {blobSubmitted && withheldColumns.length > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">{tr('Withheld Columns')}:</span>
+                        <span className="font-semibold text-red-300">{withheldColumns.length}</span>
+                      </div>
+                    )}
                   </div>
+                </div>
+              )}
+
+              {samplingDone && withheldColumns.length > 0 && (
+                <div
+                  className={`mt-4 p-3 rounded text-xs border ${
+                    availabilityConfirmed ? 'bg-yellow-900 bg-opacity-20 border-yellow-700' : 'bg-red-900 bg-opacity-30 border-red-700'
+                  }`}
+                >
+                  {availabilityConfirmed ? (
+                    <p className="text-yellow-200">
+                      {tr('This time no node happened to sample one of the {{count}} withheld columns: sampling is probabilistic. Withhold more columns or raise Samples Per Node and try again.', { count: withheldColumns.length })}
+                    </p>
+                  ) : (
+                    <>
+                      <div className="font-semibold text-red-300 mb-1">{tr('Withholding detected')}</div>
+                      <p className="text-slate-200 mb-2">
+                        {tr('{{failed}} of {{total}} nodes asked for a withheld column and no peer could serve it, so availability is NOT confirmed. This is exactly what sampling is for: a block producer that hides part of the data gets caught by random checks, without anyone downloading the whole blob.', { failed: failedNodeCount, total: samplingResults.length })}
+                      </p>
+                      <p className="text-slate-400">
+                        {tr('In real PeerDAS, erasure coding lets the network rebuild a blob from any half of its columns, so an attacker must hide more than half of them; random samples then hit a missing column almost every time.')}
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -457,7 +557,7 @@ const PeerDASDemo = () => {
             <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
               <h2 className="text-xl font-semibold mb-4">{tr('Network Nodes')}</h2>
               
-              <div className="grid grid-cols-4 gap-2 max-h-[700px] overflow-y-auto">
+              <div data-hint="node-grid" className={`grid grid-cols-4 gap-2 max-h-[700px] overflow-y-auto rounded-lg ${q.pulse('node-grid')}`}>
                 {nodes.map(node => (
                   <div
                     key={node.id}
@@ -501,22 +601,31 @@ const PeerDASDemo = () => {
 
           {/* Right Column - Node Details */}
           <div className="space-y-6">
-            {selectedNode !== null ? (
+            {inspectedNode ? (
               <div className="bg-slate-800 rounded-lg p-4 border-2 border-yellow-500">
-                <h2 className="text-xl font-semibold mb-4">{tr('Node {{id}} Details', { id: selectedNode })}</h2>
-                
+                <h2 className="text-xl font-semibold mb-4">{tr('Node {{id}} Details', { id: inspectedNode.id })}</h2>
+
                 {(() => {
-                  const node = nodes.find(n => n.id === selectedNode);
+                  const node = inspectedNode;
                   return (
                     <div className="space-y-4">
                       <div>
                         <div className="text-sm text-slate-400 mb-2">{tr('Custodied Columns ({{count}})', { count: node.assignedColumns.length })}:</div>
                         <div className="flex flex-wrap gap-1">
-                          {node.assignedColumns.map(col => (
-                            <div key={col} className="px-2 py-1 bg-blue-900 text-blue-300 rounded text-xs font-mono">
-                              {col}
-                            </div>
-                          ))}
+                          {node.assignedColumns.map(col => {
+                            const missing = blobSubmitted && withheldColumns.includes(col);
+                            return (
+                              <div
+                                key={col}
+                                title={missing ? tr('Withheld: this node never received it') : undefined}
+                                className={`px-2 py-1 rounded text-xs font-mono ${
+                                  missing ? 'bg-red-900 text-red-300 line-through' : 'bg-blue-900 text-blue-300'
+                                }`}
+                              >
+                                {col}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -541,10 +650,12 @@ const PeerDASDemo = () => {
                                   )}
                                   <span className="font-mono">{tr('Column {{index}}', { index: sample.columnIndex })}</span>
                                 </div>
-                                {sample.success && (
+                                {sample.success ? (
                                   <span className="text-slate-400">
                                     {tr('from Node {{id}}', { id: sample.provider })}
                                   </span>
+                                ) : (
+                                  <span className="text-red-300">{tr('no peer has it')}</span>
                                 )}
                               </div>
                             ))}
@@ -585,7 +696,7 @@ const PeerDASDemo = () => {
                   <div>
                     <div className="font-semibold text-blue-400 mb-2">{tr('4. Availability Proof')}</div>
                     <p className="text-xs">
-                      {tr("With {{samplingTarget}} samples from {{numColumns}} columns, there's >99.9% confidence the entire blob is retrievable if all nodes succeed.", { samplingTarget, numColumns })}
+                      {tr('With {{samplingTarget}} samples from {{numColumns}} columns, there\'s >99.9% confidence the entire blob is retrievable if all nodes succeed.', { samplingTarget, numColumns })}
                     </p>
                   </div>
 

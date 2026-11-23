@@ -13,7 +13,7 @@
   "builders_iaev6f": "Builders",
   "mev_opportunity_eth_1jt7gu2": "Opportunité MEV (ETH)",
   "builder_margin_target__ve15kf": "Marge cible du builder (%)",
-  "base_fee_gwei_12jfssr": "Base fee (gwei)",
+  "base_fee_gwei_12jfssr": "Frais de base (gwei)",
   "relay_reject__c377m5": "Rejet du relay (%)",
   "payload_fail__6sllpp": "Échec du payload (%)",
   "flow_yjjpqv": "Flux",
@@ -174,5 +174,15 @@
   "flashbots_docs_bundles_mevboost__1qylu0a": "Docs Flashbots (bundles, MEV-Boost) →",
   "ethereum_roadmap_pbs_context__kl6cbj": "Roadmap Ethereum (contexte PBS) →",
   "event_log_1wbpp59": "Journal d’événements",
-  "no_events_yet_use_step_in_a_module_mi2xq": "Aucun événement pour l’instant. Utilisez Étape dans un module."
+  "no_events_yet_use_step_in_a_module_mi2xq": "Aucun événement pour l’instant. Utilisez Étape dans un module.",
+  "builder_n_ot42wa": "Builder {{n}}",
+  "searcher_frontrun_c0zdzs": "Searcher (front-run)",
+  "other_mempool_tx_rxneyc": "Autre tx du mempool",
+  "victim_1g4bm21": "Victime",
+  "searcher_backrun_g13qhe": "Searcher (back-run)",
+  "victim_venue_a_1a7rppg": "Victime (Venue A)",
+  "searcher_buy_venue_a_e0tz33": "Achat du searcher (Venue A)",
+  "searcher_sell_venue_b_1j4katg": "Vente du searcher (Venue B)",
+  "sell_amount_eth_o4xq6e": "vente de {{amount}} ETH",
+  "buy_amount_eth_ttu6la": "achat de {{amount}} ETH"
 }

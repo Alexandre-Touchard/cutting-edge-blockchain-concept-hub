@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
   BadgeCheck,
@@ -11,11 +11,13 @@ import {
   Send,
   ShieldCheck,
   ShieldX,
+  Square,
   Timer,
   Wallet
 } from 'lucide-react';
 import { useDemoI18n } from '../useDemoI18n';
 import EduTooltip from '../../ui/EduTooltip';
+import { NextQuestCard, QuestList, useDemoQuests } from '../quests/DemoQuests';
 
 type Side = 'alice' | 'bob';
 
@@ -60,6 +62,53 @@ function formatEth(x: number) {
   return `${x.toFixed(3)} ETH`;
 }
 
+/** Payment size used by the buttons and by the auto-run scenario. */
+const PAYMENT = 0.1;
+/** Off-chain payments the auto-run scenario makes before the cheat attempt. */
+const SCENARIO_PAYMENTS = 2;
+/** Delay between two scenario moves, and between two mined blocks. */
+const SCENARIO_STEP_MS = 900;
+const SCENARIO_MINE_MS = 150;
+
+export type ScenarioAction = 'open' | 'pay-alice' | 'pay-bob' | 'sign-alice' | 'sign-bob' | 'dispute' | 'cheat' | 'mine' | 'done';
+
+/**
+ * Next move of the "cheat" story, derived from the current channel state only:
+ * open → two signed payments → dispute close (latest state on L1) → the cheater submits the old
+ * nonce=0 state (rejected) → mine until the challenge period ends. Every move changes the state it
+ * reads, so the story always progresses and ends with 'done'.
+ */
+export function nextScenarioAction(s: {
+  status: ChannelStatus;
+  latest: SignedState | null;
+  pending: SignedState | null;
+  cheatSubmitted: boolean;
+  blocksRemaining: number | null;
+}): ScenarioAction {
+  switch (s.status) {
+    case 'not-open':
+      return 'open';
+    case 'updating':
+      if (!s.pending) return 'done';
+      if (!s.pending.signedByAlice) return 'sign-alice';
+      if (!s.pending.signedByBob) return 'sign-bob';
+      return 'done';
+    case 'open':
+      if (!s.latest) return 'done';
+      if (s.latest.nonce < SCENARIO_PAYMENTS) {
+        // Alice pays Bob (so replaying nonce=0 would give her money back); Bob pays if she can't.
+        if (s.latest.aliceBalance >= PAYMENT) return 'pay-alice';
+        if (s.latest.bobBalance >= PAYMENT) return 'pay-bob';
+      }
+      return 'dispute';
+    case 'closing-disputed':
+      if (!s.cheatSubmitted) return 'cheat';
+      return (s.blocksRemaining ?? 0) > 0 ? 'mine' : 'done';
+    default:
+      return 'done';
+  }
+}
+
 export default function StateChannelsDemo() {
   const { tr } = useDemoI18n('state-channels');
 
@@ -84,12 +133,57 @@ export default function StateChannelsDemo() {
     msg: string;
   } | null>(null);
 
+  const [scenarioRunning, setScenarioRunning] = useState(false);
+
   const totalDeposits = useMemo(() => depositAlice + depositBob, [depositAlice, depositBob]);
 
-  const pushEvent = (kind: Event['kind'], msg: string) =>
-    setEvents((prev) => [{ ts: Date.now(), kind, msg }, ...prev].slice(0, 14));
+  const q = useDemoQuests('state-channels', [
+    {
+      id: 'open',
+      text: tr('Open a payment channel'),
+      tip: tr('Click Open channel to lock both deposits on L1 and create the signed state nonce=0.'),
+      done: latest !== null,
+      target: 'open-btn'
+    },
+    {
+      id: 'pay',
+      text: tr('Make two signed off-chain payments'),
+      tip: tr('Click Alice → Bob (0.1), then Sign as Alice and Sign as Bob. Repeat until the latest nonce is 2.'),
+      done: (latest?.nonce ?? 0) >= 2,
+      target: 'pay-btn'
+    },
+    {
+      id: 'coop-close',
+      text: tr('Close the channel cooperatively'),
+      tip: tr('With the channel open and no pending update, click Cooperative close to settle the latest state at once.'),
+      done: status === 'closed' && timelineMarks.length === 0,
+      target: 'coop-close-btn'
+    },
+    {
+      id: 'cheat',
+      text: tr('Cheat with an old state and get rejected'),
+      tip: tr('Click Reset, Open channel and make a payment, then click Dispute close and Submit old state (cheat).'),
+      done: timelineMarks.some((m) => m.lane === 'old' && m.kind === 'rejected'),
+      target: 'dispute-btn'
+    },
+    {
+      id: 'finalize',
+      text: tr('Mine blocks until the dispute is finalized'),
+      tip: tr('During a dispute, click Mine block until Blocks remaining reaches 0. A shorter Challenge period means fewer clicks.'),
+      done: timelineMarks.some((m) => m.action === 'finalized'),
+      target: 'mine-btn'
+    }
+  ]);
+
+  // Unique, increasing ids for the event list (several events can share the same millisecond).
+  const eventSeq = useRef(0);
+  const pushEvent = (kind: Event['kind'], msg: string) => {
+    const ts = ++eventSeq.current;
+    setEvents((prev) => [{ ts, kind, msg }, ...prev].slice(0, 14));
+  };
 
   const resetAll = () => {
+    setScenarioRunning(false);
     setStatus('not-open');
     setEvents([]);
     setLatest(null);
@@ -205,7 +299,7 @@ export default function StateChannelsDemo() {
       {
         t: 0,
         lane: 'new',
-        kind: 'info',
+        kind: 'accepted',
         action: 'submit',
         nonce: latest.nonce
       }
@@ -292,6 +386,68 @@ export default function StateChannelsDemo() {
     }
   };
 
+  // Auto-run scenario: one move per tick. The timer always calls the latest render's runner, so
+  // every move sees the current channel state (no stale closure); the effect re-arms after each move
+  // because every move changes one of its dependencies. Reset (or unmount) cancels the pending tick.
+  const cheatSubmitted = timelineMarks.some((m) => m.lane === 'old');
+  const scenarioState = { status, latest, pending, cheatSubmitted, blocksRemaining };
+  const runScenarioMove = () => {
+    const action = nextScenarioAction(scenarioState);
+    switch (action) {
+      case 'open': return openChannel();
+      case 'pay-alice': return proposeUpdate('alice', PAYMENT);
+      case 'pay-bob': return proposeUpdate('bob', PAYMENT);
+      case 'sign-alice': return signPending('alice');
+      case 'sign-bob': return signPending('bob');
+      case 'dispute': return startDisputeClose();
+      case 'cheat': return submitStateToL1('old');
+      case 'mine': return mineBlock();
+      default: return setScenarioRunning(false);
+    }
+  };
+  const scenarioMoveRef = useRef(runScenarioMove);
+  scenarioMoveRef.current = runScenarioMove;
+
+  useEffect(() => {
+    if (!scenarioRunning) return;
+    const action = nextScenarioAction(scenarioState);
+    if (action === 'done') {
+      setScenarioRunning(false);
+      pushEvent('success', tr('🏁 Scenario finished: the old state was rejected and the latest state was settled.'));
+      return;
+    }
+    const id = window.setTimeout(() => scenarioMoveRef.current(), action === 'mine' ? SCENARIO_MINE_MS : SCENARIO_STEP_MS);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioRunning, status, latest, pending, cheatSubmitted, blocksRemaining]);
+
+  const startScenario = () => {
+    if (scenarioRunning) return;
+    resetAll();
+    pushEvent('info', tr('▶️ Auto-running the cheat scenario…'));
+    setScenarioRunning(true);
+  };
+
+  const stopScenario = () => {
+    setScenarioRunning(false);
+    pushEvent('info', tr('Scenario stopped. You can continue by hand.'));
+  };
+
+  const statusLabel: Record<ChannelStatus, string> = {
+    'not-open': tr('Not open'),
+    open: tr('Open'),
+    updating: tr('Updating'),
+    'closing-cooperative': tr('Closing (cooperative)'),
+    'closing-disputed': tr('Closing (dispute)'),
+    closed: tr('Closed')
+  };
+  const markKindLabel: Record<TimelineMark['kind'], string> = {
+    accepted: tr('Accepted'),
+    rejected: tr('Rejected'),
+    invalid: tr('Invalid'),
+    info: tr('Info')
+  };
+
   const balances = latest ?? { aliceBalance: 0, bobBalance: 0, nonce: 0, signedByAlice: false, signedByBob: false };
 
   return (
@@ -304,6 +460,8 @@ export default function StateChannelsDemo() {
               'Simulate a two-party off-chain channel: lock deposits on L1, exchange signed updates off-chain, and close cooperatively or via a dispute game.'
             )}
           </p>
+          <NextQuestCard q={q} className="mt-4" />
+          <QuestList q={q} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -324,7 +482,7 @@ export default function StateChannelsDemo() {
                     value={depositAlice}
                     onChange={(e) => setDepositAlice(Number(e.target.value))}
                     className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700"
-                    disabled={status !== 'not-open'}
+                    disabled={status !== 'not-open' || scenarioRunning}
                   />
                 </label>
                 <label className="block">
@@ -335,7 +493,7 @@ export default function StateChannelsDemo() {
                     value={depositBob}
                     onChange={(e) => setDepositBob(Number(e.target.value))}
                     className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700"
-                    disabled={status !== 'not-open'}
+                    disabled={status !== 'not-open' || scenarioRunning}
                   />
                 </label>
               </div>
@@ -357,7 +515,7 @@ export default function StateChannelsDemo() {
                   value={challengePeriodBlocks}
                   onChange={(e) => setChallengePeriodBlocks(Number(e.target.value))}
                   className="w-full"
-                  disabled={status !== 'not-open'}
+                  disabled={status !== 'not-open' || scenarioRunning}
                 />
                 <div className="text-sm mt-1">{challengePeriodBlocks}</div>
               </label>
@@ -365,50 +523,22 @@ export default function StateChannelsDemo() {
               <div className="flex flex-wrap gap-2 pt-2">
                 <EduTooltip
                   text={tr(
-                    'Automatically runs a full story: open a channel, create a few updates, start a dispute, submit an old state (cheat), submit the newer state, then mine blocks until finalization.'
+                    'Automatically runs a full story, one step at a time: open a channel, make two signed payments, start a dispute close with the latest state, let the cheater submit the old nonce=0 state (rejected), then mine blocks until the dispute is finalized.'
                   )}
                 >
                   <button
-                    onClick={() => {
-                      resetAll();
-                      openChannel();
-                      // create a few updates quickly (auto-signed)
-                      setTimeout(() => {
-                        proposeUpdate('alice', 0.1);
-                        setTimeout(() => {
-                          signPending('alice');
-                          signPending('bob');
-                          setTimeout(() => {
-                            proposeUpdate('bob', 0.1);
-                            setTimeout(() => {
-                              signPending('alice');
-                              signPending('bob');
-                              setTimeout(() => {
-                                startDisputeClose();
-                                setTimeout(() => {
-                                  submitStateToL1('old');
-                                  setTimeout(() => {
-                                    submitStateToL1('latest');
-                                    // mine blocks until done
-                                    const mine = () => {
-                                      setTimeout(() => {
-                                        mineBlock();
-                                        if ((blocksRemaining ?? 1) > 1) mine();
-                                      }, 80);
-                                    };
-                                    mine();
-                                  }, 200);
-                                }, 200);
-                              }, 200);
-                            }, 200);
-                          }, 200);
-                        }, 200);
-                      }, 200);
-                    }}
-                    disabled={status !== 'not-open'}
+                    onClick={scenarioRunning ? stopScenario : startScenario}
                     className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap"
                   >
-                    <Send size={16} /> {tr('Auto-run cheat scenario')}
+                    {scenarioRunning ? (
+                      <>
+                        <Square size={16} /> {tr('Stop scenario')}
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} /> {tr('Auto-run cheat scenario')}
+                      </>
+                    )}
                   </button>
                 </EduTooltip>
                 <button
@@ -421,8 +551,9 @@ export default function StateChannelsDemo() {
                 <EduTooltip text={tr('Lock deposits on L1 and create the channel with an initial signed state (nonce=0).')}>
                   <button
                     onClick={openChannel}
-                    disabled={status !== 'not-open'}
-                    className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 flex items-center gap-2"
+                    disabled={status !== 'not-open' || scenarioRunning}
+                    data-hint="open-btn"
+                    className={`px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 flex items-center gap-2 ${q.pulse('open-btn')}`}
                   >
                     <Wallet size={16} /> {tr('Open channel')}
                   </button>
@@ -431,8 +562,9 @@ export default function StateChannelsDemo() {
                 <EduTooltip text={tr('Close immediately by submitting the latest mutually signed state (fast path).')}>
                   <button
                     onClick={cooperativeClose}
-                    disabled={status !== 'open'}
-                    className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 flex items-center gap-2"
+                    disabled={status !== 'open' || scenarioRunning}
+                    data-hint="coop-close-btn"
+                    className={`px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 flex items-center gap-2 ${q.pulse('coop-close-btn')}`}
                   >
                     <BadgeCheck size={16} /> {tr('Cooperative close')}
                   </button>
@@ -445,8 +577,9 @@ export default function StateChannelsDemo() {
                 >
                   <button
                     onClick={startDisputeClose}
-                    disabled={status !== 'open' && status !== 'updating'}
-                    className="px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-40 flex items-center gap-2"
+                    disabled={(status !== 'open' && status !== 'updating') || scenarioRunning}
+                    data-hint="dispute-btn"
+                    className={`px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-40 flex items-center gap-2 ${q.pulse('dispute-btn')}`}
                   >
                     <Timer size={16} /> {tr('Dispute close')}
                   </button>
@@ -469,7 +602,7 @@ export default function StateChannelsDemo() {
               </div>
               <div className="text-right text-sm whitespace-nowrap">
                 <div>
-                  {tr('Status')}: <span className="font-mono">{status}</span>
+                  {tr('Status')}: <span className="font-mono">{statusLabel[status]}</span>
                 </div>
                 <div className="inline-flex items-center gap-2 whitespace-nowrap">
                   <span>
@@ -543,9 +676,10 @@ export default function StateChannelsDemo() {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <EduTooltip text={tr('Propose a new off-chain state update where Alice sends ETH to Bob.')}>
                   <button
-                    className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap"
-                    disabled={!latest || status !== 'open'}
-                    onClick={() => proposeUpdate('alice', 0.1)}
+                    data-hint="pay-btn"
+                    className={`px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap ${q.pulse('pay-btn')}`}
+                    disabled={!latest || status !== 'open' || scenarioRunning}
+                    onClick={() => proposeUpdate('alice', PAYMENT)}
                   >
                     <HandCoins size={16} /> {tr('Alice → Bob (0.1)')}
                   </button>
@@ -554,8 +688,8 @@ export default function StateChannelsDemo() {
                 <EduTooltip text={tr('Propose a new off-chain state update where Bob sends ETH to Alice.')}>
                   <button
                     className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap"
-                    disabled={!latest || status !== 'open'}
-                    onClick={() => proposeUpdate('bob', 0.1)}
+                    disabled={!latest || status !== 'open' || scenarioRunning}
+                    onClick={() => proposeUpdate('bob', PAYMENT)}
                   >
                     <HandCoins size={16} /> {tr('Bob → Alice (0.1)')}
                   </button>
@@ -580,7 +714,7 @@ export default function StateChannelsDemo() {
                       <EduTooltip text={tr('Alice signs the pending state update.')}>
                         <button
                           onClick={() => signPending('alice')}
-                          disabled={pending.signedByAlice}
+                          disabled={pending.signedByAlice || scenarioRunning}
                           className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap"
                         >
                           <ShieldCheck size={16} /> {tr('Sign as Alice')}
@@ -590,7 +724,7 @@ export default function StateChannelsDemo() {
                       <EduTooltip text={tr('Bob signs the pending state update.')}>
                         <button
                           onClick={() => signPending('bob')}
-                          disabled={pending.signedByBob}
+                          disabled={pending.signedByBob || scenarioRunning}
                           className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap"
                         >
                           <ShieldCheck size={16} /> {tr('Sign as Bob')}
@@ -725,7 +859,7 @@ export default function StateChannelsDemo() {
                                   key={`${lane}-${m.t}-${i}`}
                                   className={`absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full ${color} ring-2 ring-slate-900`}
                                   style={{ left: `${pct}%` }}
-                                  title={tr('nonce={{n}} ({{kind}})', { n: m.nonce ?? 0, kind: m.kind })}
+                                  title={tr('nonce={{n}} ({{kind}})', { n: m.nonce ?? 0, kind: markKindLabel[m.kind] })}
                                 />
                               );
                             })}
@@ -741,7 +875,7 @@ export default function StateChannelsDemo() {
                 <EduTooltip text={tr('Submit the latest mutually signed state to L1 as the current best.')}
                 >
                   <button
-                    disabled={status !== 'closing-disputed'}
+                    disabled={status !== 'closing-disputed' || scenarioRunning}
                     onClick={() => submitStateToL1('latest')}
                     className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap"
                   >
@@ -751,7 +885,7 @@ export default function StateChannelsDemo() {
 
                 <EduTooltip text={tr('Try to submit the pending state (only works if it is fully signed).')}>
                   <button
-                    disabled={status !== 'closing-disputed'}
+                    disabled={status !== 'closing-disputed' || scenarioRunning}
                     onClick={() => submitStateToL1('pending')}
                     className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap"
                   >
@@ -765,7 +899,7 @@ export default function StateChannelsDemo() {
                   )}
                 >
                   <button
-                    disabled={status !== 'closing-disputed'}
+                    disabled={status !== 'closing-disputed' || scenarioRunning}
                     onClick={() => submitStateToL1('old')}
                     className="px-3 py-2 rounded-lg bg-rose-800 hover:bg-rose-700 border border-rose-700 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap"
                   >
@@ -776,9 +910,10 @@ export default function StateChannelsDemo() {
                 <EduTooltip text={tr('Advance time by one block. When the counter hits 0, the on-chain best state is finalized.')}
                 >
                   <button
-                    disabled={status !== 'closing-disputed'}
+                    disabled={status !== 'closing-disputed' || scenarioRunning}
                     onClick={mineBlock}
-                    className="px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap"
+                    data-hint="mine-btn"
+                    className={`px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap ${q.pulse('mine-btn')}`}
                   >
                     <Clock size={16} /> {tr('Mine block')}
                   </button>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import EduTooltip from '../../ui/EduTooltip';
 import { define } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
+import { NextQuestCard, QuestList, useDemoQuests } from '../quests/DemoQuests';
 const T = EduTooltip;
 import { Send, CheckCircle, Clock, AlertTriangle, Shield, Zap, Lock, Eye } from 'lucide-react';
 
@@ -24,6 +25,38 @@ const BlockchainInteropDemo = () => {
     ethereum: { cosmos: { height: 500, verified: true }, polygon: { height: 2000, verified: true } },
     polygon: { ethereum: { height: 2000, verified: true } }
   });
+
+  const delivered = (pred) => packets.some((p) => p.status === 'completed' && pred(p));
+  const q = useDemoQuests('blockchain-interop', [
+    {
+      id: 'ibc',
+      text: tr('Deliver a message over IBC'),
+      tip: tr('With IBC selected, click Send Cross-Chain Message and watch the packet go through light client verification.'),
+      done: delivered((p) => p.protocol === 'ibc'),
+      target: 'send-btn'
+    },
+    {
+      id: 'ccip',
+      text: tr('Deliver a message with CCIP'),
+      tip: tr('Select the CCIP (Chainlink Cross-Chain) card, then click Send Cross-Chain Message to see the oracle network reach consensus.'),
+      done: delivered((p) => p.protocol === 'ccip'),
+      target: 'protocol-ccip'
+    },
+    {
+      id: 'layerzero',
+      text: tr('Deliver a message with LayerZero'),
+      tip: tr('Select the LayerZero card, then click Send Cross-Chain Message: the Oracle and the Relayer must agree.'),
+      done: delivered((p) => p.protocol === 'layerzero'),
+      target: 'protocol-layerzero'
+    },
+    {
+      id: 'non-token',
+      text: tr('Send something other than tokens'),
+      tip: tr('Set Message Type to Contract Call, NFT Transfer or Data Message, then click Send Cross-Chain Message.'),
+      done: delivered((p) => p.type !== 'token_transfer'),
+      target: 'type-select'
+    }
+  ]);
 
   const protocols = {
     ibc: {
@@ -302,6 +335,18 @@ const BlockchainInteropDemo = () => {
     }
   };
 
+  const statusLabel = (status) => {
+    switch (status) {
+      case 'pending': return tr('pending');
+      case 'committed': return tr('committed');
+      case 'observing': return tr('observing');
+      case 'relaying': return tr('relaying');
+      case 'completed': return tr('completed');
+      case 'failed': return tr('failed');
+      default: return status;
+    }
+  };
+
   const getEventColor = (type) => {
     switch (type) {
       case 'success': return 'border-l-emerald-500 bg-emerald-900 bg-opacity-20';
@@ -324,6 +369,8 @@ const BlockchainInteropDemo = () => {
           <p className="text-slate-300">
             {tr('Compare IBC, CCIP, and LayerZero - different approaches to cross-chain messaging')}
           </p>
+          <NextQuestCard q={q} className="mt-4" />
+          <QuestList q={q} />
         </div>
 
         {/* Protocol Selector */}
@@ -336,11 +383,12 @@ const BlockchainInteropDemo = () => {
                 setSourceChain(protocol.chains[0]);
                 setDestChain(protocol.chains[1]);
               }}
+              data-hint={`protocol-${key}`}
               className={`p-4 rounded-lg border-2 transition-all ${
                 selectedProtocol === key
                   ? `border-${protocol.color}-500 bg-${protocol.color}-900 bg-opacity-30`
                   : 'border-slate-600 bg-slate-800 hover:bg-slate-700'
-              }`}
+              } ${q.pulse(`protocol-${key}`)}`}
             >
               <div className="font-semibold text-lg mb-2">{protocol.name}</div>
               <div className="text-sm text-slate-300 mb-3">{protocol.description}</div>
@@ -410,7 +458,8 @@ const BlockchainInteropDemo = () => {
                     value={messageType}
                     onChange={(e) => setMessageType(e.target.value)}
                     disabled={isProcessing}
-                    className="w-full bg-slate-700 rounded px-3 py-2"
+                    data-hint="type-select"
+                    className={`w-full bg-slate-700 rounded px-3 py-2 ${q.pulse('type-select')}`}
                   >
                     {Object.entries(messageTypes).map(([key, type]) => (
                       <option key={key} value={key}>
@@ -435,7 +484,8 @@ const BlockchainInteropDemo = () => {
                 <button
                   onClick={sendMessage}
                   disabled={isProcessing}
-                  className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold flex items-center justify-center gap-2"
+                  data-hint="send-btn"
+                  className={`w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold flex items-center justify-center gap-2 ${q.pulse('send-btn')}`}
                 >
                   <Send size={18} />
                   {isProcessing ? tr('Processing...') : tr('Send Cross-Chain Message')}
@@ -558,7 +608,7 @@ const BlockchainInteropDemo = () => {
                           </div>
                         </div>
                         <div className={`px-3 py-1 rounded text-xs font-semibold ${getStatusColor(packet.status)}`}>
-                          {packet.status.toUpperCase()}
+                          {statusLabel(packet.status).toUpperCase()}
                         </div>
                       </div>
 
@@ -626,51 +676,51 @@ const BlockchainInteropDemo = () => {
               <tbody className="text-slate-300">
                 <tr className="border-b border-slate-700">
                   <td className="py-2 px-3 text-slate-400">{tr('Trust Model')}</td>
-                  <td className="py-2 px-3">Light Client (Trustless)</td>
-                  <td className="py-2 px-3">Oracle Consensus</td>
-                  <td className="py-2 px-3">Oracle + Relayer</td>
+                  <td className="py-2 px-3">{tr('Light Client (Trustless)')}</td>
+                  <td className="py-2 px-3">{tr('Oracle Consensus')}</td>
+                  <td className="py-2 px-3">{tr('Oracle + Relayer')}</td>
                 </tr>
                 <tr className="border-b border-slate-700">
                   <td className="py-2 px-3 text-slate-400">{tr('Security Level')}</td>
-                  <td className="py-2 px-3 text-emerald-400">Very High ⭐⭐⭐⭐⭐</td>
-                  <td className="py-2 px-3 text-blue-400">High ⭐⭐⭐⭐</td>
-                  <td className="py-2 px-3 text-yellow-400">Medium-High ⭐⭐⭐</td>
+                  <td className="py-2 px-3 text-emerald-400">{tr('Very High')} ⭐⭐⭐⭐⭐</td>
+                  <td className="py-2 px-3 text-blue-400">{tr('High')} ⭐⭐⭐⭐</td>
+                  <td className="py-2 px-3 text-yellow-400">{tr('Medium-High')} ⭐⭐⭐</td>
                 </tr>
                 <tr className="border-b border-slate-700">
                   <td className="py-2 px-3 text-slate-400">{tr('Speed')}</td>
-                  <td className="py-2 px-3">6-20 seconds</td>
-                  <td className="py-2 px-3">1-5 minutes</td>
-                  <td className="py-2 px-3">20-60 seconds</td>
+                  <td className="py-2 px-3">{tr('6-20 seconds')}</td>
+                  <td className="py-2 px-3">{tr('1-5 minutes')}</td>
+                  <td className="py-2 px-3">{tr('20-60 seconds')}</td>
                 </tr>
                 <tr className="border-b border-slate-700">
                   <td className="py-2 px-3 text-slate-400">{tr('Cost')}</td>
-                  <td className="py-2 px-3 text-emerald-400">Low</td>
-                  <td className="py-2 px-3 text-yellow-400">Medium</td>
-                  <td className="py-2 px-3 text-blue-400">Low-Medium</td>
+                  <td className="py-2 px-3 text-emerald-400">{tr('Low')}</td>
+                  <td className="py-2 px-3 text-yellow-400">{tr('Medium')}</td>
+                  <td className="py-2 px-3 text-blue-400">{tr('Low-Medium')}</td>
                 </tr>
                 <tr className="border-b border-slate-700">
                   <td className="py-2 px-3 text-slate-400">{tr('Verification')}</td>
-                  <td className="py-2 px-3">Cryptographic Proofs</td>
-                  <td className="py-2 px-3">Oracle Consensus (DON)</td>
-                  <td className="py-2 px-3">Independent Oracle & Relayer</td>
+                  <td className="py-2 px-3">{tr('Cryptographic Proofs')}</td>
+                  <td className="py-2 px-3">{tr('Oracle Consensus (DON)')}</td>
+                  <td className="py-2 px-3">{tr('Independent Oracle & Relayer')}</td>
                 </tr>
                 <tr>
                   <td className="py-2 px-3 text-slate-400">{tr('Setup Complexity')}</td>
-                  <td className="py-2 px-3">High (Light clients)</td>
-                  <td className="py-2 px-3">Low (Managed service)</td>
-                  <td className="py-2 px-3">Medium (Configure Oracle/Relayer)</td>
+                  <td className="py-2 px-3">{tr('High (Light clients)')}</td>
+                  <td className="py-2 px-3">{tr('Low (Managed service)')}</td>
+                  <td className="py-2 px-3">{tr('Medium (Configure Oracle/Relayer)')}</td>
                 </tr>
                 <tr className="border-b border-slate-700">
                   <td className="py-2 px-3 text-slate-400">{tr('Censorship Resistance')}</td>
-                  <td className="py-2 px-3 text-emerald-400">Very High</td>
-                  <td className="py-2 px-3 text-blue-400">High</td>
-                  <td className="py-2 px-3 text-yellow-400">Medium</td>
+                  <td className="py-2 px-3 text-emerald-400">{tr('Very High')}</td>
+                  <td className="py-2 px-3 text-blue-400">{tr('High')}</td>
+                  <td className="py-2 px-3 text-yellow-400">{tr('Medium')}</td>
                 </tr>
                 <tr>
                   <td className="py-2 px-3 text-slate-400">{tr('Best For')}</td>
-                  <td className="py-2 px-3">Cosmos ecosystem, max security</td>
-                  <td className="py-2 px-3">Enterprise, multi-chain apps</td>
-                  <td className="py-2 px-3">Cost-sensitive, custom configs</td>
+                  <td className="py-2 px-3">{tr('Cosmos ecosystem, max security')}</td>
+                  <td className="py-2 px-3">{tr('Enterprise, multi-chain apps')}</td>
+                  <td className="py-2 px-3">{tr('Cost-sensitive, custom configs')}</td>
                 </tr>
               </tbody>
             </table>
@@ -745,16 +795,16 @@ const BlockchainInteropDemo = () => {
                 <div className="text-xs font-semibold text-purple-400 mb-1">{tr('Network Status')}:</div>
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span>Active Oracle Nodes:</span>
+                    <span>{tr('Active Oracle Nodes')}:</span>
                     <span className="text-emerald-400">15/15</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Consensus Threshold:</span>
+                    <span>{tr('Consensus Threshold')}:</span>
                     <span className="text-blue-400">10/15 (66%)</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Risk Management:</span>
-                    <span className="text-emerald-400">✓ Active</span>
+                    <span>{tr('Risk Management')}:</span>
+                    <span className="text-emerald-400">✓ {tr('Active')}</span>
                   </div>
                 </div>
               </div>
@@ -782,14 +832,14 @@ const BlockchainInteropDemo = () => {
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
                     <span>Oracle (Chainlink):</span>
-                    <span className="text-emerald-400">✓ Online</span>
+                    <span className="text-emerald-400">✓ {tr('Online')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Relayer:</span>
-                    <span className="text-emerald-400">✓ Online</span>
+                    <span>{tr('Relayer')}:</span>
+                    <span className="text-emerald-400">✓ {tr('Online')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Independence:</span>
+                    <span>{tr('Independence')}:</span>
                     <span className="text-yellow-400">{tr('⚠ User-configurable')}</span>
                   </div>
                 </div>

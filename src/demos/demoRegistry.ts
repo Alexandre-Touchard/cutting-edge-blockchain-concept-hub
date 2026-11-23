@@ -11,6 +11,7 @@ const demo13Thumb = new URL('../public/photo/Demo13.png', import.meta.url).href;
 export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
   'automated-market-maker-demo': {
     id: 'amm-demo',
+    learningQuestsTotal: 5,
     title: 'AMM Math & Impermanent Loss',
     category: 'defi',
     difficulty: 'Intermediate',
@@ -27,6 +28,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
   },
   'parallel-transaction-executor': {
     id: 'parallel-executor',
+    learningQuestsTotal: 5,
     title: 'Parallel Transaction Executor',
     category: 'execution',
     difficulty: 'Intermediate',
@@ -42,6 +44,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
   },
   'dag-consensus': {
     id: 'dag-consensus',
+    learningQuestsTotal: 5,
     title: 'DAG Consensus (Tangle)',
     category: 'consensus',
     difficulty: 'Advanced',
@@ -58,6 +61,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
   },
   'layer2-rollup-simulation': {
     id: 'rollup-simulation',
+    learningQuestsTotal: 5,
     title: 'Layer 2 Rollup',
     category: 'scaling',
     difficulty: 'Intermediate',
@@ -73,6 +77,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
   },
   'eigenlayer-demo': {
     id: 'eigenlayer-demo',
+    learningQuestsTotal: 5,
     title: 'EigenLayer Restaking',
     category: 'security',
     difficulty: 'Advanced',
@@ -88,6 +93,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
   },
   'peerdas-demo': {
     id: 'peerdas-demo',
+    learningQuestsTotal: 6,
     title: 'PeerDAS Sampling',
     category: 'data',
     difficulty: 'Advanced',
@@ -103,6 +109,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
   },
   'minimal-ethereum-blockchain-demo': {
     id: 'ethereum-blockchain',
+    learningQuestsTotal: 5,
     title: 'Minimal Ethereum Blockchain',
     category: 'consensus',
     difficulty: 'Beginner',
@@ -118,6 +125,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
   },
   'erc-standards-showcase': {
     id: 'erc-standards',
+    learningQuestsTotal: 5,
     title: 'ERC Standards Playground',
     category: 'defi',
     difficulty: 'Beginner',
@@ -135,6 +143,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
 
   'blockchain-interoperability': {
     id: 'blockchain-interop',
+    learningQuestsTotal: 4,
     title: 'Cross-Chain Protocols',
     category: 'interop',
     difficulty: 'Advanced',
@@ -151,6 +160,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
 
   'fraud-proofs-arbitrum-dispute-game': {
     id: 'fraud-proofs-arbitrum',
+    learningQuestsTotal: 5,
     title: 'Fraud Proofs (Optimistic Rollup Arbitrum Dispute Game)',
     category: 'scaling',
     difficulty: 'Advanced',
@@ -188,6 +198,7 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
 
   'state-channels-demo': {
     id: 'state-channels',
+    learningQuestsTotal: 5,
     title: 'State Channels (Payment Channels)',
     category: 'scaling',
     difficulty: 'Intermediate',

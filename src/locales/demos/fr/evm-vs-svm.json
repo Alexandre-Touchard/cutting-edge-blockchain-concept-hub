@@ -254,5 +254,10 @@
   "who_runs_when_1s9a1rv": "Qui s’exécute quand",
   "the_same_transactions_run_one_by_one_t_u5gzy": "Les mêmes transactions, exécutées une par une (en haut) puis en vagues parallèles (en bas). Avancez pas à pas d’un côté ou de l’autre pour voir les barres se remplir.",
   "who_touches_what_1fdxrl8": "Qui touche à quoi",
-  "each_arrow_is_an_account_a_transaction_r_19tqgew": "Chaque flèche est un compte qu’une transaction lit ou écrit. Des transactions qui écrivent le même compte ne peuvent pas être dans la même vague."
+  "each_arrow_is_an_account_a_transaction_r_19tqgew": "Chaque flèche est un compte qu’une transaction lit ou écrit. Des transactions qui écrivent le même compte ne peuvent pas être dans la même vague.",
+  "pending_13ni37e": "en attente",
+  "ok_3hmjl": "ok",
+  "failed_m9qpqe": "échec",
+  "bob_swap_writes_dexpool_goes_first_15yhn5x": "Swap de Bob (écrit DexPool) — passe en premier",
+  "alice_swap_writes_dexpool_goes_secon_m5ay82": "Swap d’Alice (écrit DexPool) — passe en second"
 }

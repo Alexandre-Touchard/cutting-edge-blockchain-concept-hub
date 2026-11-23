@@ -2,119 +2,58 @@ import React, { useState } from 'react';
 import EduTooltip from '../../ui/EduTooltip';
 import { define } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
+import { NextQuestCard, QuestList, useDemoQuests } from '../quests/DemoQuests';
+import {
+  MAX_DIFFICULTY,
+  MAX_MINING_ATTEMPTS,
+  MIN_DIFFICULTY,
+  createTx,
+  expectedAttempts,
+  isBlockValid,
+  mine,
+  type BlockHeader,
+  type Tx
+} from './minimal_ethereum/chain';
 const T = EduTooltip;
 import { Plus, Pickaxe, Link, CheckCircle, AlertCircle, Wallet, ArrowRight, Zap } from 'lucide-react';
 
-// Simulating the Rust blockchain in JavaScript for the demo
-class Transaction {
-  from: string;
-  to: string;
-  value: number;
-  nonce: number;
-  hash: string;
-
-  constructor(from: string, to: string, value: number, nonce: number) {
-    this.from = from;
-    this.to = to;
-    this.value = value;
-    this.nonce = nonce;
-    this.hash = this.calculateHash();
-  }
-
-  calculateHash() {
-    const data = `${this.from}${this.to}${this.value}${this.nonce}`;
-    return this.simpleHash(data);
-  }
-
-  simpleHash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return '0x' + Math.abs(hash).toString(16).padStart(16, '0');
-  }
-}
-
-/** Shape shared by mined blocks and the plain genesis object kept in state. */
-type ChainBlock = {
-  number: number;
-  timestamp: number;
-  transactions: Transaction[];
-  previousHash: string;
+/** A mined block: the header it commits to plus the proof-of-work result. */
+type ChainBlock = BlockHeader & {
   hash: string;
   nonce: number;
   difficulty: number;
   miner: string;
+  /** Hashes computed before the winning nonce was found. */
+  attempts: number;
 };
 
-class Block implements ChainBlock {
-  number: number;
-  timestamp: number;
-  transactions: Transaction[];
-  previousHash: string;
-  difficulty: number;
-  miner: string;
-  nonce: number;
-  hash: string;
+type Accounts = Record<string, { balance: number; nonce: number }>;
 
-  constructor(number: number, transactions: Transaction[], previousHash: string, difficulty: number, miner: string) {
-    this.number = number;
-    this.timestamp = Date.now();
-    this.transactions = transactions;
-    this.previousHash = previousHash;
-    this.difficulty = difficulty;
-    this.miner = miner;
-    this.nonce = 0;
-    this.hash = '';
-  }
+/** Hashes per chunk before yielding to the browser so the UI stays responsive. */
+const MINING_CHUNK = 100_000;
 
-  calculateHash() {
-    const txData = this.transactions.map(tx => tx.hash).join('');
-    const data = `${this.number}${this.timestamp}${txData}${this.previousHash}${this.nonce}`;
-    let hash = 0;
-    for (let i = 0; i < data.length; i++) {
-      hash = ((hash << 5) - hash) + data.charCodeAt(i);
-      hash = hash & hash;
-    }
-    return Math.abs(hash).toString(16).padStart(64, '0');
-  }
-
-  mine() {
-    const target = '0'.repeat(this.difficulty);
-    while (!this.hash.startsWith(target)) {
-      this.nonce++;
-      this.hash = this.calculateHash();
-    }
-  }
-}
+// Genesis is mined for real (difficulty 4) once, with a fixed timestamp (Ethereum's 2015 launch).
+const GENESIS: ChainBlock = (() => {
+  const header: BlockHeader = { number: 0, timestamp: 1_438_269_973_000, previousHash: '0'.repeat(64), transactions: [] };
+  const r = mine(header, 4);
+  return { ...header, hash: r.hash, nonce: r.nonce, difficulty: 4, miner: 'Genesis', attempts: r.attempts };
+})();
 
 const EthereumBlockchainDemo = () => {
   const { tr } = useDemoI18n('ethereum-blockchain');
-  const [accounts, setAccounts] = useState({
+  const [accounts, setAccounts] = useState<Accounts>({
     'Alice': { balance: 1000, nonce: 0 },
     'Bob': { balance: 1000, nonce: 0 },
     'Charlie': { balance: 1000, nonce: 0 }
   });
 
-  const [chain, setChain] = useState<ChainBlock[]>([
-    {
-      number: 0,
-      timestamp: Date.now() - 10000,
-      transactions: [],
-      previousHash: '0000000000000000',
-      hash: '0000' + Math.random().toString(16).substr(2, 60),
-      nonce: 12847,
-      difficulty: 4,
-      miner: 'Genesis'
-    }
-  ]);
+  const [chain, setChain] = useState<ChainBlock[]>([GENESIS]);
 
-  const [pendingTxs, setPendingTxs] = useState([]);
+  const [pendingTxs, setPendingTxs] = useState<Tx[]>([]);
   const [mining, setMining] = useState(false);
-  const [selectedBlock, setSelectedBlock] = useState(null);
-  const [events, setEvents] = useState([]);
+  const [miningAttempts, setMiningAttempts] = useState(0);
+  const [selectedBlock, setSelectedBlock] = useState<number | null>(null);
+  const [events, setEvents] = useState<{ id: number; message: string; type: string; time: string }[]>([]);
   const [difficulty, setDifficulty] = useState(4);
 
   // Transaction form state
@@ -122,9 +61,9 @@ const EthereumBlockchainDemo = () => {
   const [txTo, setTxTo] = useState('Bob');
   const [txValue, setTxValue] = useState(100);
 
-  const addEvent = (message, type = 'info') => {
+  const addEvent = (message: string, type = 'info') => {
     setEvents(prev => [{
-      id: Date.now(),
+      id: Date.now() + Math.random(),
       message,
       type,
       time: new Date().toLocaleTimeString()
@@ -137,71 +76,147 @@ const EthereumBlockchainDemo = () => {
       return;
     }
 
-    if (accounts[txFrom].balance < txValue) {
-      addEvent(`${txFrom} has insufficient balance`, 'error');
+    // Pending transfers from the same sender already spend part of the balance and use up nonces.
+    const senderPending = pendingTxs.filter(tx => tx.from === txFrom);
+    const available = accounts[txFrom].balance - senderPending.reduce((sum, tx) => sum + tx.value, 0);
+    if (available < txValue) {
+      q.markDone('overspend');
+      addEvent(tr('{{name}} has insufficient balance', { name: txFrom }), 'error');
       return;
     }
 
-    const tx = new Transaction(txFrom, txTo, txValue, accounts[txFrom].nonce);
-    setPendingTxs([...pendingTxs, tx]);
-    addEvent(`Transaction added: ${txFrom} → ${txTo} (${txValue} ETH)`, 'success');
+    const tx = createTx(txFrom, txTo, txValue, accounts[txFrom].nonce + senderPending.length);
+    setPendingTxs(prev => [...prev, tx]);
+    addEvent(tr('Transaction added: {{from}} → {{to}} ({{value}} ETH)', { from: txFrom, to: txTo, value: txValue }), 'success');
   };
 
   const mineBlock = async () => {
-    if (pendingTxs.length === 0) {
+    if (mining) return;
+    const txs = pendingTxs;
+    if (txs.length === 0) {
       addEvent(tr('No transactions to mine'), 'error');
       return;
     }
 
     setMining(true);
+    setMiningAttempts(0);
     addEvent(tr('Mining started...'), 'info');
 
-    // Simulate mining delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
     const previousBlock = chain[chain.length - 1];
-    const block = new Block(
-      chain.length,
-      [...pendingTxs],
-      previousBlock.hash,
+    const header: BlockHeader = {
+      number: previousBlock.number + 1,
+      timestamp: Date.now(),
+      previousHash: previousBlock.hash,
+      transactions: [...txs]
+    };
+
+    // Real proof of work: try nonces in chunks, yielding between chunks so the page can repaint.
+    let total = 0;
+    let startNonce = 0;
+    let result = mine(header, difficulty, { startNonce, maxAttempts: MINING_CHUNK });
+    total += result.attempts;
+    while (!result.found && total < MAX_MINING_ATTEMPTS) {
+      setMiningAttempts(total);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      startNonce = result.nonce;
+      result = mine(header, difficulty, { startNonce, maxAttempts: Math.min(MINING_CHUNK, MAX_MINING_ATTEMPTS - total) });
+      total += result.attempts;
+    }
+    setMiningAttempts(total);
+
+    if (!result.found) {
+      setMining(false);
+      addEvent(tr('Gave up after {{attempts}} attempts without finding a valid nonce', { attempts: total.toLocaleString() }), 'error');
+      return;
+    }
+
+    const block: ChainBlock = {
+      ...header,
+      hash: result.hash,
+      nonce: result.nonce,
       difficulty,
-      'Miner' + Math.floor(Math.random() * 10)
-    );
+      miner: 'Miner' + Math.floor(Math.random() * 10),
+      attempts: total
+    };
 
-    block.mine();
-
-    // Update account balances
-    const newAccounts = { ...accounts };
-    pendingTxs.forEach(tx => {
-      newAccounts[tx.from].balance -= tx.value;
-      newAccounts[tx.from].nonce++;
-      
-      if (!newAccounts[tx.to]) {
-        newAccounts[tx.to] = { balance: 0, nonce: 0 };
-      }
-      newAccounts[tx.to].balance += tx.value;
+    // Execute the transactions: update balances and sender nonces (copy, don't mutate state).
+    setAccounts(prev => {
+      const next: Accounts = {};
+      for (const [name, acc] of Object.entries(prev)) next[name] = { ...acc };
+      txs.forEach(tx => {
+        next[tx.from].balance -= tx.value;
+        next[tx.from].nonce++;
+        if (!next[tx.to]) next[tx.to] = { balance: 0, nonce: 0 };
+        next[tx.to].balance += tx.value;
+      });
+      return next;
     });
-
-    setAccounts(newAccounts);
-    setChain([...chain, block]);
-    setPendingTxs([]);
+    setChain(prev => [...prev, block]);
+    setPendingTxs(prev => prev.filter(tx => !txs.includes(tx)));
     setMining(false);
-    addEvent(`Block #${block.number} mined with ${block.transactions.length} TXs (nonce: ${block.nonce})`, 'success');
+    addEvent(
+      tr('Block #{{number}} mined with {{txs}} TXs after {{attempts}} attempts (nonce: {{nonce}})', {
+        number: block.number,
+        txs: block.transactions.length,
+        attempts: total.toLocaleString(),
+        nonce: block.nonce
+      }),
+      'success'
+    );
   };
 
   const validateChain = () => {
-    for (let i = 1; i < chain.length; i++) {
+    for (let i = 0; i < chain.length; i++) {
       const current = chain[i];
-      const previous = chain[i - 1];
-      
-      if (current.previousHash !== previous.hash) {
+      if (i > 0 && current.previousHash !== chain[i - 1].hash) {
         addEvent(tr('Chain validation failed: broken link'), 'error');
+        return false;
+      }
+      if (!isBlockValid(current)) {
+        addEvent(tr('Chain validation failed: block #{{number}} has an invalid hash', { number: current.number }), 'error');
         return false;
       }
     }
     addEvent(tr('Chain is valid!'), 'success');
     return true;
   };
+
+  const q = useDemoQuests('ethereum-blockchain', [
+    {
+      id: 'add-tx',
+      text: tr('Add a transaction to the pool'),
+      tip: tr('Pick From, To and an amount, then click Add to Pool: it waits in the Transaction Pool.'),
+      done: pendingTxs.length > 0 || chain.length > 1,
+      target: 'add-to-pool'
+    },
+    {
+      id: 'mine',
+      text: tr('Mine a block and watch balances change'),
+      tip: tr('Click Mine Block: the pending transactions execute, and balances and nonces update in Accounts.'),
+      done: chain.length > 1,
+      target: 'mine-block'
+    },
+    {
+      id: 'inspect-block',
+      text: tr('Open a mined block to see its transactions'),
+      tip: tr('Click the newest block in the Blockchain column to list its transactions.'),
+      done: selectedBlock !== null && selectedBlock > 0,
+      target: 'latest-block'
+    },
+    {
+      id: 'overspend',
+      text: tr('Get a transfer rejected for insufficient balance'),
+      tip: tr('Set Amount (ETH) above the sender’s balance and click Add to Pool: the Event Log shows the error.'),
+      target: 'tx-amount'
+    },
+    {
+      id: 'nonce-2',
+      text: tr('Raise an account’s nonce to 2'),
+      tip: tr('Mine a second transfer from the same sender (e.g. Alice): its Nonce in Accounts goes up by one per mined transaction.'),
+      done: Object.values(accounts).some((a) => a.nonce >= 2),
+      target: 'add-to-pool'
+    }
+  ]);
 
   const getEventColor = (type) => {
     switch (type) {
@@ -219,6 +234,8 @@ const EthereumBlockchainDemo = () => {
           <p className="text-slate-300">
             {tr('Built with Rust concepts - Proof of Work, Account Model, Transaction Pool')}
           </p>
+          <NextQuestCard q={q} className="mt-4" />
+          <QuestList q={q} />
         </div>
 
         {/* Stats */}
@@ -243,7 +260,7 @@ const EthereumBlockchainDemo = () => {
             <div className="flex items-center gap-2 mb-2">
               <Pickaxe size={20} className="text-purple-400" />
               <span className="text-sm text-slate-400">
-  <T term="Difficulty" text={define('Difficulty')} />
+  <T term={tr('Difficulty')} text={define('Difficulty')} />
 </span>
             </div>
             <div className="text-2xl font-bold">{difficulty}</div>
@@ -252,7 +269,7 @@ const EthereumBlockchainDemo = () => {
           <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-2">
               <Wallet size={20} className="text-emerald-400" />
-              <span className="text-sm text-slate-400">Total ETH</span>
+              <span className="text-sm text-slate-400">{tr('Total ETH')}</span>
             </div>
             <div className="text-2xl font-bold">
               {Object.values(accounts).reduce((sum, acc) => sum + acc.balance, 0)}
@@ -274,7 +291,7 @@ const EthereumBlockchainDemo = () => {
                   <div key={name} className="bg-slate-700 rounded p-3">
                     <div className="flex justify-between items-center mb-1">
                       <span className="font-semibold">{name}</span>
-                      <span className="text-sm text-slate-400">Nonce: {account.nonce}</span>
+                      <span className="text-sm text-slate-400">{tr('Nonce')}: {account.nonce}</span>
                     </div>
                     <div className="text-2xl font-bold text-emerald-400">
                       {account.balance} ETH
@@ -324,7 +341,8 @@ const EthereumBlockchainDemo = () => {
                     type="number"
                     value={txValue}
                     onChange={(e) => setTxValue(parseInt(e.target.value) || 0)}
-                    className="w-full bg-slate-700 rounded px-3 py-2"
+                    data-hint="tx-amount"
+                    className={`w-full bg-slate-700 rounded px-3 py-2 ${q.pulse('tx-amount')}`}
                     min="1"
                   />
                 </div>
@@ -332,7 +350,8 @@ const EthereumBlockchainDemo = () => {
                 <button
                   onClick={addTransaction}
                   disabled={mining}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 rounded font-semibold flex items-center justify-center gap-2"
+                  data-hint="add-to-pool"
+                  className={`w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 rounded font-semibold flex items-center justify-center gap-2 ${q.pulse('add-to-pool')}`}
                 >
                   <Plus size={18} />
                   {tr('Add to Pool')}
@@ -353,27 +372,40 @@ const EthereumBlockchainDemo = () => {
                 </label>
                 <input
                   type="range"
-                  min="1"
-                  max="6"
+                  min={MIN_DIFFICULTY}
+                  max={MAX_DIFFICULTY}
                   value={difficulty}
                   onChange={(e) => setDifficulty(parseInt(e.target.value))}
                   disabled={mining}
+                  aria-label={tr('Difficulty')}
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-slate-500 mt-1">
                   <span>{tr('Easy')}</span>
                   <span>{tr('Hard')}</span>
                 </div>
+                <div className="text-xs text-slate-400 mt-2">
+                  {tr('About {{attempts}} hashes expected (16^{{difficulty}})', {
+                    attempts: expectedAttempts(difficulty).toLocaleString(),
+                    difficulty
+                  })}
+                </div>
               </div>
 
               <button
                 onClick={mineBlock}
                 disabled={mining || pendingTxs.length === 0}
-                className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold flex items-center justify-center gap-2"
+                data-hint="mine-block"
+                className={`w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold flex items-center justify-center gap-2 ${q.pulse('mine-block')}`}
               >
                 <Pickaxe size={18} />
                 {mining ? tr('Mining...') : tr('Mine Block')}
               </button>
+              {mining && (
+                <div className="mt-2 text-xs text-purple-300 text-center" aria-live="polite">
+                  {tr('{{attempts}} nonces tried so far', { attempts: miningAttempts.toLocaleString() })}
+                </div>
+              )}
 
               <button
                 onClick={validateChain}
@@ -434,7 +466,7 @@ const EthereumBlockchainDemo = () => {
                         <span className="ml-auto text-emerald-400 font-bold">{tx.value} ETH</span>
                       </div>
                       <div className="text-xs text-slate-400 mt-1">
-                        Nonce: {tx.nonce}
+                        {tr('Nonce')}: {tx.nonce}
                       </div>
                     </div>
                   ))
@@ -456,45 +488,55 @@ const EthereumBlockchainDemo = () => {
                   <div key={block.number}>
                     <div
                       onClick={() => setSelectedBlock(selectedBlock === block.number ? null : block.number)}
+                      data-hint={idx === 0 ? 'latest-block' : undefined}
                       className={`bg-slate-700 rounded-lg p-3 cursor-pointer border-2 transition-all ${
                         selectedBlock === block.number ? 'border-blue-500' : 'border-slate-600'
-                      }`}
+                      } ${idx === 0 ? q.pulse('latest-block') : ''}`}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <div className="font-semibold text-lg">Block #{block.number}</div>
+                          <div className="font-semibold text-lg">{tr('Block #{{number}}', { number: block.number })}</div>
                           <div className="text-xs text-slate-400">{block.miner}</div>
                         </div>
                         <div className={`px-2 py-1 rounded text-xs font-semibold ${
                           block.number === 0 ? 'bg-purple-600' : 'bg-emerald-600'
                         }`}>
-                          {block.number === 0 ? 'GENESIS' : 'MINED'}
+                          {block.number === 0 ? tr('GENESIS') : tr('MINED')}
                         </div>
                       </div>
 
                       <div className="text-xs space-y-1">
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Transactions:</span>
+                          <span className="text-slate-400">{tr('Transactions')}:</span>
                           <span className="font-semibold">{block.transactions.length}</span>
                         </div>
                         <div className="flex justify-between">
+                          <span className="text-slate-400">{tr('Difficulty')}:</span>
+                          <span className="font-mono">{block.difficulty}</span>
+                        </div>
+                        <div className="flex justify-between">
                           <span className="text-slate-400">
-  <T term="Nonce" text={define('Nonce')} />
+  <T term={tr('Nonce')} text={define('Nonce')} />
   :
 </span>
                           <span className="font-mono">{block.nonce}</span>
                         </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">{tr('Attempts')}:</span>
+                          <span className="font-mono">{block.attempts.toLocaleString()}</span>
+                        </div>
                         <div>
-                          <span className="text-slate-400">Hash:</span>
+                          <span className="text-slate-400">{tr('Hash')}:</span>
                           <div className="font-mono text-blue-400 break-all text-xs mt-1">
-                            {block.hash}
+                            <span className="text-emerald-300">{block.hash.slice(0, block.difficulty)}</span>
+                            {block.hash.slice(block.difficulty)}
                           </div>
                         </div>
                       </div>
 
                       {selectedBlock === block.number && block.transactions.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-slate-600 space-y-2">
-                          <div className="text-xs font-semibold text-slate-300">Transactions:</div>
+                          <div className="text-xs font-semibold text-slate-300">{tr('Transactions')}:</div>
                           {block.transactions.map((tx, txIdx) => (
                             <div key={txIdx} className="bg-slate-600 rounded p-2 text-xs">
                               <div className="flex items-center gap-2">
@@ -529,17 +571,17 @@ const EthereumBlockchainDemo = () => {
               <h3 className="font-semibold text-lg mb-3 text-emerald-400">{tr('How This Maps to Ethereum')}</h3>
               <div className="space-y-3 text-sm">
                 <div className="bg-slate-700 rounded p-3">
-                  <div className="font-bold text-blue-300">Blocks & State Transitions</div>
-                  <p className="text-xs text-slate-300 mb-2">Ethereum clients execute transactions to update state, then commit to results via block headers and roots.</p>
-                  <a href="https://ethereum.org/en/developers/docs/" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-300 hover:text-blue-200 underline">Ethereum dev docs →</a>
+                  <div className="font-bold text-blue-300">{tr('Blocks & State Transitions')}</div>
+                  <p className="text-xs text-slate-300 mb-2">{tr('Ethereum clients execute transactions to update state, then commit to results via block headers and roots.')}</p>
+                  <a href="https://ethereum.org/en/developers/docs/" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-300 hover:text-blue-200 underline">{tr('Ethereum dev docs →')}</a>
                 </div>
                 <div className="bg-slate-700 rounded p-3">
-                  <div className="font-bold text-purple-300">Consensus & Finality</div>
-                  <p className="text-xs text-slate-300">Modern Ethereum uses Proof of Stake and finality gadgets; this demo shows the core chain/transaction ideas in a minimal way.</p>
+                  <div className="font-bold text-purple-300">{tr('Consensus & Finality')}</div>
+                  <p className="text-xs text-slate-300">{tr('Modern Ethereum uses Proof of Stake and finality gadgets; this demo shows the core chain/transaction ideas in a minimal way.')}</p>
                 </div>
                 <div className="bg-slate-700 rounded p-3">
-                  <div className="font-bold text-pink-300">Mempool & Fees</div>
-                  <p className="text-xs text-slate-300">Real networks have fee markets, MEV, and propagation delays; the mempool concept is the same.</p>
+                  <div className="font-bold text-pink-300">{tr('Mempool & Fees')}</div>
+                  <p className="text-xs text-slate-300">{tr('Real networks have fee markets, MEV, and propagation delays; the mempool concept is the same.')}</p>
                 </div>
               </div>
             </div>
@@ -567,9 +609,9 @@ const EthereumBlockchainDemo = () => {
         <div className="mt-6 bg-slate-800 rounded-lg p-6 border border-slate-700">
           <h2 className="text-2xl font-bold mb-4 text-blue-300">📚 {tr('Further Reading')}</h2>
           <ul className="space-y-2 text-sm">
-            <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://ethereum.org/en/developers/docs/" target="_blank" rel="noopener noreferrer">Ethereum developer documentation →</a></li>
-            <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://ethereum.org/en/developers/docs/consensus-mechanisms/pow/" target="_blank" rel="noopener noreferrer">Proof of Work basics →</a></li>
-            <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://bitcoin.org/bitcoin.pdf" target="_blank" rel="noopener noreferrer">Bitcoin whitepaper (foundations) →</a></li>
+            <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://ethereum.org/en/developers/docs/" target="_blank" rel="noopener noreferrer">{tr('Ethereum developer documentation →')}</a></li>
+            <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://ethereum.org/en/developers/docs/consensus-mechanisms/pow/" target="_blank" rel="noopener noreferrer">{tr('Proof of Work basics →')}</a></li>
+            <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://bitcoin.org/bitcoin.pdf" target="_blank" rel="noopener noreferrer">{tr('Bitcoin whitepaper (foundations) →')}</a></li>
           </ul>
         </div>
 

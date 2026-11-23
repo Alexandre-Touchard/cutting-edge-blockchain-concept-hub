@@ -416,5 +416,14 @@
     },
     "hidePaths": "Ocultar las rutas",
     "showPaths": "Mostrar las rutas"
+  },
+  "quests": {
+    "title": "Misiones de aprendizaje",
+    "done": "Hecha",
+    "todo": "Pendiente",
+    "showMe": "Muéstramelo",
+    "next": "Siguiente misión ({{n}}/{{total}})",
+    "allDone": "¡Todas las misiones completadas!",
+    "allDoneHint": "Buen trabajo. Sigue experimentando con los controles para explorar otros escenarios."
   }
 }

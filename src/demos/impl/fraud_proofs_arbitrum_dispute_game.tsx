@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Play,
   RotateCcw,
@@ -13,11 +13,13 @@ import {
   Split,
   Gavel,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Square
 } from 'lucide-react';
 import { useDemoI18n } from '../useDemoI18n';
 import EduTooltip from '../../ui/EduTooltip';
 import { define } from '../glossary';
+import { useDemoQuests, QuestList, NextQuestCard } from '../quests/DemoQuests';
 
 type Phase =
   | 'setup'
@@ -55,7 +57,7 @@ function transition(prev: number, input: number) {
   return (prev * 31 + input) % 100000;
 }
 
-function buildTrace(opts: { steps: number; seed: number; malicious: boolean }): Trace {
+export function buildTrace(opts: { steps: number; seed: number; malicious: boolean }): Trace {
   const rng = mulberry32(opts.seed);
   const inputs = Array.from({ length: opts.steps }, () => 1 + Math.floor(rng() * 997));
 
@@ -80,20 +82,48 @@ function buildTrace(opts: { steps: number; seed: number; malicious: boolean }): 
   return { steps: opts.steps, inputs, trueStates, claimedStates, bugStep };
 }
 
-function firstMismatchIndex(trace: Trace): number | null {
+export function firstMismatchIndex(trace: Trace): number | null {
   for (let i = 0; i <= trace.steps; i++) {
     if (trace.trueStates[i] !== trace.claimedStates[i]) return i;
   }
   return null;
 }
 
-function rangeContainsMismatch(trace: Trace, lo: number, hi: number): boolean {
-  // mismatch can be at a state index. For a step range [lo,hi], the relevant state indices are [lo..hi].
-  for (let i = lo; i <= hi; i++) {
-    if (trace.trueStates[i] !== trace.claimedStates[i]) return true;
-  }
-  return false;
+/**
+ * One bisection round. Invariant: both parties agree on state[lo] and disagree on state[hi].
+ * The challenger checks the proposer's midpoint: if it agrees, the first wrong step is in the right
+ * half, otherwise in the left half. This converges on the first incorrect transition (a wrong claim
+ * stays wrong after the bug, so "which half contains a mismatch" would always say "right").
+ * With an honest proposer every midpoint agrees, so the game ends on the last step and the
+ * challenger loses.
+ */
+export function bisectStep(trace: Trace, lo: number, hi: number): { mid: number; lo: number; hi: number; side: 'left' | 'right' } {
+  const mid = Math.floor((lo + hi) / 2);
+  const midAgrees = trace.trueStates[mid] === trace.claimedStates[mid];
+  return midAgrees ? { mid, lo: mid, hi, side: 'right' } : { mid, lo, hi: mid, side: 'left' };
 }
+
+export type AutoPlayAction = 'post' | 'challenge' | 'bisect' | 'prove' | 'done';
+
+/** What auto-play does next, given the current (fresh) game state. Every action changes phase, lo or hi. */
+export function autoPlayAction(phase: Phase, lo: number, hi: number): AutoPlayAction {
+  switch (phase) {
+    case 'setup':
+      return 'post';
+    case 'asserted':
+      return 'challenge';
+    case 'challenged':
+    case 'bisection':
+      return hi > lo ? 'bisect' : 'done';
+    case 'one-step-proof':
+      return hi - lo === 1 ? 'prove' : 'done';
+    default:
+      return 'done';
+  }
+}
+
+/** Delay between two auto-play moves, so each phase is visible. */
+const AUTO_PLAY_STEP_MS = 900;
 
 export const demoMeta = {
   id: 'fraud-proofs-arbitrum',
@@ -123,6 +153,7 @@ export default function FraudProofsArbitrumDisputeGame() {
 
   const [isSetupVisible, setIsSetupVisible] = useState(true);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
+  const [autoPlaying, setAutoPlaying] = useState(false);
 
   // disputed state index interval [lo, hi]
   const [lo, setLo] = useState(0);
@@ -130,10 +161,53 @@ export default function FraudProofsArbitrumDisputeGame() {
 
   const mismatchAt = useMemo(() => firstMismatchIndex(trace), [trace]);
 
-  const pushEvent = (kind: Event['kind'], msg: string) =>
-    setEvents((prev) => [{ ts: Date.now(), kind, msg }, ...prev].slice(0, 12));
+  const q = useDemoQuests('fraud-proofs-arbitrum', [
+    {
+      id: 'post-fraud',
+      text: tr('Post a fraudulent assertion'),
+      tip: tr('Keep Malicious proposer ticked and click Post Assertion: the claimed final state differs from the true one.'),
+      done: phase !== 'setup' && mismatchAt !== null,
+      target: 'post-assertion'
+    },
+    {
+      id: 'challenge',
+      text: tr('Challenge the assertion'),
+      tip: tr('Click Challenge to lock the challenger bond and open the interactive bisection game.'),
+      done: phase === 'bisection',
+      target: 'challenge'
+    },
+    {
+      id: 'bisect',
+      text: tr('Bisect by hand down to a single step'),
+      tip: tr('Click Commit midpoint + bisect repeatedly (no auto-play): each round halves [lo, hi] until hi = lo + 1.'),
+      done: phase === 'bisection' && hi - lo === 1 && !autoPlaying,
+      target: 'bisect'
+    },
+    {
+      id: 'prove-fraud',
+      text: tr('Win the dispute with a one-step proof'),
+      tip: tr('Click Commit midpoint + bisect once more to reach the one-step phase, then Execute one-step proof: L1 checks one transition and the proposer loses its bond.'),
+      done: phase === 'resolved' && trace.trueStates[lo + 1] !== trace.claimedStates[lo + 1],
+      target: 'one-step'
+    },
+    {
+      id: 'honest-loses',
+      text: tr('Challenge an honest proposer and lose'),
+      tip: tr('Untick Malicious proposer, then post, challenge, bisect and Execute one-step proof (or just click Auto-play full dispute): this time the challenger loses its bond.'),
+      done: phase === 'resolved' && mismatchAt === null,
+      target: 'malicious'
+    }
+  ]);
+
+  // Unique, increasing ids for the event list (several events can share the same millisecond).
+  const eventSeq = useRef(0);
+  const pushEvent = (kind: Event['kind'], msg: string) => {
+    const ts = ++eventSeq.current;
+    setEvents((prev) => [{ ts, kind, msg }, ...prev].slice(0, 12));
+  };
 
   const resetAll = () => {
+    setAutoPlaying(false);
     setPhase('setup');
     setEvents([]);
     setLo(0);
@@ -167,27 +241,15 @@ export default function FraudProofsArbitrumDisputeGame() {
       pushEvent('info', tr('Dispute range is 1 step - ready for one-step proof on L1.'));
       return;
     }
-    const mid = Math.floor((lo + hi) / 2);
-    const claimedMid = trace.claimedStates[mid];
-    pushEvent('info', tr('Proposer commits midpoint state[{{mid}}] = {{value}}', { mid, value: claimedMid }));
-
-    // Challenger chooses half where mismatch lies.
-    const leftHasMismatch = rangeContainsMismatch(trace, lo, mid);
-    const rightHasMismatch = rangeContainsMismatch(trace, mid, hi);
-
-    // In a valid dispute there should be a mismatch in exactly one half.
-    const choose: 'left' | 'right' = leftHasMismatch && !rightHasMismatch ? 'left' : 'right';
-
-    if (choose === 'left') {
-      setHi(mid);
-      pushEvent('info', tr('Challenger selects LEFT half: [{{lo}}, {{hi}}]', { lo, hi: mid }));
+    // Challenger chooses the half where the mismatch lies.
+    const next = bisectStep(trace, lo, hi);
+    pushEvent('info', tr('Proposer commits midpoint state[{{mid}}] = {{value}}', { mid: next.mid, value: trace.claimedStates[next.mid] }));
+    setLo(next.lo);
+    setHi(next.hi);
+    if (next.side === 'left') {
+      pushEvent('info', tr('Challenger selects LEFT half: [{{lo}}, {{hi}}]', { lo: next.lo, hi: next.hi }));
     } else {
-      setLo(mid);
-      pushEvent('info', tr('Challenger selects RIGHT half: [{{lo}}, {{hi}}]', { lo: mid, hi }));
-    }
-
-    if (mid - lo <= 1 || hi - mid <= 1) {
-      // Might become a 1-step range after this update; check next render.
+      pushEvent('info', tr('Challenger selects RIGHT half: [{{lo}}, {{hi}}]', { lo: next.lo, hi: next.hi }));
     }
   };
 
@@ -213,34 +275,62 @@ export default function FraudProofsArbitrumDisputeGame() {
     }
   };
 
-  const autoplayToResolution = () => {
-    if (phase === 'setup') postAssertion();
-    if (phase === 'asserted') challenge();
-    if (phase === 'challenged') {
-      // will move to bisection inside challenge()
+  // Auto-play: one move per tick. The timer always calls the latest render's runner, so each move
+  // sees the current phase / interval (no stale closure), and the effect re-arms after every move.
+  const runAutoMove = () => {
+    const action = autoPlayAction(phase, lo, hi);
+    if (action === 'post') postAssertion();
+    else if (action === 'challenge') challenge();
+    else if (action === 'bisect') commitMidpoint();
+    else if (action === 'prove') resolveOneStepProof();
+    else setAutoPlaying(false);
+  };
+  const autoMoveRef = useRef(runAutoMove);
+  autoMoveRef.current = runAutoMove;
+
+  useEffect(() => {
+    if (!autoPlaying) return;
+    if (autoPlayAction(phase, lo, hi) === 'done') {
+      setAutoPlaying(false);
+      return;
     }
+    const id = window.setTimeout(() => autoMoveRef.current(), AUTO_PLAY_STEP_MS);
+    return () => window.clearTimeout(id);
+  }, [autoPlaying, phase, lo, hi]);
 
-    // Run bisection until one step.
-    let aLo = lo;
-    let aHi = hi;
+  const stopAutoPlay = () => setAutoPlaying(false);
 
-    // If we are not yet in bisection state due to setState async, just push an event.
-    pushEvent('info', tr('⏩ Auto-playing bisection rounds...'));
+  /** Settings changed: back to setup (and stop auto-play, the game it was playing is gone). */
+  const restartGame = (nextSteps: number) => {
+    setAutoPlaying(false);
+    setPhase('setup');
+    setLo(0);
+    setHi(nextSteps);
+  };
 
-    // Compute using current trace synchronously.
-    while (aHi - aLo > 1) {
-      const mid = Math.floor((aLo + aHi) / 2);
-      const leftHasMismatch = rangeContainsMismatch(trace, aLo, mid);
-      const rightHasMismatch = rangeContainsMismatch(trace, mid, aHi);
-      const choose: 'left' | 'right' = leftHasMismatch && !rightHasMismatch ? 'left' : 'right';
-      if (choose === 'left') aHi = mid;
-      else aLo = mid;
+  const toggleAutoPlay = () => {
+    if (autoPlaying) {
+      stopAutoPlay();
+      pushEvent('info', tr('Auto-play stopped.'));
+      return;
     }
+    if (phase === 'resolved') {
+      // Replay the whole game from the start.
+      setPhase('setup');
+      setLo(0);
+      setHi(steps);
+    }
+    pushEvent('info', tr('⏩ Auto-playing the dispute game step by step…'));
+    setAutoPlaying(true);
+  };
 
-    setPhase('one-step-proof');
-    setLo(aLo);
-    setHi(aHi);
-    pushEvent('info', tr('Reached one-step proof range: [{{lo}}, {{hi}}]', { lo: aLo, hi: aHi }));
+  const phaseLabel: Record<Phase, string> = {
+    setup: tr('Setup'),
+    asserted: tr('Asserted'),
+    challenged: tr('Challenged'),
+    bisection: tr('Bisection'),
+    'one-step-proof': tr('One-step proof'),
+    resolved: tr('Resolved')
   };
 
   const statusPill = useMemo(() => {
@@ -298,6 +388,8 @@ export default function FraudProofsArbitrumDisputeGame() {
               )}
             </button>
           </div>
+          <NextQuestCard q={q} className="mt-4" />
+          <QuestList q={q} />
         </div>
 
         <div className={`grid grid-cols-1 gap-6 ${isSetupVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-1'}`}>
@@ -328,9 +420,7 @@ export default function FraudProofsArbitrumDisputeGame() {
                   onChange={(e) => {
                     const v = Number(e.target.value);
                     setSteps(v);
-                    setHi(v);
-                    setLo(0);
-                    setPhase('setup');
+                    restartGame(v);
                   }}
                   className="w-full"
                 />
@@ -344,23 +434,19 @@ export default function FraudProofsArbitrumDisputeGame() {
                   value={seed}
                   onChange={(e) => {
                     setSeed(Number(e.target.value));
-                    setPhase('setup');
-                    setLo(0);
-                    setHi(steps);
+                    restartGame(steps);
                   }}
                   className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700"
                 />
               </label>
 
-              <label className="flex items-center gap-2">
+              <label data-hint="malicious" className={`flex items-center gap-2 ${q.pulse('malicious')}`}>
                 <input
                   type="checkbox"
                   checked={malicious}
                   onChange={(e) => {
                     setMalicious(e.target.checked);
-                    setPhase('setup');
-                    setLo(0);
-                    setHi(steps);
+                    restartGame(steps);
                   }}
                 />
                 <span className="text-sm">{tr('Malicious proposer (inject a wrong step)')}</span>
@@ -404,8 +490,9 @@ export default function FraudProofsArbitrumDisputeGame() {
                 >
                   <button
                     onClick={postAssertion}
-                    disabled={phase !== 'setup'}
-                    className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 flex items-center gap-2"
+                    disabled={phase !== 'setup' || autoPlaying}
+                    data-hint="post-assertion"
+                    className={`px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 flex items-center gap-2 ${q.pulse('post-assertion')}`}
                   >
                     <Play size={16} /> {tr('Post Assertion')}
                   </button>
@@ -418,8 +505,9 @@ export default function FraudProofsArbitrumDisputeGame() {
                 >
                   <button
                     onClick={challenge}
-                    disabled={phase !== 'asserted'}
-                    className="px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 flex items-center gap-2"
+                    disabled={phase !== 'asserted' || autoPlaying}
+                    data-hint="challenge"
+                    className={`px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 flex items-center gap-2 ${q.pulse('challenge')}`}
                   >
                     <Swords size={16} /> {tr('Challenge')}
                   </button>
@@ -432,8 +520,9 @@ export default function FraudProofsArbitrumDisputeGame() {
                 >
                   <button
                     onClick={commitMidpoint}
-                    disabled={phase !== 'bisection'}
-                    className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 flex items-center gap-2"
+                    disabled={phase !== 'bisection' || autoPlaying}
+                    data-hint="bisect"
+                    className={`px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 flex items-center gap-2 ${q.pulse('bisect')}`}
                   >
                     <Split size={16} /> {tr('Commit midpoint + bisect')}
                   </button>
@@ -441,14 +530,22 @@ export default function FraudProofsArbitrumDisputeGame() {
 
                 <EduTooltip
                   text={tr(
-                    'Automatically run the bisection rounds to reach a 1-step dispute interval (hi = lo + 1), ready for the final on-chain check.'
+                    'Automatically play the whole game, one move at a time: post the assertion, challenge it, bisect until hi = lo + 1, then execute the one-step proof on L1.'
                   )}
                 >
                   <button
-                    onClick={autoplayToResolution}
+                    onClick={toggleAutoPlay}
                     className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center gap-2"
                   >
-                    <FastForward size={16} /> {tr('Auto-play to one-step proof')}
+                    {autoPlaying ? (
+                      <>
+                        <Square size={16} /> {tr('Stop auto-play')}
+                      </>
+                    ) : (
+                      <>
+                        <FastForward size={16} /> {tr('Auto-play full dispute')}
+                      </>
+                    )}
                   </button>
                 </EduTooltip>
 
@@ -459,8 +556,9 @@ export default function FraudProofsArbitrumDisputeGame() {
                 >
                   <button
                     onClick={resolveOneStepProof}
-                    disabled={phase !== 'one-step-proof'}
-                    className="px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap"
+                    disabled={phase !== 'one-step-proof' || autoPlaying}
+                    data-hint="one-step"
+                    className={`px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-40 inline-flex items-center gap-2 whitespace-nowrap ${q.pulse('one-step')}`}
                   >
                     <Gavel size={16} /> {tr('Execute one-step proof')}
                   </button>
@@ -534,7 +632,7 @@ export default function FraudProofsArbitrumDisputeGame() {
               </div>
               <div className="text-right text-sm">
                 <div>
-                  {tr('Phase')}: <span className="font-mono text-slate-200">{phase}</span>
+                  {tr('Phase')}: <span className="font-mono text-slate-200">{phaseLabel[phase]}</span>
                 </div>
                 <div className="whitespace-nowrap inline-flex items-center gap-2">
                   <span>{tr('Dispute steps')}:</span>

@@ -89,6 +89,7 @@ function QuestRow({ done, text, tip }: { done: boolean; text: string; tip: strin
 
 type PbsBuilder = {
   id: string;
+  n: number;
   marginPct: number;
   bidEth: number;
   builderEarnEth: number;
@@ -136,6 +137,7 @@ function PbsModule({
       const builderEarnEth = params.mevOpportunityEth - bid - gasEth;
       out.push({
         id: `Builder ${i + 1}`,
+        n: i + 1,
         marginPct: margin,
         bidEth: Math.max(0, bid),
         builderEarnEth,
@@ -174,7 +176,7 @@ function PbsModule({
       addEvent(
         'success',
         tr('Winner selected: {{b}} bids {{bid}} ETH → proposer earns {{earn}} ETH.', {
-          b: winner.id,
+          b: tr('Builder {{n}}', { n: winner.n }),
           bid: winner.bidEth.toFixed(3),
           earn: proposerEarnEth.toFixed(3)
         })
@@ -331,7 +333,7 @@ function PbsModule({
                   const isWin = winner?.id === b.id;
                   return (
                     <tr key={b.id} className={isWin ? 'bg-emerald-950/20' : ''}>
-                      <td className={`py-1 ${isWin ? 'text-emerald-200 font-semibold' : 'text-slate-200'}`}>{b.id}</td>
+                      <td className={`py-1 ${isWin ? 'text-emerald-200 font-semibold' : 'text-slate-200'}`}>{tr('Builder {{n}}', { n: b.n })}</td>
                       <td className="py-1 text-right text-slate-200">{b.marginPct}%</td>
                       <td className="py-1 text-right text-slate-100 font-mono">{b.bidEth.toFixed(3)}</td>
                       <td className={`py-1 text-right font-mono ${b.builderEarnEth >= 0 ? 'text-slate-100' : 'text-rose-200'}`}>{b.builderEarnEth.toFixed(3)}</td>
@@ -347,7 +349,7 @@ function PbsModule({
             <div className="text-slate-300">{tr('Proposer earns')}</div>
             <div className="text-right font-mono text-slate-100">{proposerEarnEth.toFixed(3)} ETH</div>
             <div className="text-slate-300">{tr('Winner')}</div>
-            <div className="text-right font-mono text-slate-100">{winner ? winner.id : '—'}</div>
+            <div className="text-right font-mono text-slate-100">{winner ? tr('Builder {{n}}', { n: winner.n }) : '—'}</div>
           </div>
         </div>
 
@@ -458,6 +460,8 @@ export default function MevPbsSimulation() {
   // -----------------------------
   type ArbPhase = 1 | 2 | 3 | 4;
 
+  type ArbTxWho = 'Victim (Venue A)' | 'Searcher buy (Venue A)' | 'Searcher sell (Venue B)';
+
   type ArbComputation = {
     priceRef: number;
     priceA0: number;
@@ -470,8 +474,9 @@ export default function MevPbsSimulation() {
     gasCostEth: number;
     netProfitEth: number;
     ordering: Array<{
-      who: 'Victim (Venue A)' | 'Searcher buy (Venue A)' | 'Searcher sell (Venue B)';
-      detail: string;
+      who: ArbTxWho;
+      side: 'buy' | 'sell';
+      amountEth: string;
     }>;
   };
 
@@ -538,11 +543,11 @@ export default function MevPbsSimulation() {
     const priceA2 = clamp(priceA1 + (priceB - priceA1) * restore01, 50, 50_000);
 
     const ordering: ArbComputation['ordering'] = [
-      { who: 'Victim (Venue A)', detail: `sell ${fmt(victimSellEth, 2)} ETH` }
+      { who: 'Victim (Venue A)', side: 'sell', amountEth: fmt(victimSellEth, 2) }
     ];
     if (searcherSizeEth > 1e-9) {
-      ordering.push({ who: 'Searcher buy (Venue A)', detail: `buy ${fmt(searcherSizeEth, 2)} ETH` });
-      ordering.push({ who: 'Searcher sell (Venue B)', detail: `sell ${fmt(searcherSizeEth, 2)} ETH` });
+      ordering.push({ who: 'Searcher buy (Venue A)', side: 'buy', amountEth: fmt(searcherSizeEth, 2) });
+      ordering.push({ who: 'Searcher sell (Venue B)', side: 'sell', amountEth: fmt(searcherSizeEth, 2) });
     }
 
     return {
@@ -775,6 +780,20 @@ export default function MevPbsSimulation() {
       validatorTipEth,
       ordering
     };
+  }
+
+  /** Display label for a transaction actor (the English value stays in data for the styling logic). */
+  function txWhoLabel(who: SandwichTxWho | ArbTxWho): string {
+    const labels: Record<SandwichTxWho | ArbTxWho, string> = {
+      'Searcher (front-run)': tr('Searcher (front-run)'),
+      'Other mempool tx': tr('Other mempool tx'),
+      Victim: tr('Victim'),
+      'Searcher (back-run)': tr('Searcher (back-run)'),
+      'Victim (Venue A)': tr('Victim (Venue A)'),
+      'Searcher buy (Venue A)': tr('Searcher buy (Venue A)'),
+      'Searcher sell (Venue B)': tr('Searcher sell (Venue B)')
+    };
+    return labels[who];
   }
 
   function runSandwichOnce() {
@@ -1045,7 +1064,7 @@ export default function MevPbsSimulation() {
                                 : 'border-slate-700 bg-slate-950/30 text-slate-200'
                           }`}
                         >
-                          <div className="font-semibold">{tx.who}</div>
+                          <div className="font-semibold">{txWhoLabel(tx.who)}</div>
                           <div className="text-[11px] text-slate-300/80">
                             {tx.kind === 'sell_eth' ? tr('sell ETH → buy USDC') : tr('sell USDC → buy ETH')}
                           </div>
@@ -1209,8 +1228,12 @@ export default function MevPbsSimulation() {
                               : 'border-rose-500/40 bg-rose-950/20 text-rose-200'
                           }`}
                         >
-                          <div className="font-semibold">{tx.who}</div>
-                          <div className="text-[11px] text-slate-300/80">{tx.detail}</div>
+                          <div className="font-semibold">{txWhoLabel(tx.who)}</div>
+                          <div className="text-[11px] text-slate-300/80">
+                            {tx.side === 'sell'
+                              ? tr('sell {{amount}} ETH', { amount: tx.amountEth })
+                              : tr('buy {{amount}} ETH', { amount: tx.amountEth })}
+                          </div>
                         </div>
                       ))}
                     </div>

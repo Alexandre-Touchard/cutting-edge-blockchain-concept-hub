@@ -1,142 +1,208 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import LinkWithCopy from '../../ui/LinkWithCopy';
 import EduTooltip from '../../ui/EduTooltip';
 import { define } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
+import { useDemoQuests, QuestList, NextQuestCard } from '../quests/DemoQuests';
+import { Plus, Play, RefreshCw, GitBranch, Square } from 'lucide-react';
 const T = EduTooltip;
-import { Plus, Play, RefreshCw, Zap, GitBranch, CheckCircle } from 'lucide-react';
 
-type DagNode = {
+/** Transactions present at start (and after Reset): quests look at the ones the learner adds. */
+const INITIAL_DAG_IDS = ['A', 'B', 'C', 'D'];
+
+/** A transaction is confirmed once its cumulative weight (itself + every later tx approving it) reaches this. */
+export const CONFIRMATION_THRESHOLD = 3;
+
+const VALIDATORS = [
+  'Alice', 'Bob', 'Charlie', 'Dave', 'Eve', 'Frank', 'Grace', 'Henry',
+  'Ivy', 'Jack', 'Kate', 'Liam', 'Maya', 'Noah', 'Olivia', 'Paul',
+  'Quinn', 'Ruby', 'Sam', 'Tina'
+];
+const TRANSACTION_TYPES = ['Transfer', 'Smart Contract', 'NFT Mint', 'Token Swap', 'Stake', 'Governance Vote'];
+const AMOUNTS = [10, 25, 50, 100, 250, 500, 1000];
+const AUTO_GENERATE_DELAY_MS = 600;
+
+export type DagNode = {
   id: string;
   x: number;
   y: number;
   parents: string[];
   validator: string;
-  weight: number;
-  confirmed: boolean;
   timestamp: number;
-  // Transaction details (set by the richer presets)
+  // Transaction details
   type?: string;
   amount?: number;
   from?: string;
   to?: string;
-  /** Kept as a formatted string by the presets (e.g. "0.0010"). */
+  /** Kept as a formatted string (e.g. "0.0010"). */
   fee?: string | number;
   nonce?: number;
 };
 
+type Rng = () => number;
+
+const pick = <V,>(items: V[], rng: Rng): V => items[Math.floor(rng() * items.length)];
+
+/** Transaction id for the n-th node: A..Z, then AA, AB, … (ids follow insertion order). */
+export function idForIndex(index: number): string {
+  let n = index;
+  let id = '';
+  do {
+    id = String.fromCharCode(65 + (n % 26)) + id;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return id;
+}
+
+/** Tips = transactions that no other transaction approves yet (in insertion order). */
+export function computeTips(nodes: DagNode[]): string[] {
+  const approved = new Set(nodes.flatMap((n) => n.parents));
+  return nodes.filter((n) => !approved.has(n.id)).map((n) => n.id);
+}
+
+/**
+ * Cumulative weight of every transaction: its own weight (1) plus the number of distinct
+ * transactions that approve it directly or indirectly (its descendants in the DAG).
+ */
+export function computeCumulativeWeights(nodes: DagNode[]): Map<string, number> {
+  const children = new Map<string, string[]>();
+  for (const n of nodes) {
+    for (const p of n.parents) children.set(p, [...(children.get(p) ?? []), n.id]);
+  }
+  const weights = new Map<string, number>();
+  for (const n of nodes) {
+    const seen = new Set<string>();
+    const stack = [...(children.get(n.id) ?? [])];
+    while (stack.length > 0) {
+      const id = stack.pop()!;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      stack.push(...(children.get(id) ?? []));
+    }
+    weights.set(n.id, 1 + seen.size);
+  }
+  return weights;
+}
+
+/** Up to `max` distinct random tips of the current DAG. */
+export function pickRandomTips(nodes: DagNode[], max: number, rng: Rng): string[] {
+  const available = computeTips(nodes);
+  const chosen: string[] = [];
+  while (chosen.length < max && available.length > 0) {
+    chosen.push(available.splice(Math.floor(rng() * available.length), 1)[0]);
+  }
+  return chosen;
+}
+
+/** Appends a new transaction approving `parents` (falls back to the first two tips of `nodes`). */
+export function appendTransaction(nodes: DagNode[], parents: string[], validator: string, rng: Rng): DagNode[] {
+  const existing = parents.filter((id) => nodes.some((n) => n.id === id));
+  const parentIds = existing.length > 0 ? existing : computeTips(nodes).slice(0, 2);
+  const parentNodes = nodes.filter((n) => parentIds.includes(n.id));
+  const avgX = parentNodes.reduce((sum, n) => sum + n.x, 0) / Math.max(1, parentNodes.length);
+  const maxY = Math.max(0, ...parentNodes.map((n) => n.y));
+  const jitter = (rng() - 0.5) * 100;
+  const newNode: DagNode = {
+    id: idForIndex(nodes.length),
+    x: Math.max(100, Math.min(700, avgX + jitter)),
+    y: maxY + 120,
+    parents: parentIds,
+    validator,
+    timestamp: Date.now(),
+    type: pick(TRANSACTION_TYPES, rng),
+    amount: pick(AMOUNTS, rng),
+    from: pick(VALIDATORS, rng),
+    to: pick(VALIDATORS, rng),
+    fee: (rng() * 0.1).toFixed(4),
+    nonce: Math.floor(rng() * 10000)
+  };
+  return [...nodes, newNode];
+}
+
+function makeInitialNodes(): DagNode[] {
+  const now = Date.now();
+  const fee = () => (Math.random() * 0.1).toFixed(4);
+  const nonce = () => Math.floor(Math.random() * 10000);
+  return [
+    {
+      id: 'A', x: 400, y: 100, parents: [], validator: 'Alice', timestamp: now - 5000,
+      type: 'Genesis', amount: 0, from: 'System', to: 'Network', fee: 0, nonce: 0
+    },
+    {
+      id: 'B', x: 250, y: 200, parents: ['A'], validator: 'Bob', timestamp: now - 4500,
+      type: TRANSACTION_TYPES[0], amount: AMOUNTS[3], from: VALIDATORS[1], to: VALIDATORS[2], fee: fee(), nonce: nonce()
+    },
+    {
+      id: 'C', x: 400, y: 200, parents: ['A'], validator: 'Charlie', timestamp: now - 4300,
+      type: TRANSACTION_TYPES[4], amount: AMOUNTS[5], from: VALIDATORS[2], to: 'Validator Pool', fee: fee(), nonce: nonce()
+    },
+    {
+      id: 'D', x: 550, y: 200, parents: ['A'], validator: 'Dave', timestamp: now - 4000,
+      type: TRANSACTION_TYPES[1], amount: AMOUNTS[4], from: VALIDATORS[3], to: VALIDATORS[0], fee: fee(), nonce: nonce()
+    }
+  ];
+}
+
 const DAGConsensus = () => {
   const { tr } = useDemoI18n('dag-consensus');
-  const [nodes, setNodes] = useState<DagNode[]>([
-    { id: 'A', x: 400, y: 100, parents: [], validator: 'Alice', weight: 1, confirmed: true, timestamp: Date.now() - 5000 },
-    { id: 'B', x: 250, y: 200, parents: ['A'], validator: 'Bob', weight: 1, confirmed: true, timestamp: Date.now() - 4500 },
-    { id: 'C', x: 400, y: 200, parents: ['A'], validator: 'Charlie', weight: 1, confirmed: true, timestamp: Date.now() - 4300 },
-    { id: 'D', x: 550, y: 200, parents: ['A'], validator: 'Dave', weight: 1, confirmed: true, timestamp: Date.now() - 4000 }
-  ]);
-  
-  const [nextId, setNextId] = useState('E');
-  const [selectedParents, setSelectedParents] = useState([]);
+  const [nodes, setNodes] = useState<DagNode[]>(makeInitialNodes);
+
+  const [selectedParents, setSelectedParents] = useState<string[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [validators] = useState([
-    'Alice', 'Bob', 'Charlie', 'Dave', 'Eve', 'Frank', 'Grace', 'Henry',
-    'Ivy', 'Jack', 'Kate', 'Liam', 'Maya', 'Noah', 'Olivia', 'Paul',
-    'Quinn', 'Ruby', 'Sam', 'Tina'
-  ]);
+  const [generatedCount, setGeneratedCount] = useState(0);
+  const validators = VALIDATORS;
   const [selectedValidator, setSelectedValidator] = useState('Eve');
-  const [tips, setTips] = useState([]);
-  const [confirmationThreshold] = useState(3);
   const [numToGenerate, setNumToGenerate] = useState(10);
-  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  // Calculate tips (nodes with no children)
-  useEffect(() => {
-    const children = new Set(nodes.flatMap(n => n.parents));
-    const tipNodes = nodes.filter(n => !children.has(n.id));
-    setTips(tipNodes.map(n => n.id));
-  }, [nodes]);
+  // Everything below is derived from the current DAG, so it can never be stale.
+  const nextId = idForIndex(nodes.length);
+  const tips = useMemo(() => computeTips(nodes), [nodes]);
+  const weights = useMemo(() => computeCumulativeWeights(nodes), [nodes]);
+  const calculateWeight = (nodeId: string) => weights.get(nodeId) ?? 0;
+  const isConfirmed = (nodeId: string) => calculateWeight(nodeId) >= CONFIRMATION_THRESHOLD;
+  const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) ?? null : null;
 
-  // Calculate cumulative weight
-  const calculateWeight = (nodeId) => {
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return 0;
-    
-    let weight = 1;
-    const visited = new Set();
-    const queue = [...node.parents];
-    
-    while (queue.length > 0) {
-      const parentId = queue.shift();
-      if (visited.has(parentId)) continue;
-      visited.add(parentId);
-      
-      const parent = nodes.find(n => n.id === parentId);
-      if (parent) {
-        weight += 1;
-        queue.push(...parent.parents);
-      }
+  // Auto-generation run currently allowed to write to the DAG (null = none). Reset/unmount clear it.
+  const activeRunRef = useRef<number | null>(null);
+  const runCounterRef = useRef(0);
+  useEffect(() => () => {
+    activeRunRef.current = null;
+  }, []);
+
+  const txTypeLabel = (type?: string) => {
+    switch (type) {
+      case 'Genesis': return tr('Genesis');
+      case 'Transfer': return tr('Transfer');
+      case 'Smart Contract': return tr('Smart Contract');
+      case 'NFT Mint': return tr('NFT Mint');
+      case 'Token Swap': return tr('Token Swap');
+      case 'Stake': return tr('Stake');
+      case 'Governance Vote': return tr('Governance Vote');
+      default: return type ?? '-';
     }
-    
-    return weight;
   };
 
-  const isConfirmed = (nodeId) => {
-    const weight = calculateWeight(nodeId);
-    return weight >= confirmationThreshold;
+  const partyLabel = (party?: string) => {
+    switch (party) {
+      case 'System': return tr('System');
+      case 'Network': return tr('Network');
+      case 'Validator Pool': return tr('Validator Pool');
+      default: return party ?? '-';
+    }
   };
 
-  const addTransaction = (parentIds = null) => {
+  const addTransaction = () => {
     if (isAnimating) return;
-    
-    let parentsToUse = parentIds || selectedParents;
-    
-    if (parentsToUse.length === 0) {
-      const tipIds = tips.length > 0 ? tips.slice(0, Math.min(2, tips.length)) : [nodes[nodes.length - 1].id];
-      parentsToUse = tipIds;
-    }
-
-    const parentNodes = nodes.filter(n => parentsToUse.includes(n.id));
-    const avgX = parentNodes.reduce((sum, n) => sum + n.x, 0) / parentNodes.length;
-    const maxY = Math.max(...parentNodes.map(n => n.y));
-    
-    const jitter = (Math.random() - 0.5) * 100;
-    
-    // Generate random transaction data
-    const transactionTypes = ['Transfer', 'Smart Contract', 'NFT Mint', 'Token Swap', 'Stake', 'Governance Vote'];
-    const amounts = [10, 25, 50, 100, 250, 500, 1000];
-    
-    const newNode = {
-      id: nextId,
-      x: Math.max(100, Math.min(700, avgX + jitter)),
-      y: maxY + 120,
-      parents: [...parentsToUse],
-      validator: selectedValidator,
-      weight: 1,
-      confirmed: false,
-      timestamp: Date.now(),
-      // Transaction details
-      type: transactionTypes[Math.floor(Math.random() * transactionTypes.length)],
-      amount: amounts[Math.floor(Math.random() * amounts.length)],
-      from: validators[Math.floor(Math.random() * validators.length)],
-      to: validators[Math.floor(Math.random() * validators.length)],
-      fee: (Math.random() * 0.1).toFixed(4),
-      nonce: Math.floor(Math.random() * 10000)
-    };
-
-    setNodes([...nodes, newNode]);
-    setNextId(String.fromCharCode(nextId.charCodeAt(0) + 1));
+    const parents = selectedParents;
+    const validator = selectedValidator;
+    setNodes((prev) => appendTransaction(prev, parents, validator, Math.random));
     setSelectedParents([]);
-    
-    setTimeout(() => {
-      setNodes(prev => prev.map(n => ({
-        ...n,
-        confirmed: isConfirmed(n.id)
-      })));
-    }, 100);
   };
 
-  const handleNodeClick = (nodeId, event) => {
+  const handleNodeClick = (nodeId: string, event?: React.MouseEvent) => {
     if (isAnimating) return;
-    
+
     // Check if this is a selection action (shift key) or info view
     if (event?.shiftKey) {
       // Shift-click for parent selection
@@ -149,89 +215,52 @@ const DAGConsensus = () => {
       }
     } else {
       // Regular click for viewing details
-      const node = nodes.find(n => n.id === nodeId);
-      setSelectedNode(node);
+      setSelectedNodeId(nodeId);
     }
+  };
+
+  const stopAutoGenerate = () => {
+    activeRunRef.current = null;
+    setIsAnimating(false);
   };
 
   const reset = () => {
-    const transactionTypes = ['Transfer', 'Smart Contract', 'NFT Mint', 'Token Swap', 'Stake', 'Governance Vote'];
-    const amounts = [10, 25, 50, 100, 250, 500, 1000];
-    
-    setNodes([
-      { 
-        id: 'A', x: 400, y: 100, parents: [], validator: 'Alice', weight: 1, confirmed: true, 
-        timestamp: Date.now() - 5000, type: 'Genesis', amount: 0, from: 'System', to: 'Network', 
-        fee: 0, nonce: 0 
-      },
-      { 
-        id: 'B', x: 250, y: 200, parents: ['A'], validator: 'Bob', weight: 1, confirmed: true, 
-        timestamp: Date.now() - 4500, 
-        type: transactionTypes[0], 
-        amount: amounts[3], 
-        from: validators[1], 
-        to: validators[2], 
-        fee: (Math.random() * 0.1).toFixed(4), 
-        nonce: Math.floor(Math.random() * 10000)
-      },
-      { 
-        id: 'C', x: 400, y: 200, parents: ['A'], validator: 'Charlie', weight: 1, confirmed: true, 
-        timestamp: Date.now() - 4300, 
-        type: transactionTypes[4], 
-        amount: amounts[5], 
-        from: validators[2], 
-        to: 'Validator Pool', 
-        fee: (Math.random() * 0.1).toFixed(4), 
-        nonce: Math.floor(Math.random() * 10000)
-      },
-      { 
-        id: 'D', x: 550, y: 200, parents: ['A'], validator: 'Dave', weight: 1, confirmed: true, 
-        timestamp: Date.now() - 4000, 
-        type: transactionTypes[1], 
-        amount: amounts[4], 
-        from: validators[3], 
-        to: validators[0], 
-        fee: (Math.random() * 0.1).toFixed(4), 
-        nonce: Math.floor(Math.random() * 10000)
-      }
-    ]);
-    setNextId('E');
+    stopAutoGenerate();
+    setNodes(makeInitialNodes());
     setSelectedParents([]);
-    setIsAnimating(false);
-    setSelectedNode(null);
+    setSelectedNodeId(null);
+    setGeneratedCount(0);
   };
 
   const autoGenerate = async () => {
+    if (activeRunRef.current !== null) return; // already running (e.g. double click)
+    const runId = ++runCounterRef.current;
+    activeRunRef.current = runId;
+    const total = numToGenerate;
     setIsAnimating(true);
-    
-    for (let i = 0; i < numToGenerate; i++) {
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
-      const currentTips = [...tips];
-      if (currentTips.length === 0) break;
-      
-      const numParents = Math.random() > 0.5 && currentTips.length >= 2 ? 2 : 1;
-      const selectedTips = [];
-      const availableTips = [...currentTips];
-      
-      for (let j = 0; j < numParents && availableTips.length > 0; j++) {
-        const idx = Math.floor(Math.random() * availableTips.length);
-        selectedTips.push(availableTips[idx]);
-        availableTips.splice(idx, 1);
-      }
-      
-      const randomValidator = validators[Math.floor(Math.random() * validators.length)];
-      setSelectedValidator(randomValidator);
-      
-      addTransaction(selectedTips);
+    setGeneratedCount(0);
+    setSelectedParents([]);
+
+    for (let i = 0; i < total; i++) {
+      await new Promise((resolve) => setTimeout(resolve, AUTO_GENERATE_DELAY_MS));
+      if (activeRunRef.current !== runId) return; // stopped, reset or unmounted
+
+      const validator = pick(VALIDATORS, Math.random);
+      setSelectedValidator(validator);
+      // Functional update: each transaction picks its parents among the tips of the *current* DAG.
+      setNodes((prev) => {
+        const numParents = Math.random() > 0.5 ? 2 : 1;
+        return appendTransaction(prev, pickRandomTips(prev, numParents, Math.random), validator, Math.random);
+      });
+      setGeneratedCount(i + 1);
     }
-    
-    setIsAnimating(false);
+
+    if (activeRunRef.current === runId) stopAutoGenerate();
   };
 
   // Get color for validator
-  const getValidatorColor = (validator) => {
-    const colors = {
+  const getValidatorColor = (validator?: string) => {
+    const colors: Record<string, string> = {
       'Alice': '#ef4444', 'Bob': '#3b82f6', 'Charlie': '#10b981', 'Dave': '#f59e0b', 'Eve': '#8b5cf6',
       'Frank': '#ec4899', 'Grace': '#14b8a6', 'Henry': '#f97316', 'Ivy': '#06b6d4', 'Jack': '#84cc16',
       'Kate': '#a855f7', 'Liam': '#22c55e', 'Maya': '#eab308', 'Noah': '#6366f1', 'Olivia': '#f43f5e',
@@ -239,6 +268,45 @@ const DAGConsensus = () => {
     };
     return colors[validator] || '#6b7280';
   };
+
+  // Learning quests
+  const addedCount = nodes.filter(n => !INITIAL_DAG_IDS.includes(n.id)).length;
+  const q = useDemoQuests('dag-consensus', [
+    {
+      id: 'inspect-tx',
+      text: tr('Open the details of a transaction'),
+      tip: tr('Click any node in the graph, or a tip under Current Tips, to open its Transaction Details: parents, weight and status.'),
+      done: selectedNode !== null,
+      target: 'tips'
+    },
+    {
+      id: 'pick-parents',
+      text: tr('Select two tips as parents'),
+      tip: tr('Shift+Click two tips under Current Tips: they turn yellow and appear under Selected Parents (2/2).'),
+      done: selectedParents.length === 2,
+      target: 'tips'
+    },
+    {
+      id: 'add-two-parents',
+      text: tr('Add a transaction approving your two tips'),
+      tip: tr('With two parents selected, click Add Transaction: the new node points to both parents, and they are no longer tips.'),
+      target: 'add-tx'
+    },
+    {
+      id: 'merge-tips',
+      text: tr('Merge every branch into a single tip'),
+      tip: tr('Keep clicking Add Transaction (it picks two tips for you) until Current Tips shows just one: one transaction now approves the whole DAG.'),
+      done: addedCount > 0 && tips.length === 1,
+      target: 'add-tx'
+    },
+    {
+      id: 'confirm-own',
+      text: tr('Inspect one of your transactions once confirmed'),
+      tip: tr('Keep adding transactions until one you added is approved (directly or indirectly) by at least two later ones, then click its green ✓ node: its details show ✓ CONFIRMED, with a weight of 3 or more.'),
+      done: !!selectedNode && !INITIAL_DAG_IDS.includes(selectedNode.id) && isConfirmed(selectedNode.id),
+      target: 'dag-graph'
+    }
+  ]);
 
   const maxY = Math.max(...nodes.map(n => n.y), 300);
 
@@ -254,6 +322,8 @@ const DAGConsensus = () => {
             'Directed Acyclic Graph consensus - transactions reference previous ones, forming a web instead of a chain'
           )}
         </p>
+        <NextQuestCard q={q} className="mt-4" />
+        <QuestList q={q} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -267,7 +337,7 @@ const DAGConsensus = () => {
   <T term="Current Tips" text={define('Current Tips')} />
 </h2>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div data-hint="tips" className={`flex flex-wrap gap-2 rounded ${q.pulse('tips')}`}>
               {tips.length > 0 ? (
                 tips.map(tipId => {
                   const node = nodes.find(n => n.id === tipId);
@@ -337,9 +407,13 @@ const DAGConsensus = () => {
             </div>
 
             <button
-              onClick={() => addTransaction()}
+              onClick={() => {
+                if (!isAnimating && selectedParents.length === 2) q.markDone('add-two-parents');
+                addTransaction();
+              }}
               disabled={isAnimating}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold transition-all"
+              data-hint="add-tx"
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold transition-all ${q.pulse('add-tx')}`}
             >
               <Plus size={18} />
               {tr('Add Transaction {{id}}', { id: nextId })}
@@ -374,12 +448,15 @@ const DAGConsensus = () => {
             </div>
 
             <button
-              onClick={autoGenerate}
-              disabled={isAnimating}
-              className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold transition-all"
+              onClick={isAnimating ? stopAutoGenerate : autoGenerate}
+              className={`w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 rounded font-semibold transition-all ${
+                isAnimating ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              <Play size={18} />
-              {isAnimating ? tr('Generating...') : tr('Auto-Generate {{count}} TXs', { count: numToGenerate })}
+              {isAnimating ? <Square size={16} /> : <Play size={18} />}
+              {isAnimating
+                ? tr('Stop generating ({{done}}/{{total}})', { done: generatedCount, total: numToGenerate })
+                : tr('Auto-Generate {{count}} TXs', { count: numToGenerate })}
             </button>
 
             <button
@@ -402,13 +479,13 @@ const DAGConsensus = () => {
               <div className="flex justify-between">
                 <span className="text-slate-400">{tr('Confirmed')}:</span>
                 <span className="font-semibold text-emerald-400">
-                  {nodes.filter(n => n.confirmed).length}
+                  {nodes.filter(n => isConfirmed(n.id)).length}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">{tr('Pending')}:</span>
                 <span className="font-semibold text-yellow-400">
-                  {nodes.filter(n => !n.confirmed).length}
+                  {nodes.filter(n => !isConfirmed(n.id)).length}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -451,8 +528,10 @@ const DAGConsensus = () => {
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-semibold text-blue-300">{tr('Transaction Details')}</h2>
                 <button
-                  onClick={() => setSelectedNode(null)}
+                  onClick={() => setSelectedNodeId(null)}
                   className="text-slate-400 hover:text-white text-xl"
+                  aria-label={tr('Close')}
+                  title={tr('Close')}
                 >
                   ✕
                 </button>
@@ -467,16 +546,16 @@ const DAGConsensus = () => {
                     </span>
                   </div>
                   <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                    selectedNode.confirmed ? 'bg-emerald-600' : 'bg-yellow-600'
+                    isConfirmed(selectedNode.id) ? 'bg-emerald-600' : 'bg-yellow-600'
                   }`}>
-                    {selectedNode.confirmed ? tr('✓ CONFIRMED') : tr('⏳ PENDING')}
+                    {isConfirmed(selectedNode.id) ? tr('✓ CONFIRMED') : tr('⏳ PENDING')}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-slate-700 rounded p-2">
                     <div className="text-xs text-slate-400">{tr('Type')}</div>
-                    <div className="font-semibold">{selectedNode.type}</div>
+                    <div className="font-semibold">{txTypeLabel(selectedNode.type)}</div>
                   </div>
                   <div className="bg-slate-700 rounded p-2">
                     <div className="text-xs text-slate-400">{tr('Amount')}</div>
@@ -487,9 +566,9 @@ const DAGConsensus = () => {
                 <div className="bg-slate-700 rounded p-2">
                   <div className="text-xs text-slate-400 mb-1">{tr('From → To')}</div>
                   <div className="font-semibold">
-                    <span style={{ color: getValidatorColor(selectedNode.from) }}>{selectedNode.from}</span>
+                    <span style={{ color: getValidatorColor(selectedNode.from) }}>{partyLabel(selectedNode.from)}</span>
                     <span className="mx-2">→</span>
-                    <span style={{ color: getValidatorColor(selectedNode.to) }}>{selectedNode.to}</span>
+                    <span style={{ color: getValidatorColor(selectedNode.to) }}>{partyLabel(selectedNode.to)}</span>
                   </div>
                 </div>
 
@@ -515,7 +594,7 @@ const DAGConsensus = () => {
                         return (
                           <button
                             key={parentId}
-                            onClick={() => setSelectedNode(parent)}
+                            onClick={() => setSelectedNodeId(parentId)}
                             className="px-2 py-1 rounded text-sm font-semibold hover:scale-105 transition-all"
                             style={{ 
                               backgroundColor: getValidatorColor(parent?.validator) + '40',
@@ -558,7 +637,7 @@ const DAGConsensus = () => {
 
         {/* Right Panel - DAG Visualization */}
         <div className="lg:col-span-3">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 overflow-auto">
+          <div data-hint="dag-graph" className={`bg-slate-800 rounded-lg border border-slate-700 p-4 overflow-auto ${q.pulse('dag-graph')}`}>
             <svg width="800" height={maxY + 150} style={{ minHeight: '600px' }}>
               <defs>
                 <marker
@@ -611,7 +690,7 @@ const DAGConsensus = () => {
               {/* Draw nodes */}
               {nodes.map(node => {
                 const weight = calculateWeight(node.id);
-                const confirmed = node.confirmed;
+                const confirmed = weight >= CONFIRMATION_THRESHOLD;
                 const isSelected = selectedParents.includes(node.id);
                 const isTip = tips.includes(node.id);
                 const validatorColor = getValidatorColor(node.validator);
@@ -710,7 +789,7 @@ const DAGConsensus = () => {
                 />
               </div>
               <div className="bg-slate-700 rounded p-3">
-                <div className="font-bold text-purple-300">Avalanche (DAG family)</div>
+                <div className="font-bold text-purple-300">{tr('Avalanche (DAG family)')}</div>
                 <p className="text-xs text-slate-300 mb-2">{tr('Consensus inspired by repeated random sampling; includes DAG-like structures in parts of its design.')}</p>
                 <LinkWithCopy
                   href="https://docs.avax.network/"
@@ -719,7 +798,7 @@ const DAGConsensus = () => {
                 />
               </div>
               <div className="bg-slate-700 rounded p-3">
-                <div className="font-bold text-pink-300">Mempool / Block DAG research</div>
+                <div className="font-bold text-pink-300">{tr('Mempool / Block DAG research')}</div>
                 <p className="text-xs text-slate-300 mb-2">{tr('Many projects explore DAGs for parallel transaction ordering and faster confirmations.')}</p>
                 <LinkWithCopy
                   href="https://eprint.iacr.org/"
@@ -791,7 +870,7 @@ const DAGConsensus = () => {
           </div>
           <div>
             <div className="font-semibold text-blue-400 mb-1">{tr('3. Confirmation')}</div>
-            <p>{tr('Once a transaction has enough cumulative weight (≥3 references), it becomes confirmed and immutable.')}</p>
+            <p>{tr('Once a transaction reaches a cumulative weight of 3 (itself plus at least 2 transactions approving it directly or indirectly), it is considered confirmed.')}</p>
           </div>
         </div>
         <p className="text-xs text-slate-400 mt-3">

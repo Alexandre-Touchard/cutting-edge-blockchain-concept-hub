@@ -4,7 +4,11 @@ import EduTooltip from '../../ui/EduTooltip';
 import LinkWithCopy from '../../ui/LinkWithCopy';
 import { define } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
+import { useDemoQuests, QuestList, NextQuestCard } from '../quests/DemoQuests';
 const T = EduTooltip;
+
+/** Starting ETH stake per validator id (a lower value means the validator was slashed). */
+const INITIAL_STAKE: Record<number, number> = { 1: 32, 2: 64, 3: 32, 4: 96 };
 
 const EigenLayerDemo = () => {
   const { tr } = useDemoI18n('eigenlayer-demo');
@@ -19,10 +23,8 @@ const EigenLayerDemo = () => {
     {
       id: 1,
       name: 'Oracle Network',
-      description: 'Decentralized price feeds',
       requiredStake: 32,
       rewardRate: 8,
-      slashCondition: 'False data submission',
       validators: [],
       totalStaked: 0,
       status: 'active',
@@ -31,10 +33,8 @@ const EigenLayerDemo = () => {
     {
       id: 2,
       name: 'Bridge Protocol',
-      description: 'Cross-chain asset bridge',
       requiredStake: 64,
       rewardRate: 12,
-      slashCondition: 'Invalid bridge signature',
       validators: [],
       totalStaked: 0,
       status: 'active',
@@ -43,10 +43,8 @@ const EigenLayerDemo = () => {
     {
       id: 3,
       name: 'Data Availability',
-      description: 'DA layer for rollups',
       requiredStake: 32,
       rewardRate: 6,
-      slashCondition: 'Data withholding',
       validators: [],
       totalStaked: 0,
       status: 'active',
@@ -55,10 +53,8 @@ const EigenLayerDemo = () => {
     {
       id: 4,
       name: 'ZK Prover Network',
-      description: 'Shared ZK proof generation',
       requiredStake: 48,
       rewardRate: 15,
-      slashCondition: 'Invalid proof submission',
       validators: [],
       totalStaked: 0,
       status: 'active',
@@ -69,11 +65,62 @@ const EigenLayerDemo = () => {
   const [selectedValidator, setSelectedValidator] = useState(null);
   const [selectedAVS, setSelectedAVS] = useState(null);
   const [events, setEvents] = useState([]);
-  const [totalRestaked, setTotalRestaked] = useState(0);
+  // ETH Restaked = sum of every AVS's TVL (the same stake counts once per AVS it secures).
+  const totalRestaked = avs.reduce((sum, a) => sum + a.totalStaked, 0);
+
+  /** Translated description and slashing rule of each AVS (AVS names are kept as proper nouns). */
+  const avsText = (id: number) =>
+    ({
+      1: { description: tr('Decentralized price feeds'), slashCondition: tr('False data submission') },
+      2: { description: tr('Cross-chain asset bridge'), slashCondition: tr('Invalid bridge signature') },
+      3: { description: tr('DA layer for rollups'), slashCondition: tr('Data withholding') },
+      4: { description: tr('Shared ZK proof generation'), slashCondition: tr('Invalid proof submission') }
+    })[id] ?? { description: '', slashCondition: '' };
+
+  /** Round away floating-point noise for display (e.g. 25.919999 -> 25.92). */
+  const fmtEth = (x: number) => String(parseFloat(x.toFixed(2)));
+
+  // Learning quests
+  const q = useDemoQuests('eigenlayer-demo', [
+    {
+      id: 'restake',
+      text: tr('Enable restaking on a validator'),
+      tip: tr('Click a validator card (e.g. Bob) under Ethereum Validators, then click Enable Restaking.'),
+      done: validators.some(v => v.isRestaking),
+      target: 'validators'
+    },
+    {
+      id: 'join-avs',
+      text: tr('Opt a restaking validator into an AVS'),
+      tip: tr('Click an AVS card (e.g. Oracle Network), then click your validator under Select validator to join: its Total APY goes up.'),
+      done: validators.some(v => v.services.length > 0),
+      target: 'avs-list'
+    },
+    {
+      id: 'avs-rewards',
+      text: tr('Earn AVS rewards on top of staking'),
+      tip: tr('Click Distribute Rewards while a validator secures an AVS: its Rewards Earned adds each AVS reward to the base staking reward.'),
+      target: 'rewards-btn'
+    },
+    {
+      id: 'three-avs',
+      text: tr('Secure 3 AVS with the same stake'),
+      tip: tr('Join more AVS with one validator (Bob and Dave have enough stake for all of them) and watch Total APY and Slash Risk climb together.'),
+      done: validators.some(v => v.services.length >= 3),
+      target: 'avs-list'
+    },
+    {
+      id: 'slash',
+      text: tr('Get a restaking validator slashed'),
+      tip: tr('Select a validator that secures an AVS and click Simulate Slash: its ETH Staked and Restaked drop, because the same stake backs every service.'),
+      done: validators.some(v => v.ethStaked < (INITIAL_STAKE[v.id] ?? 0)),
+      target: 'validators'
+    }
+  ]);
 
   const addEvent = (message, type = 'info') => {
     const newEvent = {
-      id: Date.now(),
+      id: Date.now() + Math.random(), // unique even when two events are logged in the same millisecond
       message,
       type,
       timestamp: new Date().toLocaleTimeString()
@@ -146,7 +193,6 @@ const EigenLayerDemo = () => {
       return a;
     }));
 
-    setTotalRestaked(prev => prev + validator.restakeAmount);
     addEvent(
       tr('{{name}} joined {{service}} - earning {{apy}}% APY', {
         name: validator.name,
@@ -186,7 +232,6 @@ const EigenLayerDemo = () => {
       return a;
     }));
 
-    setTotalRestaked(prev => prev - validator.restakeAmount);
     addEvent(tr('{{name}} left {{service}}', { name: validator.name, service: avsService.name }), 'info');
   };
 
@@ -255,11 +300,23 @@ const EigenLayerDemo = () => {
       return v;
     }));
 
-    setTotalRestaked(prev => prev - slashAmount);
+    // The slashed ETH was backing every AVS this validator secures, so each of their TVLs drops too.
+    setAvs(prev => prev.map(a =>
+      validator.services.includes(a.id) ? { ...a, totalStaked: Math.max(0, a.totalStaked - slashAmount) } : a
+    ));
+
     addEvent(
       tr('⚠️ {{name}} was slashed {{amount}} ETH for protocol violation!', {
         name: validator.name,
         amount: slashAmount.toFixed(2)
+      }),
+      'error'
+    );
+    addEvent(
+      tr('TVL of each AVS secured by {{name}} drops by {{amount}} ETH ({{count}} AVS)', {
+        name: validator.name,
+        amount: slashAmount.toFixed(2),
+        count: validator.services.length
       }),
       'error'
     );
@@ -294,12 +351,14 @@ const EigenLayerDemo = () => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">
-            <T term="Restaking" text={define('Restaking')} />
+            <T term={tr('Restaking')} text={define('Restaking')} />
             {tr('Demo')}
           </h1>
           <p className="text-slate-300">
             {tr('Reuse your ETH stake to secure multiple protocols and earn additional rewards')}
           </p>
+          <NextQuestCard q={q} className="mt-4" />
+          <QuestList q={q} />
         </div>
 
         {/* Global Stats */}
@@ -309,7 +368,7 @@ const EigenLayerDemo = () => {
               <Shield size={20} className="text-emerald-400" />
               <span className="text-sm text-slate-400">{tr('Total ETH Staked')}</span>
             </div>
-            <div className="text-2xl font-bold">{getTotalEthSecured()} ETH</div>
+            <div className="text-2xl font-bold">{fmtEth(getTotalEthSecured())} ETH</div>
           </div>
 
           <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
@@ -317,14 +376,14 @@ const EigenLayerDemo = () => {
               <Layers size={20} className="text-blue-400" />
               <span className="text-sm text-slate-400">{tr('ETH Restaked')}</span>
             </div>
-            <div className="text-2xl font-bold text-blue-400">{totalRestaked} ETH</div>
+            <div className="text-2xl font-bold text-blue-400">{fmtEth(totalRestaked)} ETH</div>
           </div>
 
           <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-2">
               <Zap size={20} className="text-yellow-400" />
               <span className="text-sm text-slate-400">
-  <T term="Active AVS" text={define('Active AVS')} />
+  <T term={tr('Active AVS')} text={define('Active AVS')} />
 </span>
             </div>
             <div className="text-2xl font-bold">{avs.length}</div>
@@ -348,7 +407,7 @@ const EigenLayerDemo = () => {
                 {tr('Ethereum Validators')}
               </h2>
 
-              <div className="space-y-3">
+              <div data-hint="validators" className={`space-y-3 rounded-lg ${q.pulse('validators')}`}>
                 {validators.map(validator => (
                   <div
                     key={validator.id}
@@ -463,8 +522,12 @@ const EigenLayerDemo = () => {
               </div>
 
               <button
-                onClick={simulateRewards}
-                className="w-full mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded font-semibold flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (validators.some(v => v.isRestaking && v.services.length > 0)) q.markDone('avs-rewards');
+                  simulateRewards();
+                }}
+                data-hint="rewards-btn"
+                className={`w-full mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded font-semibold flex items-center justify-center gap-2 ${q.pulse('rewards-btn')}`}
               >
                 <DollarSign size={18} />
                 {tr('Distribute Rewards')}
@@ -480,7 +543,7 @@ const EigenLayerDemo = () => {
                 {tr('Actively Validated Services')}
               </h2>
 
-              <div className="space-y-3">
+              <div data-hint="avs-list" className={`space-y-3 rounded-lg ${q.pulse('avs-list')}`}>
                 {avs.map(service => (
                   <div
                     key={service.id}
@@ -493,7 +556,7 @@ const EigenLayerDemo = () => {
                       <div className="text-3xl">{service.icon}</div>
                       <div className="flex-1">
                         <div className="font-semibold">{service.name}</div>
-                        <div className="text-xs text-slate-400">{service.description}</div>
+                        <div className="text-xs text-slate-400">{avsText(service.id).description}</div>
                       </div>
                     </div>
 
@@ -512,7 +575,7 @@ const EigenLayerDemo = () => {
                       </div>
                       <div className="bg-slate-600 rounded p-2">
                         <div className="text-xs text-slate-400">TVL</div>
-                        <div className="font-semibold text-blue-400">{service.totalStaked} ETH</div>
+                        <div className="font-semibold text-blue-400">{fmtEth(service.totalStaked)} ETH</div>
                       </div>
                     </div>
 
@@ -520,7 +583,7 @@ const EigenLayerDemo = () => {
                       <div className="mt-3 pt-3 border-t border-slate-600">
                         <div className="text-xs text-red-400 mb-3 flex items-center gap-1">
                           <AlertCircle size={12} />
-                          {tr('Slash condition')}: {service.slashCondition}
+                          {tr('Slash condition')}: {avsText(service.id).slashCondition}
                         </div>
 
                         <div className="text-xs text-slate-400 mb-2">{tr('Select validator to join')}:</div>

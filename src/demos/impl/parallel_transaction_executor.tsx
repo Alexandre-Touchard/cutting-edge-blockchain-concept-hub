@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import EduTooltip from '../../ui/EduTooltip';
 import { define } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
+import { useDemoQuests, QuestList, NextQuestCard } from '../quests/DemoQuests';
 const T = EduTooltip;
 import { Play, Plus, Trash2, RefreshCw, Zap, AlertTriangle } from 'lucide-react';
 
@@ -70,7 +71,7 @@ const ParallelExecutor = () => {
     log.push({
       type: 'phase',
       phase: 'optimistic',
-      message: '🚀 Phase 1: Optimistic Parallel Execution'
+      message: tr('🚀 Phase 1: Optimistic Parallel Execution')
     });
     setExecutionLog([...log]);
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -100,7 +101,7 @@ const ParallelExecutor = () => {
         txResults.push({
           tx,
           success: false,
-          reason: 'Insufficient balance'
+          reason: tr('Insufficient balance')
         });
       }
     }
@@ -116,7 +117,7 @@ const ParallelExecutor = () => {
     log.push({
       type: 'phase',
       phase: 'validation',
-      message: '🔍 Phase 2: Conflict Detection'
+      message: tr('🔍 Phase 2: Conflict Detection')
     });
     setExecutionLog([...log]);
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -161,7 +162,7 @@ const ParallelExecutor = () => {
       log.push({
         type: 'phase',
         phase: 'reexecution',
-        message: `⚠️ Phase 3: Re-executing ${conflicts.length} Conflicted Transaction(s)`
+        message: tr('⚠️ Phase 3: Re-executing {{count}} Conflicted Transaction(s)', { count: conflicts.length })
       });
       setExecutionLog([...log]);
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -186,7 +187,7 @@ const ParallelExecutor = () => {
           log.push({
             type: 'error',
             tx: tx,
-            reason: 'Insufficient balance after re-execution'
+            reason: tr('Insufficient balance after re-execution')
           });
         }
         
@@ -221,7 +222,7 @@ const ParallelExecutor = () => {
     log.push({
       type: 'phase',
       phase: 'analysis',
-      message: `📊 Phase 1: Analyzed ${groups.length} Parallel Group(s)`
+      message: tr('📊 Phase 1: Analyzed {{count}} Parallel Group(s)', { count: groups.length })
     });
     setExecutionLog([...log]);
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -255,7 +256,7 @@ const ParallelExecutor = () => {
           log.push({
             type: 'error',
             tx: tx,
-            reason: 'Insufficient balance'
+            reason: tr('Insufficient balance')
           });
         }
       }
@@ -367,16 +368,16 @@ const ParallelExecutor = () => {
     
     if (conflictRate < 20) {
       recommendation = 'optimistic';
-      reasoning = 'Low conflict rate - optimistic execution will have minimal re-executions and maximize parallelism.';
+      reasoning = tr('Low conflict rate - optimistic execution will have minimal re-executions and maximize parallelism.');
     } else if (conflictRate > 50) {
       recommendation = 'conservative';
-      reasoning = 'High conflict rate - conservative pre-analysis avoids wasteful re-executions.';
+      reasoning = tr('High conflict rate - conservative pre-analysis avoids wasteful re-executions.');
     } else {
       recommendation = parallelEfficiency > 2 ? 'optimistic' : 'conservative';
-      reasoning = 'Moderate conflict rate - recommendation based on parallel efficiency. ';
+      reasoning = tr('Moderate conflict rate - recommendation based on parallel efficiency.') + ' ';
       reasoning += parallelEfficiency > 2 
-        ? 'Good parallelism potential favors optimistic.'
-        : 'Limited parallelism suggests conservative approach.';
+        ? tr('Good parallelism potential favors optimistic.')
+        : tr('Limited parallelism suggests conservative approach.');
     }
     
     return {
@@ -390,6 +391,54 @@ const ParallelExecutor = () => {
   };
 
   const analysis = analyzeConflictRate();
+
+  /** Display name of a strategy id ('optimistic' | 'conservative'). */
+  const strategyLabel = (mode) => (mode === 'optimistic' ? tr('Optimistic') : tr('Conservative'));
+  /** "1 re-execution" / "N re-executions". */
+  const reExecLabel = (n) => (n === 1 ? tr('1 re-execution') : tr('{{count}} re-executions', { count: n }));
+
+  // Quest progress, derived from the last finished run in the execution log.
+  const runComplete = executionLog.find((e) => e.type === 'complete');
+  const ranConservative = !!runComplete && executionLog.some((e) => e.type === 'phase' && e.phase === 'analysis');
+  const ranOptimistic = !!runComplete && executionLog.some((e) => e.type === 'phase' && e.phase === 'optimistic');
+  const optimisticBatch = executionLog.find((e) => e.type === 'optimistic_batch')?.count ?? 0;
+
+  const q = useDemoQuests('parallel-executor', [
+    {
+      id: 'conservative-run',
+      text: tr('Execute the queue in Conservative mode'),
+      tip: tr('With Conservative (Solana-style) selected, click Execute (Conservative) and watch transactions run in parallel groups.'),
+      done: ranConservative,
+      target: 'execute'
+    },
+    {
+      id: 'optimistic-reexec',
+      text: tr('See Optimistic re-execute conflicting transactions'),
+      tip: tr('Select Optimistic (Aptos Block-STM), then click Execute (Optimistic): transactions that read stale balances are flagged and re-executed.'),
+      done: ranOptimistic && runComplete.reExecutions > 0,
+      target: 'mode-optimistic'
+    },
+    {
+      id: 'low-conflict',
+      text: tr('Make the analyzer recommend Optimistic'),
+      tip: tr('Delete transactions (trash icon) or change their accounts until no two share an account, keeping at least 2: the Recommended badge switches to Optimistic.'),
+      done: transactions.length >= 2 && analysis?.recommendation === 'optimistic',
+      target: 'queue'
+    },
+    {
+      id: 'zero-reexec',
+      text: tr('Run Optimistic with zero re-executions'),
+      tip: tr('With a conflict-free queue of 2+ transactions, click Execute (Optimistic): every transaction validates on the first pass.'),
+      done: ranOptimistic && runComplete.reExecutions === 0 && optimisticBatch >= 2,
+      target: 'execute'
+    },
+    {
+      id: 'benchmark-busy',
+      text: tr('Benchmark both strategies on 6+ transactions'),
+      tip: tr('Click Add Random until the queue holds at least 6 transactions, then click Benchmark Both Strategies and compare times and re-executions.'),
+      target: transactions.length >= 6 ? 'benchmark' : 'add-random'
+    }
+  ]);
 
   // Benchmark both strategies
   const runBenchmark = async () => {
@@ -506,7 +555,8 @@ const ParallelExecutor = () => {
     });
     
     setIsBenchmarking(false);
-    
+    if (transactions.length >= 6) q.markDone('benchmark-busy');
+
     // Reset accounts to initial state
     setAccounts(initialAccounts);
   };
@@ -515,12 +565,14 @@ const ParallelExecutor = () => {
     <div className="w-full max-w-7xl mx-auto p-6 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-lg">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">
-  <T term="Parallel Execution" text={define('Parallel Execution')} />
-  Executor
+  <T term={tr('Parallel Execution')} text={define('Parallel Execution')} />
+  {tr('Executor')}
 </h1>
         <p className="text-slate-300">
           {tr('Compare Conservative (Solana-style) vs Optimistic (Aptos Block-STM) parallel execution strategies')}
         </p>
+        <NextQuestCard q={q} className="mt-4" />
+        <QuestList q={q} />
       </div>
 
       {/* Execution Mode Selector */}
@@ -547,7 +599,7 @@ const ParallelExecutor = () => {
             <div className="grid grid-cols-3 gap-4 mb-3">
               <div className="bg-slate-800 rounded p-3">
                 <div className="text-xs text-slate-400 mb-1">
-  <T term="Conflict Rate" text={define('Conflict Rate')} />
+  <T term={tr('Conflict Rate')} text={define('Conflict Rate')} />
 </div>
                 <div className={`text-2xl font-bold ${
                   parseFloat(analysis.conflictRate) < 20 ? 'text-emerald-400' :
@@ -556,7 +608,7 @@ const ParallelExecutor = () => {
                   {analysis.conflictRate}%
                 </div>
                 <div className="text-xs text-slate-400 mt-1">
-                  {analysis.conflictPairs} of {analysis.totalPairs} pairs
+                  {tr('{{conflicts}} of {{total}} pairs', { conflicts: analysis.conflictPairs, total: analysis.totalPairs })}
                 </div>
               </div>
               
@@ -566,7 +618,7 @@ const ParallelExecutor = () => {
                   {conflictGroups.length}
                 </div>
                 <div className="text-xs text-slate-400 mt-1">
-                  {transactions.length} transactions
+                  {tr('{{count}} transactions', { count: transactions.length })}
                 </div>
               </div>
               
@@ -578,14 +630,14 @@ const ParallelExecutor = () => {
                   {analysis.parallelEfficiency}x
                 </div>
                 <div className="text-xs text-slate-400 mt-1">
-                  speedup potential
+                  {tr('speedup potential')}
                 </div>
               </div>
             </div>
             
             <div className="bg-blue-900 bg-opacity-20 rounded p-3 border border-blue-700">
               <div className="text-sm text-blue-200">
-                <span className="font-semibold">{tr('Why')} {analysis.recommendation}?</span> {analysis.reasoning}
+                <span className="font-semibold">{tr('Why {{strategy}}?', { strategy: strategyLabel(analysis.recommendation) })}</span> {analysis.reasoning}
               </div>
             </div>
           </div>
@@ -606,7 +658,7 @@ const ParallelExecutor = () => {
               <span className="font-semibold">{tr('Conservative (Solana-style)')}</span>
             </div>
             <p className="text-sm text-slate-300">
-              Pre-analyze dependencies, schedule non-conflicting transactions in parallel groups. 
+              {tr('Pre-analyze dependencies, schedule non-conflicting transactions in parallel groups.')}{' '}
               {tr('No wasted work, but requires upfront analysis.')}
             </p>
           </button>
@@ -614,18 +666,19 @@ const ParallelExecutor = () => {
           <button
             onClick={() => setExecutionMode('optimistic')}
             disabled={isExecuting}
+            data-hint="mode-optimistic"
             className={`p-4 rounded-lg border-2 transition-all ${
               executionMode === 'optimistic'
                 ? 'border-purple-500 bg-purple-900 bg-opacity-30'
                 : 'border-slate-600 bg-slate-700 hover:bg-slate-600'
-            }`}
+            } ${q.pulse('mode-optimistic')}`}
           >
             <div className="flex items-center gap-2 mb-2">
               <Zap size={20} className="text-purple-400" />
               <span className="font-semibold">{tr('Optimistic (Aptos Block-STM)')}</span>
             </div>
             <p className="text-sm text-slate-300">
-              {tr("Execute everything in parallel speculatively, detect conflicts, re-execute only what's needed.")}
+              {tr('Execute everything in parallel speculatively, detect conflicts, re-execute only what\'s needed.')}{' '}
               {tr('Max parallelism upfront, some wasted work on conflicts.')}
             </p>
           </button>
@@ -663,14 +716,15 @@ const ParallelExecutor = () => {
               <h2 className="text-xl font-semibold">{tr('Transaction Queue')}</h2>
               <button
                 onClick={addTransaction}
-                className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm"
+                data-hint="add-random"
+                className={`flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm ${q.pulse('add-random')}`}
               >
                 <Plus size={14} />
-                Add Random
+                {tr('Add Random')}
               </button>
             </div>
             
-            <div className="space-y-2 max-h-80 overflow-y-auto">
+            <div data-hint="queue" className={`space-y-2 max-h-80 overflow-y-auto rounded ${q.pulse('queue')}`}>
               {transactions.map((tx, idx) => {
                 const groupIdx = conflictGroups.findIndex(g => g.includes(idx));
                 const groupColors = ['bg-purple-900', 'bg-blue-900', 'bg-green-900', 'bg-yellow-900', 'bg-red-900'];
@@ -683,11 +737,13 @@ const ParallelExecutor = () => {
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-xs text-slate-400">
                         TX #{tx.id}
-                        {executionMode === 'conservative' && ` • Group ${groupIdx + 1}`}
+                        {executionMode === 'conservative' && ` • ${tr('Group {{n}}', { n: groupIdx + 1 })}`}
                       </span>
                       <button
                         onClick={() => removeTransaction(tx.id)}
                         className="text-red-400 hover:text-red-300"
+                        title={tr('Remove transaction')}
+                        aria-label={tr('Remove transaction')}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -730,21 +786,23 @@ const ParallelExecutor = () => {
             <button
               onClick={executeTransactions}
               disabled={isExecuting || transactions.length === 0 || isBenchmarking}
-              className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold"
+              data-hint="execute"
+              className={`w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold ${q.pulse('execute')}`}
             >
               <Play size={18} />
               {isExecuting
                 ? tr('Executing...')
-                : `${tr('Execute')} (${executionMode === 'optimistic' ? tr('Optimistic') : tr('Conservative')})`}
+                : `${tr('Execute')} (${strategyLabel(executionMode)})`}
             </button>
             
             <button
               onClick={runBenchmark}
+              data-hint="benchmark"
               disabled={isExecuting || transactions.length === 0 || isBenchmarking}
-              className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold text-sm"
+              className={`w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded font-semibold text-sm ${q.pulse('benchmark')}`}
             >
               <Zap size={16} />
-              {isBenchmarking ? 'Running Benchmark...' : 'Benchmark Both Strategies'}
+              {isBenchmarking ? tr('Running Benchmark...') : tr('Benchmark Both Strategies')}
             </button>
           </div>
 
@@ -756,15 +814,15 @@ const ParallelExecutor = () => {
                 {conflictGroups.map((group, idx) => (
                   <div key={idx} className="bg-slate-700 rounded p-3">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-semibold">Group {idx + 1}</span>
+                      <span className="font-semibold">{tr('Group {{n}}', { n: idx + 1 })}</span>
                       <span className={`text-xs px-2 py-1 rounded ${
                         group.length > 1 ? 'bg-emerald-600' : 'bg-slate-600'
                       }`}>
-                        {group.length > 1 ? `${group.length} Parallel` : 'Sequential'}
+                        {group.length > 1 ? tr('{{count}} Parallel', { count: group.length }) : tr('Sequential')}
                       </span>
                     </div>
                     <div className="text-sm text-slate-300">
-                      TXs: {group.map(i => `#${transactions[i].id}`).join(', ')}
+                      {tr('TXs: {{ids}}', { ids: group.map(i => `#${transactions[i].id}`).join(', ') })}
                     </div>
                   </div>
                 ))}
@@ -776,11 +834,11 @@ const ParallelExecutor = () => {
                   <span className="font-semibold">{conflictGroups.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-300">Speedup:</span>
+                  <span className="text-slate-300">{tr('Speedup')}:</span>
                   <span className="font-semibold text-emerald-400">
                     {transactions.length > 0 
                       ? `${(transactions.length / conflictGroups.length).toFixed(1)}x`
-                      : 'N/A'
+                      : tr('N/A')
                     }
                   </span>
                 </div>
@@ -794,7 +852,7 @@ const ParallelExecutor = () => {
           {/* Benchmark Results */}
           {benchmarkResults && (
             <div className="bg-slate-800 rounded-lg p-4 border-2 border-yellow-600">
-              <h2 className="text-xl font-semibold mb-3 text-yellow-300">Benchmark Results</h2>
+              <h2 className="text-xl font-semibold mb-3 text-yellow-300">{tr('Benchmark Results')}</h2>
               
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className={`p-4 rounded-lg border-2 ${
@@ -803,19 +861,19 @@ const ParallelExecutor = () => {
                     : 'border-slate-600 bg-slate-700'
                 }`}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-emerald-300">Conservative</span>
+                    <span className="font-semibold text-emerald-300">{tr('Conservative')}</span>
                     {benchmarkResults.winner === 'conservative' && (
-                      <span className="text-xs bg-emerald-600 px-2 py-1 rounded">WINNER</span>
+                      <span className="text-xs bg-emerald-600 px-2 py-1 rounded">{tr('WINNER')}</span>
                     )}
                   </div>
                   <div className="text-3xl font-bold text-white mb-1">
                     {benchmarkResults.conservative.time}ms
                   </div>
                   <div className="text-sm text-slate-300">
-                    {conflictGroups.length} sequential groups
+                    {tr('{{count}} sequential groups', { count: conflictGroups.length })}
                   </div>
                   <div className="text-sm text-slate-400">
-                    0 re-executions
+                    {reExecLabel(0)}
                   </div>
                 </div>
                 
@@ -825,21 +883,21 @@ const ParallelExecutor = () => {
                     : 'border-slate-600 bg-slate-700'
                 }`}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-purple-300">Optimistic</span>
+                    <span className="font-semibold text-purple-300">{tr('Optimistic')}</span>
                     {benchmarkResults.winner === 'optimistic' && (
-                      <span className="text-xs bg-purple-600 px-2 py-1 rounded">WINNER</span>
+                      <span className="text-xs bg-purple-600 px-2 py-1 rounded">{tr('WINNER')}</span>
                     )}
                   </div>
                   <div className="text-3xl font-bold text-white mb-1">
                     {benchmarkResults.optimistic.time}ms
                   </div>
                   <div className="text-sm text-slate-300">
-                    Full parallelism
+                    {tr('Full parallelism')}
                   </div>
                   <div className={`text-sm ${
                     benchmarkResults.optimistic.reExecutions > 0 ? 'text-orange-400' : 'text-slate-400'
                   }`}>
-                    {benchmarkResults.optimistic.reExecutions} re-execution{benchmarkResults.optimistic.reExecutions !== 1 ? 's' : ''}
+                    {reExecLabel(benchmarkResults.optimistic.reExecutions)}
                   </div>
                 </div>
               </div>
@@ -847,7 +905,7 @@ const ParallelExecutor = () => {
               <div className="bg-slate-900 rounded p-3 border border-slate-700">
                 <div className="text-sm">
                   <div className="flex justify-between mb-1">
-                    <span className="text-slate-400">Performance difference:</span>
+                    <span className="text-slate-400">{tr('Performance difference')}:</span>
                     <span className="font-semibold text-yellow-400">
                       {benchmarkResults.percentDiff}% ({benchmarkResults.timeDiff}ms)
                     </span>
@@ -865,8 +923,11 @@ const ParallelExecutor = () => {
                         : 'text-orange-400'
                     }`}>
                       {analysis.recommendation === benchmarkResults.winner 
-                        ? '✓ Analyzer prediction was correct!'
-                        : `⚠️ Analyzer predicted ${analysis.recommendation}, but ${benchmarkResults.winner} performed better`
+                        ? tr('✓ Analyzer prediction was correct!')
+                        : tr('⚠️ Analyzer predicted {{predicted}}, but {{winner}} performed better', {
+                            predicted: strategyLabel(analysis.recommendation),
+                            winner: strategyLabel(benchmarkResults.winner)
+                          })
                       }
                     </div>
                   )}
@@ -876,18 +937,18 @@ const ParallelExecutor = () => {
           )}
           
           <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-            <h2 className="text-xl font-semibold mb-3">Execution Log</h2>
+            <h2 className="text-xl font-semibold mb-3">{tr('Execution Log')}</h2>
             
             {/* Stats */}
             {stats.totalTime > 0 && (
               <div className="mb-4 p-3 bg-slate-700 rounded">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div className="text-slate-400">Execution Time</div>
+                    <div className="text-slate-400">{tr('Execution Time')}</div>
                     <div className="text-lg font-semibold text-blue-400">{stats.totalTime}ms</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">Re-executions</div>
+                    <div className="text-slate-400">{tr('Re-executions')}</div>
                     <div className={`text-lg font-semibold ${stats.reExecutions > 0 ? 'text-orange-400' : 'text-emerald-400'}`}>
                       {stats.reExecutions}
                     </div>
@@ -918,14 +979,14 @@ const ParallelExecutor = () => {
                       <div className={`font-semibold py-2 px-3 rounded ${
                         entry.parallel ? 'bg-emerald-900 bg-opacity-30 text-emerald-300' : 'bg-slate-700 text-slate-300'
                       }`}>
-                        {entry.parallel ? '⚡ ' : '→ '}
-                        Group {entry.group} ({entry.count} TX{entry.count > 1 ? 's' : ''} 
-                        {entry.parallel ? ' in parallel' : ''})
+                        {entry.parallel
+                          ? `⚡ ${tr('Group {{group}} ({{count}} TXs in parallel)', { group: entry.group, count: entry.count })}`
+                          : `→ ${tr('Group {{group}} (1 TX)', { group: entry.group })}`}
                       </div>
                     )}
                     {entry.type === 'success' && (
                       <div className="bg-slate-700 rounded px-3 py-2 text-sm ml-4">
-                        <div className="text-emerald-400">✓ TX #{entry.tx.id} Success</div>
+                        <div className="text-emerald-400">{tr('✓ TX #{{id}} Success', { id: entry.tx.id })}</div>
                         <div className="text-slate-300 text-xs mt-1">
                           {entry.tx.from} ({entry.fromBalance}) → {entry.tx.to} ({entry.toBalance}) 
                           <span className="text-yellow-400 ml-1">[{entry.tx.amount}]</span>
@@ -934,7 +995,7 @@ const ParallelExecutor = () => {
                     )}
                     {entry.type === 'validated' && (
                       <div className="bg-emerald-900 bg-opacity-20 rounded px-3 py-2 text-sm ml-4 border border-emerald-700">
-                        <div className="text-emerald-400">✓ TX #{entry.tx.id} Validated (no conflict)</div>
+                        <div className="text-emerald-400">{tr('✓ TX #{{id}} Validated (no conflict)', { id: entry.tx.id })}</div>
                         <div className="text-slate-300 text-xs mt-1">
                           {entry.tx.from} ({entry.fromBalance}) → {entry.tx.to} ({entry.toBalance}) 
                           <span className="text-yellow-400 ml-1">[{entry.tx.amount}]</span>
@@ -943,15 +1004,19 @@ const ParallelExecutor = () => {
                     )}
                     {entry.type === 'conflict' && (
                       <div className="bg-orange-900 bg-opacity-30 rounded px-3 py-2 text-sm ml-4 border border-orange-600">
-                        <div className="text-orange-400">⚠️ TX #{entry.tx.id} Conflict Detected</div>
+                        <div className="text-orange-400">{tr('⚠️ TX #{{id}} Conflict Detected', { id: entry.tx.id })}</div>
                         <div className="text-slate-300 text-xs mt-1">
-                          Expected {entry.tx.from}: {entry.expected.from}, Got: {entry.actual.from}
+                          {tr('Expected {{account}}: {{expected}}, Got: {{actual}}', {
+                            account: entry.tx.from,
+                            expected: entry.expected.from,
+                            actual: entry.actual.from
+                          })}
                         </div>
                       </div>
                     )}
                     {entry.type === 'reexecuted' && (
                       <div className="bg-purple-900 bg-opacity-20 rounded px-3 py-2 text-sm ml-4 border border-purple-700">
-                        <div className="text-purple-400">🔄 TX #{entry.tx.id} Re-executed</div>
+                        <div className="text-purple-400">{tr('🔄 TX #{{id}} Re-executed', { id: entry.tx.id })}</div>
                         <div className="text-slate-300 text-xs mt-1">
                           {entry.tx.from} ({entry.fromBalance}) → {entry.tx.to} ({entry.toBalance}) 
                           <span className="text-yellow-400 ml-1">[{entry.tx.amount}]</span>
@@ -960,16 +1025,16 @@ const ParallelExecutor = () => {
                     )}
                     {entry.type === 'error' && (
                       <div className="bg-red-900 bg-opacity-30 rounded px-3 py-2 text-sm ml-4">
-                        <div className="text-red-400">✗ TX #{entry.tx.id} Failed</div>
+                        <div className="text-red-400">{tr('✗ TX #{{id}} Failed', { id: entry.tx.id })}</div>
                         <div className="text-slate-300 text-xs mt-1">{entry.reason}</div>
                       </div>
                     )}
                     {entry.type === 'complete' && (
                       <div className="font-semibold py-3 px-3 rounded bg-slate-700 text-slate-200 border-2 border-slate-600">
-                        ✅ Execution Complete
+                        ✅ {tr('Execution Complete')}
                         {entry.reExecutions > 0 && (
                           <span className="text-orange-400 ml-2">
-                            ({entry.reExecutions} re-execution{entry.reExecutions > 1 ? 's' : ''})
+                            ({reExecLabel(entry.reExecutions)})
                           </span>
                         )}
                       </div>
@@ -992,14 +1057,14 @@ const ParallelExecutor = () => {
               <div className="bg-slate-700 rounded p-3">
                 <div className="font-bold text-blue-300">Solana</div>
                 <p className="text-xs text-slate-300 mb-2">{tr('Uses a conservative model where transactions declare account access so the runtime can schedule non-conflicting transactions in parallel.')}</p>
-                <a href="https://solana.com/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-300 hover:text-blue-200 underline">Solana docs →</a>
+                <a href="https://solana.com/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-300 hover:text-blue-200 underline">{tr('Solana docs →')}</a>
               </div>
               <div className="bg-slate-700 rounded p-3">
-                <div className="font-bold text-purple-300">Aptos / Sui-style research</div>
+                <div className="font-bold text-purple-300">{tr('Aptos / Sui-style research')}</div>
                 <p className="text-xs text-slate-300 mb-2">{tr('Optimistic approaches (like Block-STM) execute in parallel and re-run conflicting transactions to maximize throughput.')}</p>
                 <div className="flex gap-3">
-                  <a href="https://aptos.dev/" target="_blank" rel="noopener noreferrer" className="text-xs text-purple-300 hover:text-purple-200 underline">Aptos docs →</a>
-                  <a href="https://docs.sui.io/" target="_blank" rel="noopener noreferrer" className="text-xs text-purple-300 hover:text-purple-200 underline">Sui docs →</a>
+                  <a href="https://aptos.dev/" target="_blank" rel="noopener noreferrer" className="text-xs text-purple-300 hover:text-purple-200 underline">{tr('Aptos docs →')}</a>
+                  <a href="https://docs.sui.io/" target="_blank" rel="noopener noreferrer" className="text-xs text-purple-300 hover:text-purple-200 underline">{tr('Sui docs →')}</a>
                 </div>
               </div>
               <div className="bg-slate-700 rounded p-3">
@@ -1032,9 +1097,9 @@ const ParallelExecutor = () => {
       <div className="mt-6 bg-slate-800 rounded-lg p-6 border border-slate-700">
         <h2 className="text-2xl font-bold mb-4 text-blue-300">📚 {tr('Further Reading')}</h2>
         <ul className="space-y-2 text-sm">
-          <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://solana.com/docs" target="_blank" rel="noopener noreferrer">Solana runtime & accounts docs →</a></li>
-          <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://aptos.dev/" target="_blank" rel="noopener noreferrer">Aptos documentation (Block-STM lineage) →</a></li>
-          <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://docs.sui.io/" target="_blank" rel="noopener noreferrer">Sui documentation →</a></li>
+          <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://solana.com/docs" target="_blank" rel="noopener noreferrer">{tr('Solana runtime & accounts docs →')}</a></li>
+          <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://aptos.dev/" target="_blank" rel="noopener noreferrer">{tr('Aptos documentation (Block-STM lineage) →')}</a></li>
+          <li><a className="text-blue-300 hover:text-blue-200 underline" href="https://docs.sui.io/" target="_blank" rel="noopener noreferrer">{tr('Sui documentation →')}</a></li>
         </ul>
       </div>
 

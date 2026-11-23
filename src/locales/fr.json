@@ -427,5 +427,14 @@
     },
     "hidePaths": "Masquer les parcours",
     "showPaths": "Afficher les parcours"
+  },
+  "quests": {
+    "title": "Quêtes d’apprentissage",
+    "done": "Terminée",
+    "todo": "À faire",
+    "showMe": "Montrez-moi",
+    "next": "Prochaine quête ({{n}}/{{total}})",
+    "allDone": "Toutes les quêtes sont terminées !",
+    "allDoneHint": "Bravo. Continuez à jouer avec les réglages pour explorer d’autres scénarios."
   }
 }

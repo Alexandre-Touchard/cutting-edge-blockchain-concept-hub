@@ -154,5 +154,14 @@
         "4": "Speed up / cancel replaces the pending tx (same nonce) and typically requires a fee bump (≈10%)"
       }
     }
+  },
+  "quests": {
+    "title": "Learning quests",
+    "done": "Done",
+    "todo": "To do",
+    "showMe": "Show me",
+    "next": "Next quest ({{n}}/{{total}})",
+    "allDone": "All quests complete!",
+    "allDoneHint": "Nice work. Keep experimenting with the controls to explore other scenarios."
   }
 }

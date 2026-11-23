@@ -4,6 +4,7 @@ import EduTooltip from '../../ui/EduTooltip';
 import LinkWithCopy from '../../ui/LinkWithCopy';
 import { define } from '../glossary';
 import { useDemoI18n } from '../useDemoI18n';
+import { NextQuestCard, QuestList, useDemoQuests } from '../quests/DemoQuests';
 import { amountAfterFee, impermanentLossPercent, priceImpactPercent, swapOutput } from './amm/math';
 
 // Backwards-compatible alias so we don't have to rewrite all usages.
@@ -67,11 +68,50 @@ const AMMDemo = () => {
   const priceRatio = currentPrice / initialPrice;
   const il = impermanentLossPercent(priceRatio);
 
+  const q = useDemoQuests('amm-demo', [
+    {
+      id: 'swap',
+      text: tr('Make your first swap'),
+      tip: tr('Enter an amount in You pay and click Swap: the reserves change, but k stays the same.'),
+      target: 'swap-btn'
+    },
+    {
+      id: 'add-liquidity',
+      text: tr('Add liquidity and receive LP tokens'),
+      tip: tr('Click 100 A under Add Liquidity: you deposit A and B at the current price and get LP tokens.'),
+      done: lpTokens > 0,
+      target: 'add-liquidity'
+    },
+    {
+      id: 'fee',
+      text: tr('Raise the trading fee to 1% or more'),
+      tip: tr('Drag the Trading Fee slider to 1% or more and watch You receive drop for the same input.'),
+      done: feePercent >= 1,
+      target: 'fee-slider'
+    },
+    {
+      id: 'impact',
+      text: tr('Quote a trade with price impact above 25%'),
+      tip: tr('Type a large amount in You pay (about a third of that token’s reserve) and read Price Impact.'),
+      done: inputAmount > 0 && priceImpact > 25,
+      target: 'swap-amount'
+    },
+    {
+      id: 'il-2x',
+      text: tr('Move the price 2× and read the impermanent loss'),
+      tip: tr('Swap until Price Change reaches +100% (or −50%), then read Impermanent Loss: about −5.7%.'),
+      done: priceRatio >= 1.98 || priceRatio <= 0.505,
+      target: 'swap-amount'
+    }
+  ]);
+
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">💱 {tr('Automated Market Maker (AMM) Math')}</h1>
         <p className="text-slate-300 mb-6">{tr('Constant Product Formula (x × y = k)')}</p>
+        <NextQuestCard q={q} className="mb-6" />
+        <QuestList q={q} />
 
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
@@ -154,7 +194,7 @@ const AMMDemo = () => {
 
               <div className="bg-slate-900 rounded p-3">
                 <div className="text-xs text-slate-400">
-                  Constant Product (k)
+                  {tr('Constant Product (k)')}
                   <Tooltip text={define('Constant Product (k)')} />
                 </div>
                 <div className="font-mono text-lg font-bold text-emerald-400">
@@ -177,7 +217,8 @@ const AMMDemo = () => {
                   step="0.1"
                   value={feePercent}
                   onChange={(e) => setFeePercent(parseFloat(e.target.value))}
-                  className="w-full"
+                  data-hint="fee-slider"
+                  className={`w-full ${q.pulse('fee-slider')}`}
                 />
               </div>
             </div>
@@ -195,7 +236,8 @@ const AMMDemo = () => {
                     type="number"
                     value={inputAmount}
                     onChange={(e) => setInputAmount(parseFloat(e.target.value) || 0)}
-                    className="flex-1 bg-slate-600 rounded px-3 py-2"
+                    data-hint="swap-amount"
+                    className={`flex-1 bg-slate-600 rounded px-3 py-2 ${q.pulse('swap-amount')}`}
                   />
                   <select
                     value={inputToken}
@@ -257,11 +299,15 @@ const AMMDemo = () => {
               )}
 
               <button
-                onClick={executeSwap}
+                onClick={() => {
+                  if (outputAmount > 0) q.markDone('swap');
+                  executeSwap();
+                }}
                 disabled={outputAmount <= 0}
-                className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 rounded font-semibold"
+                data-hint="swap-btn"
+                className={`w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 rounded font-semibold ${q.pulse('swap-btn')}`}
               >
-                Swap
+                {tr('Swap')}
               </button>
             </div>
           </div>
@@ -269,7 +315,7 @@ const AMMDemo = () => {
           {/* Liquidity */}
           <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
             <h2 className="text-lg font-semibold mb-4">
-              Liquidity & IL
+              {tr('Liquidity & IL')}
               <Tooltip text={define('Liquidity & IL')} />
             </h2>
 
@@ -282,7 +328,8 @@ const AMMDemo = () => {
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => addLiquidity(100)}
-                    className="py-2 bg-emerald-900 bg-opacity-30 hover:bg-emerald-900 hover:bg-opacity-50 border border-emerald-700 rounded text-sm"
+                    data-hint="add-liquidity"
+                    className={`py-2 bg-emerald-900 bg-opacity-30 hover:bg-emerald-900 hover:bg-opacity-50 border border-emerald-700 rounded text-sm ${q.pulse('add-liquidity')}`}
                   >
                     100 A
                   </button>
@@ -310,7 +357,7 @@ const AMMDemo = () => {
                   {((lpTokens / totalLpSupply) * 100).toFixed(2)}%
                 </div>
                 <div className="text-xs text-slate-500 mt-1">
-                  {lpTokens.toFixed(2)} / {totalLpSupply.toFixed(2)} LP tokens
+                  {lpTokens.toFixed(2)} / {totalLpSupply.toFixed(2)} {tr('LP tokens')}
                 </div>
               </div>
 
@@ -351,7 +398,7 @@ const AMMDemo = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">
-                      Impermanent Loss
+                      {tr('Impermanent Loss')}
                       <Tooltip text={define('IL Formula')} />
                     </span>
                     <span className={`font-bold ${il < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
@@ -423,7 +470,7 @@ const AMMDemo = () => {
                 <div className="bg-slate-700 rounded p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-bold text-purple-300">SushiSwap</span>
-                    <LinkWithCopy href="https://docs.sushi.com/" label={<>Docs →</>} className="text-xs text-purple-300 hover:text-purple-200 underline" />
+                    <LinkWithCopy href="https://docs.sushi.com/" label={<>{tr('Docs')} →</>} className="text-xs text-purple-300 hover:text-purple-200 underline" />
                     <span className="text-xs bg-purple-600 px-2 py-1 rounded">$500M+ TVL</span>
                   </div>
                   <p className="text-xs text-slate-300">
@@ -435,7 +482,7 @@ const AMMDemo = () => {
                 <div className="bg-slate-700 rounded p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-bold text-pink-300">PancakeSwap</span>
-                    <LinkWithCopy href="https://docs.pancakeswap.finance/" label={<>Docs →</>} className="text-xs text-pink-300 hover:text-pink-200 underline" />
+                    <LinkWithCopy href="https://docs.pancakeswap.finance/" label={<>{tr('Docs')} →</>} className="text-xs text-pink-300 hover:text-pink-200 underline" />
                     <span className="text-xs bg-pink-600 px-2 py-1 rounded">$2B+ TVL</span>
                   </div>
                   <p className="text-xs text-slate-300">
@@ -514,29 +561,29 @@ const AMMDemo = () => {
               <div className="bg-slate-700 rounded p-3">
                 <div className="font-semibold text-blue-300 mb-2">Uniswap V3</div>
                 <p className="text-slate-300 mb-2">
-                  Extends constant product with <strong>concentrated liquidity</strong>. 
-                  LPs can focus capital in specific price ranges for better capital efficiency.
+                  {tr('Extends constant product with')} <strong>{tr('concentrated liquidity')}</strong>.{' '}
+                  {tr('LPs can focus capital in specific price ranges for better capital efficiency.')}
                 </p>
-                <div className="text-emerald-400">✓ Up to 4000x capital efficiency</div>
-                <div className="text-emerald-400">✓ Custom fee tiers (0.01%, 0.05%, 0.3%, 1%)</div>
+                <div className="text-emerald-400">✓ {tr('Up to 4000x capital efficiency')}</div>
+                <div className="text-emerald-400">✓ {tr('Custom fee tiers (0.01%, 0.05%, 0.3%, 1%)')}</div>
               </div>
 
               <div className="bg-slate-700 rounded p-3">
                 <div className="font-semibold text-purple-300 mb-2">Curve Finance</div>
                 <p className="text-slate-300 mb-2">
-                  Modified formula for <strong>stablecoins</strong>: combines constant product + constant sum for minimal slippage on similar assets.
+                  {tr('Modified formula for')} <strong>{tr('stablecoins')}</strong>: {tr('combines constant product + constant sum for minimal slippage on similar assets.')}
                 </p>
-                <div className="text-emerald-400">✓ 0.04% slippage on $10M swaps</div>
-                <div className="text-emerald-400">✓ $20B+ TVL in stable pools</div>
+                <div className="text-emerald-400">✓ {tr('0.04% slippage on $10M swaps')}</div>
+                <div className="text-emerald-400">✓ {tr('$20B+ TVL in stable pools')}</div>
               </div>
 
               <div className="bg-slate-700 rounded p-3">
                 <div className="font-semibold text-yellow-300 mb-2">Balancer</div>
                 <p className="text-slate-300 mb-2">
-                  Generalized constant product: supports <strong>2-8 tokens per pool</strong> with custom weights (e.g., 80% ETH / 20% USDC).
+                  {tr('Generalized constant product: supports')} <strong>{tr('2-8 tokens per pool')}</strong> {tr('with custom weights (e.g., 80% ETH / 20% USDC).')}
                 </p>
-                <div className="text-emerald-400">✓ Customizable pool ratios</div>
-                <div className="text-emerald-400">✓ Index fund liquidity pools</div>
+                <div className="text-emerald-400">✓ {tr('Customizable pool ratios')}</div>
+                <div className="text-emerald-400">✓ {tr('Index fund liquidity pools')}</div>
               </div>
             </div>
           </div>
@@ -546,9 +593,9 @@ const AMMDemo = () => {
             <h3 className="font-semibold text-lg mb-3 text-orange-400">🔗 {tr('How dApps Integrate AMMs')}</h3>
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
-                <div className="font-semibold text-blue-300 mb-2">Aggregators (1inch, Matcha)</div>
+                <div className="font-semibold text-blue-300 mb-2">{tr('Aggregators (1inch, Matcha)')}</div>
                 <p className="text-slate-300 mb-2">
-                  Query multiple AMMs, calculate optimal routes, split trades across pools to minimize price impact.
+                  {tr('Query multiple AMMs, calculate optimal routes, split trades across pools to minimize price impact.')}
                 </p>
                 <div className="bg-slate-900 rounded p-2 font-mono text-xs text-emerald-400">
                   {`// Check Uniswap, Sushi, Curve
@@ -559,9 +606,9 @@ const bestPrice = await aggregator
               </div>
 
               <div>
-                <div className="font-semibold text-purple-300 mb-2">Wallets (MetaMask, Rainbow)</div>
+                <div className="font-semibold text-purple-300 mb-2">{tr('Wallets (MetaMask, Rainbow)')}</div>
                 <p className="text-slate-300 mb-2">
-                  Built-in swap features use AMM smart contracts. Show price quotes, slippage warnings, and execute trades.
+                  {tr('Built-in swap features use AMM smart contracts. Show price quotes, slippage warnings, and execute trades.')}
                 </p>
                 <div className="bg-slate-900 rounded p-2 font-mono text-xs text-emerald-400">
                   {`// Get quote from Uniswap router
@@ -572,9 +619,9 @@ const amountOut = await router
               </div>
 
               <div>
-                <div className="font-semibold text-emerald-300 mb-2">Lending Protocols (Aave, Compound)</div>
+                <div className="font-semibold text-emerald-300 mb-2">{tr('Lending Protocols (Aave, Compound)')}</div>
                 <p className="text-slate-300 mb-2">
-                  Use AMM prices as oracles. Flash loan users arbitrage price differences. Liquidators swap collateral via AMMs.
+                  {tr('Use AMM prices as oracles. Flash loan users arbitrage price differences. Liquidators swap collateral via AMMs.')}
                 </p>
                 <div className="bg-slate-900 rounded p-2 font-mono text-xs text-emerald-400">
                   {`// Flash loan -> arbitrage -> repay
@@ -586,9 +633,9 @@ flashLoan.repay();`}
               </div>
 
               <div>
-                <div className="font-semibold text-pink-300 mb-2">NFT Marketplaces (Sudoswap)</div>
+                <div className="font-semibold text-pink-300 mb-2">{tr('NFT Marketplaces (Sudoswap)')}</div>
                 <p className="text-slate-300 mb-2">
-                  Apply AMM math to NFTs. Pools hold NFTs + ETH, users swap instantly at bonding curve prices.
+                  {tr('Apply AMM math to NFTs. Pools hold NFTs + ETH, users swap instantly at bonding curve prices.')}
                 </p>
                 <div className="bg-slate-900 rounded p-2 font-mono text-xs text-emerald-400">
                   {`// NFT AMM pool
@@ -626,21 +673,21 @@ Price increases as x decreases`}
               <li>
                 <LinkWithCopy
                   href="https://docs.uniswap.org/"
-                  label={<>Uniswap documentation →</>}
+                  label={<>{tr('Uniswap documentation')} →</>}
                   className="text-blue-300 hover:text-blue-200 underline"
                 />
               </li>
               <li>
                 <LinkWithCopy
                   href="https://uniswap.org/whitepaper.pdf"
-                  label={<>Uniswap V2 whitepaper →</>}
+                  label={<>{tr('Uniswap V2 whitepaper')} →</>}
                   className="text-blue-300 hover:text-blue-200 underline"
                 />
               </li>
               <li>
                 <LinkWithCopy
                   href="https://ethereum.org/en/defi/"
-                  label={<>Ethereum.org: DeFi overview →</>}
+                  label={<>{tr('Ethereum.org: DeFi overview')} →</>}
                   className="text-blue-300 hover:text-blue-200 underline"
                 />
               </li>

@@ -46,8 +46,55 @@ function isBlockedByEarlierNonceInMempool(state: ReturnType<typeof makeInitialWa
   return state.mempool.some((t) => t.from === tx.from && t.status === 'mempool' && t.nonce < expected);
 }
 
-function mineabilityInfo(state: ReturnType<typeof makeInitialWalletTxState>, tx: Tx): { mineable: boolean; reason?: string } {
-  if (tx.status !== 'mempool' && tx.status !== 'ignored') return { mineable: false, reason: 'Not pending' };
+type Tr = (english: string, opts?: Record<string, unknown>) => string;
+
+/** Translate an engine error message (kept in English in state, since quest checks match on it). */
+function trTxError(tr: Tr, err: string): string {
+  switch (err) {
+    case 'Ignored: max fee is below current base fee.':
+      return tr('Ignored: max fee is below current base fee.');
+    case 'Reorg: returned to mempool (this demo rewound the last block).':
+      return tr('Reorg: returned to mempool (this demo rewound the last block).');
+    case 'Replacement rejected: fee bump requirements not met.':
+      return tr('Replacement rejected: fee bump requirements not met.');
+    case 'Dropped: insufficient ETH to cover value + (gasLimit × maxFee).':
+      return tr('Dropped: insufficient ETH to cover value + (gasLimit × maxFee).');
+    case 'Out of gas: gas limit too low; execution reverted and full gas limit was charged.':
+      return tr('Out of gas: gas limit too low; execution reverted and full gas limit was charged.');
+    case 'Reverted: insufficient ETH balance to transfer value.':
+      return tr('Reverted: insufficient ETH balance to transfer value.');
+    case 'Reverted: missing permit signature.':
+      return tr('Reverted: missing permit signature.');
+    case 'Reverted: invalid permit (owner/spender mismatch).':
+      return tr('Reverted: invalid permit (owner/spender mismatch).');
+    case 'Reverted: permit expired (deadline passed).':
+      return tr('Reverted: permit expired (deadline passed).');
+    case 'Reverted: permit signature invalid (toy check).':
+      return tr('Reverted: permit signature invalid (toy check).');
+    case 'Dropped: tx evicted from mempool (TTL expired in this simulator).':
+      return tr('Dropped: tx evicted from mempool (TTL expired in this simulator).');
+  }
+  let m: RegExpExecArray | null;
+  if ((m = /^Dropped: nonce too low \(already used\)\. Expected nonce >= (\S+), got (\S+)\.$/.exec(err))) {
+    return tr('Dropped: nonce too low (already used). Expected nonce >= {{expected}}, got {{got}}.', { expected: m[1], got: m[2] });
+  }
+  if ((m = /^Reverted: invalid permit nonce \(have (\S+), got (\S+)\)\.$/.exec(err))) {
+    return tr('Reverted: invalid permit nonce (have {{have}}, got {{got}}).', { have: m[1], got: m[2] });
+  }
+  if ((m = /^Reverted: permit value too low \(permit (\S+) DAI, need (\S+) DAI\)\.$/.exec(err))) {
+    return tr('Reverted: permit value too low (permit {{permit}} DAI, need {{need}} DAI).', { permit: m[1], need: m[2] });
+  }
+  if ((m = /^Reverted: ERC-20 insufficient allowance \(have (\S+) DAI, need (\S+) DAI\)\.$/.exec(err))) {
+    return tr('Reverted: ERC-20 insufficient allowance (have {{have}} DAI, need {{need}} DAI).', { have: m[1], need: m[2] });
+  }
+  if ((m = /^Reverted: ERC-20 insufficient token balance \(have (\S+) DAI, need (\S+) DAI\)\.$/.exec(err))) {
+    return tr('Reverted: ERC-20 insufficient token balance (have {{have}} DAI, need {{need}} DAI).', { have: m[1], need: m[2] });
+  }
+  return err;
+}
+
+function mineabilityInfo(state: ReturnType<typeof makeInitialWalletTxState>, tx: Tx, tr: Tr): { mineable: boolean; reason?: string } {
+  if (tx.status !== 'mempool' && tx.status !== 'ignored') return { mineable: false, reason: tr('Not pending') };
 
   // Fee cap vs base fee
   if (tx.maxFeeGwei < state.baseFeeGwei) {
@@ -58,23 +105,23 @@ function mineabilityInfo(state: ReturnType<typeof makeInitialWalletTxState>, tx:
   const value = tx.type === 'eth_transfer' ? tx.valueEth : 0;
   const upfrontMaxCostEth = value + gweiGasToEth(tx.maxFeeGwei, tx.gasLimit);
   if (state.accounts[tx.from].eth < upfrontMaxCostEth) {
-    return { mineable: false, reason: 'Insufficient ETH for (value + gasLimit × maxFee)' };
+    return { mineable: false, reason: tr('Insufficient ETH for (value + gasLimit × maxFee)') };
   }
 
   // Nonce ordering
   const expected = state.accounts[tx.from].nonce;
   if (tx.nonce > expected) {
-    return { mineable: false, reason: `Nonce gap (waiting for nonce ${expected})` };
+    return { mineable: false, reason: tr('Nonce gap (waiting for nonce {{expected}})', { expected }) };
   }
   if (tx.nonce < expected) {
-    return { mineable: false, reason: `Nonce too low (expected >= ${expected})` };
+    return { mineable: false, reason: tr('Nonce too low (expected >= {{expected}})', { expected }) };
   }
 
   if (isBlockedByEarlierNonceInMempool(state, tx)) {
-    return { mineable: false, reason: `Blocked by earlier pending nonce` };
+    return { mineable: false, reason: tr('Blocked by earlier pending nonce') };
   }
 
-  return { mineable: true, reason: 'May wait if outbid by higher tip txs' };
+  return { mineable: true, reason: tr('May wait if outbid by higher tip txs') };
 }
 
 function fmtEth(n: number) {
@@ -1787,13 +1834,13 @@ export default function WalletTransactionLifecycleImpl() {
                                           ) : null}
 
                                           {tx?.status === 'executed_revert' && tx.error ? (
-                                            <div className="text-[11px] text-amber-300 mt-1">{tr('revert')}: {tx.error}</div>
+                                            <div className="text-[11px] text-amber-300 mt-1">{tr('revert')}: {trTxError(tr, tx.error)}</div>
                                           ) : null}
                                           {tx?.status === 'executed_success' ? (
                                             <div className="text-[11px] text-emerald-300 mt-1">{tr('success')}</div>
                                           ) : null}
                                           {tx?.status === 'ignored' && tx.error ? (
-                                            <div className="text-[11px] text-slate-300 mt-1">{tr('ignored')}: {tx.error}</div>
+                                            <div className="text-[11px] text-slate-300 mt-1">{tr('ignored')}: {trTxError(tr, tx.error)}</div>
                                           ) : null}
                                         </div>
 
@@ -1821,7 +1868,7 @@ export default function WalletTransactionLifecycleImpl() {
               )}
               {state.mempool.map((tx) => {
                 const gap = nonceGapInfo(state, tx);
-                const mineability = mineabilityInfo(state, tx);
+                const mineability = mineabilityInfo(state, tx, tr);
                 const age = state.blockNumber - tx.firstSeenBlock;
                 const ttl = 20;
                 const ttlRemaining = Math.max(0, ttl - age);
@@ -2096,7 +2143,7 @@ export default function WalletTransactionLifecycleImpl() {
                         : 'border-slate-700 bg-slate-800/40 text-slate-200'
                     }`}
                   >
-                    {selectedTx.error}
+                    {trTxError(tr, selectedTx.error)}
                   </div>
                 )}
 

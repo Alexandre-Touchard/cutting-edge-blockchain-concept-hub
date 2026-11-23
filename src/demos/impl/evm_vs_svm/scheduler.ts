@@ -25,10 +25,15 @@ export type Wave = {
   slotsTotal: number;
 };
 
+/** Why a transaction could not join an earlier wave (structured, so the UI can translate it). */
+export type ScheduleAttempt =
+  | { wave: number; kind: 'full' }
+  | { wave: number; kind: 'conflict'; accounts: AccountId[]; withTx: number[] };
+
 export type ScheduleDebug = {
   txId: number;
   placedWave: number;
-  attempts: Array<{ wave: number; reason: string }>;
+  attempts: ScheduleAttempt[];
 };
 
 export function missingDeclarations(tx: Tx): Array<{ account: AccountId; needed: AccessMode | 'present' }> {
@@ -97,13 +102,13 @@ export function computeSchedule(txs: Tx[], threads: number): { waves: Wave[]; de
 
   for (const tx of txs) {
     let placedWave = -1;
-    const attempts: Array<{ wave: number; reason: string }> = [];
+    const attempts: ScheduleAttempt[] = [];
 
     for (let w = 0; w < waves.length; w++) {
       const wave = waves[w];
 
       if (wave.txs.length >= threads) {
-        attempts.push({ wave: w, reason: 'Wave full (thread limit)' });
+        attempts.push({ wave: w, kind: 'full' });
         continue;
       }
 
@@ -123,10 +128,7 @@ export function computeSchedule(txs: Tx[], threads: number): { waves: Wave[]; de
             if (am === 'w' || bm === 'w') conflictAccounts.add(acct);
           }
         }
-        attempts.push({
-          wave: w,
-          reason: `Conflicts on ${Array.from(conflictAccounts).join(', ')} (with TX ${conflictWith.join(', ')})`
-        });
+        attempts.push({ wave: w, kind: 'conflict', accounts: Array.from(conflictAccounts), withTx: conflictWith });
         continue;
       }
 
@@ -200,4 +202,56 @@ export function defaultTxs(): Tx[] {
 
 export function sumCu(txs: Tx[]) {
   return txs.reduce((a, t) => a + t.computeUnits, 0);
+}
+
+/** Accounts on which two access sets conflict (same account, at least one write). */
+export function conflictingAccounts(a: Partial<Record<AccountId, AccessMode>>, b: Partial<Record<AccountId, AccessMode>>): AccountId[] {
+  return (Object.keys({ ...a, ...b }) as AccountId[]).filter((acct) => {
+    const am = a[acct];
+    const bm = b[acct];
+    return !!am && !!bm && (am === 'w' || bm === 'w');
+  });
+}
+
+/** Accounts both sets only read: shared read locks, which never conflict. */
+export function sharedReads(a: Partial<Record<AccountId, AccessMode>>, b: Partial<Record<AccountId, AccessMode>>): AccountId[] {
+  return (Object.keys(a) as AccountId[]).filter((acct) => a[acct] === 'r' && b[acct] === 'r');
+}
+
+export type ConflictPair = { a: number; b: number; accounts: Array<{ account: AccountId; modes: string }> };
+
+/** Every pair of transactions whose declarations conflict, with the accounts and lock modes (e.g. "W/W"). */
+export function conflictPairs(txs: Tx[]): ConflictPair[] {
+  const out: ConflictPair[] = [];
+  for (let i = 0; i < txs.length; i++) {
+    for (let j = i + 1; j < txs.length; j++) {
+      const accts = conflictingAccounts(txs[i].declared, txs[j].declared);
+      if (accts.length === 0) continue;
+      out.push({
+        a: txs[i].id,
+        b: txs[j].id,
+        accounts: accts.map((account) => ({
+          account,
+          modes: `${txs[i].declared[account]!.toUpperCase()}/${txs[j].declared[account]!.toUpperCase()}`
+        }))
+      });
+    }
+  }
+  return out;
+}
+
+/** Accounts a transaction actually writes: its state changes when it succeeds. */
+export function writtenAccounts(tx: Tx): AccountId[] {
+  return (Object.entries(tx.actual) as Array<[AccountId, AccessMode]>).filter(([, m]) => m === 'w').map(([a]) => a);
+}
+
+/** Preset: many transactions read the oracle, one updates it (read locks are shared; the write is exclusive). */
+export function oracleHeavyTxs(): Tx[] {
+  return [
+    { id: 1, label: 'Oracle read', computeUnits: 15, actual: { Oracle: 'r' }, declared: { Oracle: 'r' } },
+    { id: 2, label: 'Oracle read', computeUnits: 15, actual: { Oracle: 'r' }, declared: { Oracle: 'r' } },
+    { id: 3, label: 'Oracle read', computeUnits: 15, actual: { Oracle: 'r' }, declared: { Oracle: 'r' } },
+    { id: 4, label: 'Oracle write (conflicts with oracle reads)', computeUnits: 30, actual: { Oracle: 'w' }, declared: { Oracle: 'w' } },
+    { id: 5, label: 'Oracle read', computeUnits: 15, actual: { Oracle: 'r' }, declared: { Oracle: 'r' } }
+  ];
 }

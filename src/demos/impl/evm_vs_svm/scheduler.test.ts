@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { computeSchedule, conflicts, declaredCoversActual, defaultTxs, missingDeclarations, type Tx } from './scheduler';
+import {
+  computeSchedule,
+  conflictPairs,
+  conflictingAccounts,
+  conflicts,
+  declaredCoversActual,
+  defaultTxs,
+  missingDeclarations,
+  oracleHeavyTxs,
+  sharedReads,
+  writtenAccounts,
+  type Tx
+} from './scheduler';
 
 function tx(id: number, declared: Tx['declared'], computeUnits = 10): Tx {
   return { id, label: `tx${id}`, computeUnits, actual: declared as Tx['actual'], declared };
@@ -53,7 +65,7 @@ describe('computeSchedule', () => {
   it('pushes a conflicting transaction to a later wave', () => {
     const { waves, debug } = computeSchedule([tx(1, { DexPool: 'w' }), tx(2, { DexPool: 'w' })], 4);
     expect(waves.map((w) => w.txs.map((t) => t.id))).toEqual([[1], [2]]);
-    expect(debug[1].attempts[0].reason).toContain('DexPool');
+    expect(debug[1].attempts[0]).toEqual({ wave: 0, kind: 'conflict', accounts: ['DexPool'], withTx: [1] });
   });
 
   it('never puts more transactions in a wave than there are threads', () => {
@@ -86,5 +98,36 @@ describe('computeSchedule', () => {
     const { waves } = computeSchedule([tx(1, { Alice: 'r' }), tx(2, { Bob: 'w' })], 4);
     expect(waves[0].locks).toEqual({ Alice: 'r', Bob: 'w' });
     expect(waves[0].lockSources).toEqual({ Alice: [1], Bob: [2] });
+  });
+});
+
+describe('explanations', () => {
+  it('reports a full wave as a structured reason', () => {
+    const { debug } = computeSchedule([tx(1, { Alice: 'w' }), tx(2, { Bob: 'w' })], 1);
+    expect(debug[1].attempts).toEqual([{ wave: 0, kind: 'full' }]);
+  });
+
+  it('lists conflicting accounts and shared reads', () => {
+    expect(conflictingAccounts({ DexPool: 'w', Oracle: 'r' }, { DexPool: 'r', Oracle: 'r' })).toEqual(['DexPool']);
+    expect(sharedReads({ DexPool: 'w', Oracle: 'r' }, { DexPool: 'r', Oracle: 'r' })).toEqual(['Oracle']);
+  });
+
+  it('lists every conflicting pair with lock modes', () => {
+    const pairs = conflictPairs([tx(1, { DexPool: 'w' }), tx(2, { DexPool: 'r' }), tx(3, { Oracle: 'r' }), tx(4, { Oracle: 'r' })]);
+    expect(pairs).toEqual([{ a: 1, b: 2, accounts: [{ account: 'DexPool', modes: 'W/R' }] }]);
+  });
+
+  it('reports the accounts a transaction writes', () => {
+    expect(writtenAccounts(defaultTxs()[0])).toEqual(['Alice', 'DexPool', 'FeeVault']);
+    expect(writtenAccounts(tx(9, { Oracle: 'r' }))).toEqual([]);
+  });
+});
+
+describe('oracle-heavy preset', () => {
+  it('packs the reads together and isolates the write', () => {
+    const { waves } = computeSchedule(oracleHeavyTxs(), 4);
+    // reads 1-3 share a read lock; the write (4) needs its own wave; read 5 joins the first wave
+    expect(waves.map((w) => w.txs.map((t) => t.id))).toEqual([[1, 2, 3, 5], [4]]);
+    expect(waves[1].locks).toEqual({ Oracle: 'w' });
   });
 });

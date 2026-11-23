@@ -120,8 +120,19 @@
       }
     },
     "evm-vs-svm": {
-      "title": "EVM vs Solana (style)",
-      "description": "Bientôt disponible : une simulation plus réaliste, accessible aux débutants et précise pour les développeurs de l’exécution séquentielle (EVM) vs la planification parallèle (style Solana)."
+      "title": "Exécution séquentielle vs parallèle (EVM vs SVM)",
+      "description": "Exécutez les mêmes transactions une par une (Ethereum) puis en vagues parallèles (Solana), et voyez pourquoi déclarer les comptes à l’avance permet le parallélisme, et ce qui oblige encore des transactions à attendre.",
+      "keyTakeaways": {
+        "0": "Ethereum exécute les transactions une par une car elles ne déclarent pas l’état qu’elles touchent ; les transactions Solana déclarent leurs comptes, ce qui permet d’exécuter en parallèle celles qui n’entrent pas en conflit.",
+        "1": "Deux transactions n’entrent en conflit que si elles touchent le même compte et qu’au moins l’une écrit ; les lectures peuvent être partagées.",
+        "2": "Le parallélisme ne supprime pas l’ordre : les comptes très sollicités sérialisent toujours les transactions, et l’ordre crée toujours de la MEV."
+      },
+      "tags": {
+        "0": "Ethereum",
+        "1": "Solana",
+        "2": "Sealevel",
+        "3": "Exécution parallèle"
+      }
     },
     "wallet-tx-lifecycle": {
       "title": "UX de wallet & cycle de vie d’une transaction",

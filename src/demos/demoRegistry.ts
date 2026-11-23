@@ -242,16 +242,20 @@ export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
 
   'evm-vs-svm': {
     id: 'evm-vs-svm',
-    title: 'EVM vs SVM',
+    title: 'Sequential vs Parallel Execution (EVM vs SVM)',
     thumbnail: demo13Thumb,
     description:
-      'A simulation of sequential (EVM-style) execution vs parallel (Solana-style) scheduling, and why parallel scheduling increases throughput when transactions do not conflict.',
+      'Run the same transactions one by one (Ethereum) and in parallel waves (Solana), and see why declaring accounts upfront enables parallelism, and what still forces transactions to wait.',
     category: 'execution',
     difficulty: 'Beginner',
-    tags: [],
+    tags: ['Ethereum', 'Solana', 'Sealevel', 'Parallel execution'],
     concepts: ['Sequential execution', 'Parallel scheduling', 'Account locks', 'Read/write conflicts'],
     learningQuestsTotal: 8,
-    keyTakeaways: ['Why parallel scheduling increases throughput when transactions do not conflict'],
+    keyTakeaways: [
+      'Ethereum runs transactions one by one because they don’t declare the state they touch; Solana transactions declare their accounts, so non-conflicting ones run in parallel.',
+      'Two transactions conflict only if they touch the same account and at least one writes; reads can be shared.',
+      'Parallelism doesn’t remove ordering: hot accounts still serialise transactions, and order still creates MEV.'
+    ],
     status: 'coming_soon'
   },
   'arkea-heist-tracing': {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import EduTooltip from '../../ui/EduTooltip';
 import LearningQuestsPortal from '../../ui/LearningQuestsPortal';
 import LinkWithCopy from '../../ui/LinkWithCopy';
@@ -20,28 +20,70 @@ import {
 } from 'lucide-react';
 import {
   computeSchedule,
+  conflictPairs,
+  conflictingAccounts,
   conflicts,
   declaredCoversActual,
   defaultTxs,
   missingDeclarations,
+  oracleHeavyTxs,
+  sharedReads,
   sumCu,
+  writtenAccounts,
   type AccessMode,
   type AccountId,
+  type ScheduleAttempt,
   type ScheduleDebug,
   type Tx,
   type Wave
 } from './evm_vs_svm/scheduler';
 import { usePersistedQuests, useReportQuestProgress } from '../questProgress';
+import { usePulseTarget } from '../../ui/attention';
+import ExecutionTimeline from './evm_vs_svm/ExecutionTimeline';
+import AccessDiagram from './evm_vs_svm/AccessDiagram';
 
 
-function MissingDeclBox({ out }: { out: Outcome | undefined }) {
+/** Sources for the "Further Reading" section (all checked on 2026-11-23). Group titles are translated. */
+const FURTHER_READING: Array<{ title: string; links: Array<{ label: string; href: string }> }> = [
+  {
+    title: 'Solana: declared accounts and Sealevel',
+    links: [
+      {
+        label: 'Solana Foundation — Sealevel: Parallel Processing Thousands of Smart Contracts (2019)',
+        href: 'https://solana.com/news/sealevel---parallel-processing-thousands-of-smart-contracts'
+      },
+      { label: 'Solana docs — Transaction Structure', href: 'https://solana.com/docs/core/transactions/transaction-structure' },
+      { label: 'Solana docs — Account Modification Rules', href: 'https://solana.com/docs/core/accounts/modification-rules' }
+    ]
+  },
+  {
+    title: 'Ethereum: sequential execution',
+    links: [
+      { label: 'ethereum.org — Ethereum Virtual Machine (EVM)', href: 'https://ethereum.org/en/developers/docs/evm/' },
+      { label: 'EIP-2930 — Optional access lists', href: 'https://eips.ethereum.org/EIPS/eip-2930' }
+    ]
+  },
+  {
+    title: 'Other parallelism models',
+    links: [
+      {
+        label: 'Block-STM: Scaling Blockchain Execution by Turning Ordering Curse to a Performance Blessing (arXiv, 2022)',
+        href: 'https://arxiv.org/abs/2203.06871'
+      },
+      { label: 'Sui docs — Object Model', href: 'https://docs.sui.io/concepts/object-model' },
+      { label: 'Monad docs — Parallel Execution', href: 'https://docs.monad.xyz/monad-arch/execution/parallel-execution' }
+    ]
+  }
+];
+
+function MissingDeclBox({ out, tr }: { out: Outcome | undefined; tr: (s: string) => string }) {
   if (!out || out.status !== 'failed' || out.reason !== 'MissingAccountDeclaration') return null;
   const missing = out.missing ?? [];
   if (missing.length === 0) return null;
 
   return (
     <div className="mt-2 rounded-lg border border-red-800 bg-red-950/20 p-3">
-      <div className="text-xs font-semibold text-red-200">Missing declarations</div>
+      <div className="text-xs font-semibold text-red-200">{tr('Missing declarations')}</div>
       <ul className="mt-2 text-xs text-red-100 list-disc pl-5 space-y-1">
         {missing.map((m) => (
           <li key={`${m.account}-${m.needed}`}
@@ -53,7 +95,12 @@ function MissingDeclBox({ out }: { out: Outcome | undefined }) {
         ))}
       </ul>
       <div className="mt-2 text-[11px] text-red-200/80">
-        Tip: declared accounts are like Solana account locks (READ/WRITE). If you touch an account at runtime but didn’t declare it, the tx can fail.
+        {tr(
+          'Declared accounts are Solana’s account locks (READ/WRITE). A transaction that uses an account it didn’t declare, or writes one it declared read-only, fails at runtime.'
+        )}
+      </div>
+      <div className="mt-1 text-[11px] text-red-200/80">
+        {tr('A failed transaction is not rejected: it is still included in the block and still pays its fee. Only its state changes are discarded.')}
       </div>
     </div>
   );
@@ -92,12 +139,14 @@ export default function EvmVsSvmDemo() {
     () => [
       {
         term: tr('EVM (sequential execution)'),
-        def: tr('Executes transactions in a strict order. State access is implicit.')
+        def: tr(
+          'Ethereum executes transactions one after another, in block order. Transactions don’t declare the state they touch, so a node can’t tell upfront which ones conflict. Optional access lists (EIP-2930) exist, but they aren’t enforced: a transaction can still touch state outside its list.'
+        )
       },
       {
         term: tr('Solana-style (parallel scheduling)'),
         def: tr(
-          'Transactions can run in parallel when they declare non-conflicting account read/write sets (account locks).'
+          'Every Solana transaction lists the accounts it reads and writes. The runtime (Sealevel) takes read/write locks on them and runs transactions whose locks don’t conflict at the same time.'
         )
       },
       {
@@ -107,6 +156,18 @@ export default function EvmVsSvmDemo() {
       {
         term: tr('Conflicts'),
         def: tr('Two txs conflict if they touch the same account and at least one writes.')
+      },
+      {
+        term: tr('Account'),
+        def: tr('A piece of on-chain data with its own address: a user’s balance, a liquidity pool, an oracle price. On Solana, the unit that gets locked.')
+      },
+      {
+        term: tr('State'),
+        def: tr('The current content of all accounts. Executing a transaction reads some of it and changes some of it (its writes).')
+      },
+      {
+        term: tr('Wave'),
+        def: tr('In this demo, a group of transactions whose locks don’t conflict, run at the same time. A wave holds at most as many transactions as there are threads.')
       }
     ],
     [tr]
@@ -155,6 +216,8 @@ export default function EvmVsSvmDemo() {
     setQuestFlags((prev) => ({ ...prev, [k]: true }));
   }
 
+  const conflictList = useMemo(() => conflictPairs(txs), [txs]);
+
   const scheduleDebugByTxId = useMemo(() => {
     const m = new Map<number, ScheduleDebug>();
     for (const d of schedule.debug) m.set(d.txId, d);
@@ -175,6 +238,83 @@ export default function EvmVsSvmDemo() {
     setEvmIndex(0);
     setSvmWaveIndex(0);
     if (!keepLogs) setLogs([]);
+  }
+
+  /** Rewinds one side only (the transaction list and the other side are untouched). */
+  function resetEvm() {
+    setEvmOut({});
+    setEvmIndex(0);
+    appendLog('EVM', 'info', tr('Reset EVM execution'));
+  }
+
+  function resetSvm() {
+    setSvmOut({});
+    setSvmWaveIndex(0);
+    appendLog('SOLANA', 'info', tr('Reset Solana-style execution'));
+  }
+
+  /** Translated reason why a transaction could not join an earlier wave. */
+  function attemptText(a: ScheduleAttempt): string {
+    return a.kind === 'full'
+      ? tr('Wave {{n}} was full (thread limit).', { n: a.wave + 1 })
+      : tr('Wave {{n}}: conflicts with {{txs}} on {{accounts}}.', {
+          n: a.wave + 1,
+          txs: a.withTx.map((id) => `TX #${id}`).join(', '),
+          accounts: a.accounts.join(', ')
+        });
+  }
+
+  /** Plain-language explanation of where a transaction was scheduled and why (TODO C2). */
+  function whyThisWave(tx: Tx): string {
+    const dbg = scheduleDebugByTxId.get(tx.id);
+    if (!dbg) return tr('No scheduling info');
+    const wave = waves[dbg.placedWave];
+    const parts: string[] = [];
+
+    if (dbg.attempts.length > 0) {
+      parts.push(attemptText(dbg.attempts[dbg.attempts.length - 1]));
+    } else {
+      const others = (wave?.txs ?? []).filter((t) => t.id !== tx.id);
+      const list = others.map((t) => `TX #${t.id}`).join(', ');
+      if (others.length === 0) {
+        parts.push(tr('Runs alone in wave {{n}}.', { n: dbg.placedWave + 1 }));
+      } else {
+        const shared = Array.from(new Set(others.flatMap((o) => sharedReads(tx.declared, o.declared))));
+        parts.push(
+          shared.length > 0
+            ? tr('Runs alongside {{txs}}: they only share read locks on {{accounts}} (read/read is fine).', {
+                txs: list,
+                accounts: shared.join(', ')
+              })
+            : tr('Runs alongside {{txs}}: no shared account is written.', { txs: list })
+        );
+      }
+    }
+
+    // Scheduled before a conflicting transaction that was listed earlier: the leader reordered them.
+    const idx = txs.findIndex((t) => t.id === tx.id);
+    const overtaken = txs
+      .slice(0, idx)
+      .filter(
+        (e) =>
+          (scheduleDebugByTxId.get(e.id)?.placedWave ?? 0) > dbg.placedWave &&
+          conflictingAccounts(e.declared, tx.declared).length > 0
+      );
+    if (overtaken.length > 0) {
+      parts.push(
+        tr(
+          'Note: it runs before {{txs}}, listed earlier, although they conflict. A Solana leader may reorder like this, so this transaction sees the state from before them.',
+          { txs: overtaken.map((t) => `TX #${t.id}`).join(', ') }
+        )
+      );
+    }
+    return parts.join(' ');
+  }
+
+  /** "writes Alice, DexPool" or "read-only: no state change" (what a successful tx changes). */
+  function stateChangeText(t: Tx): string {
+    const w = writtenAccounts(t);
+    return w.length > 0 ? `${tr('writes')} ${w.join(', ')}` : tr('read-only: no state change');
   }
 
   const quests = useMemo(() => {
@@ -217,6 +357,74 @@ export default function EvmVsSvmDemo() {
     };
   }, [txs, evmIndex, svmWaveIndex, waves, speedup, threads, questFlags]);
   useReportQuestProgress('evm-vs-svm', Object.values(quests).filter(Boolean).length, 8);
+
+  // Guided quests: the next unfinished quest, with a hint and the control to click (pulses on "Show me").
+  const questSteps: Array<{ key: keyof typeof quests; text: string; hint: string; target: string }> = [
+    {
+      key: 'fixedMissing',
+      text: tr('Fix TX #2 by declaring FeeVault as write'),
+      hint: tr('Click Auto-fix on TX #2, or set FeeVault to write (W) in its declared accounts.'),
+      target: 'autofix'
+    },
+    {
+      key: 'ranBoth',
+      text: tr('Run both EVM and Solana-style to completion'),
+      hint: tr('Press Run all on both sides, then compare the two timelines below.'),
+      target: 'run'
+    },
+    {
+      key: 'locksViewed',
+      text: tr('Open the lock timeline (Show locks)'),
+      hint: tr('Open the lock timeline to see which accounts each wave locks.'),
+      target: 'locks'
+    },
+    {
+      key: 'gotSpeedup',
+      text: tr('Reach speedup ≥ 1.2× (increase threads + reduce conflicts)'),
+      hint: quests.fixedMissing ? tr('Move the threads slider up and watch the Solana-style timeline shrink.') : tr('Fix TX #2 first: a failing transaction does not count.'),
+      target: quests.fixedMissing ? 'threads' : 'autofix'
+    },
+    {
+      key: 'hasOracleReadParallel',
+      text: tr('Make two Oracle READ txs run in the same wave (R/R)'),
+      hint: tr('Load the Oracle-heavy preset: oracle reads share a read lock, so they fit in the same wave.'),
+      target: 'preset-oracle'
+    },
+    {
+      key: 'oracleWriteCreatesWLock',
+      text: tr('Add an Oracle WRITE and observe it creates a W lock (blocks reads)'),
+      hint: tr('Click Add tx: it adds an oracle write, which takes an exclusive (W) lock.'),
+      target: 'add-tx'
+    },
+    {
+      key: 'threadLimitConcept',
+      text: tr('Increase threads so a disjoint preset fits in 1 wave'),
+      hint: questFlags.loadedDisjointPreset ? tr('Now set threads to 3 or more.') : tr('Load the Mostly independent preset first.'),
+      target: questFlags.loadedDisjointPreset ? 'threads' : 'preset-independent'
+    },
+    {
+      key: 'orderingExplored',
+      text: tr('Load ordering preset and swap TX1 ↔ TX2'),
+      hint: questFlags.loadedOrderingPreset
+        ? tr('Now swap TX1 ↔ TX2 in the “Ordering still matters” section.')
+        : tr('Load the High conflict (same pool) preset first.'),
+      target: questFlags.loadedOrderingPreset ? 'swap' : 'preset-ordering'
+    }
+  ];
+  const questsDoneCount = questSteps.filter((q) => quests[q.key]).length;
+  const nextQuest = questSteps.find((q) => !quests[q.key]) ?? null;
+  const { point, clear: clearPulse, pulse } = usePulseTarget();
+
+  // Point at the first quest's control on arrival (no scroll), and stop pulsing once a quest is done.
+  useEffect(() => {
+    if (nextQuest) point(nextQuest.target, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const lastQuestKey = useRef(nextQuest?.key);
+  useEffect(() => {
+    if (lastQuestKey.current !== nextQuest?.key) clearPulse();
+    lastQuestKey.current = nextQuest?.key;
+  }, [nextQuest?.key, clearPulse]);
 
   function onTxListChanged(reason: string) {
     resetExecution(true);
@@ -288,6 +496,12 @@ export default function EvmVsSvmDemo() {
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 50);
     }
+  }
+
+  /** Opens the debug view (where the lock timeline lives) and scrolls to the timeline. */
+  function showLocks() {
+    setShowDebug(true);
+    window.setTimeout(() => highlightSection('timeline'), 60);
   }
 
   function highlightSection(id: 'waves' | 'timeline') {
@@ -419,6 +633,20 @@ export default function EvmVsSvmDemo() {
     if (guidedMode) highlightSection('waves');
   }
 
+  function loadPresetOracleHeavy() {
+    const preset = oracleHeavyTxs();
+    setTxs(preset);
+    setNextId(preset.length + 1);
+    onTxListChanged(tr('Loaded preset: oracle-heavy (many reads, one write)'));
+    if (guidedMode) highlightSection('waves');
+  }
+
+  function loadPresetDefault() {
+    setTxs(defaultTxs());
+    setNextId(Math.max(...defaultTxs().map((t) => t.id)) + 1);
+    onTxListChanged(tr('Loaded preset: default (TX #2 has a missing declaration)'));
+  }
+
   function swapOrderOfFirstTwoTxs() {
     markQuestFlag('swappedOrder');
 
@@ -456,7 +684,7 @@ export default function EvmVsSvmDemo() {
 
     appendLog('EVM', 'phase', `${tr('Execute TX')} #${t.id}`);
     setEvmOut((prev) => ({ ...prev, [t.id]: { status: 'ok', summary: tr('Executed') } }));
-    appendLog('EVM', 'success', `${tr('OK')} — #${t.id}: ${tr(t.label)}`);
+    appendLog('EVM', 'success', `${tr('OK')} — #${t.id}: ${tr(t.label)} (${stateChangeText(t)})`);
 
     setEvmIndex((v) => v + 1);
   }
@@ -484,7 +712,7 @@ export default function EvmVsSvmDemo() {
         appendLog('SOLANA', 'error', `${tr('FAILED')} — #${t.id}: ${failed.summary}`);
       } else {
         patch[t.id] = { status: 'ok', summary: tr('Executed') };
-        appendLog('SOLANA', 'success', `${tr('OK')} — #${t.id}: ${tr(t.label)}`);
+        appendLog('SOLANA', 'success', `${tr('OK')} — #${t.id}: ${tr(t.label)} (${stateChangeText(t)})`);
       }
     }
 
@@ -553,7 +781,7 @@ export default function EvmVsSvmDemo() {
           <div className="min-w-0">
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
               <Cpu className="text-blue-300" />
-              {tr('EVM vs Solana-style: Sequential vs Parallel execution')}
+              {tr('Sequential vs parallel execution: Ethereum (EVM) vs Solana (SVM)')}
             </h1>
             <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-4 max-w-3xl">
               <div className="text-sm font-semibold text-slate-200 flex items-center gap-2">
@@ -571,7 +799,7 @@ export default function EvmVsSvmDemo() {
                   </span>
                 </li>
                 <li>
-                  {tr('Click')} <span className="font-semibold text-emerald-200">{tr('Step')}</span> {tr('on Solana-style to execute a whole wave in parallel.')}
+                  {tr('Click')} <span className="font-semibold text-emerald-200">{tr('Step wave')}</span> {tr('on Solana-style to execute a whole wave in parallel.')}
                   <span className="ml-2">
                     <EduTooltip widthClassName="w-96" text={tr('A wave is a batch of transactions that can run concurrently because their declared account locks do not conflict.')} />
                   </span>
@@ -581,7 +809,7 @@ export default function EvmVsSvmDemo() {
                   <button
                     type="button"
                     onClick={autoFixTx2}
-                    className="ml-2 inline-flex items-center px-2 py-1 rounded border border-amber-700 bg-amber-900/20 text-amber-100 text-xs hover:bg-amber-900/30"
+                    className={`ml-2 inline-flex items-center px-2 py-1 rounded border border-amber-700 bg-amber-900/20 text-amber-100 text-xs hover:bg-amber-900/30 ${pulse('autofix')}`}
                   >
                     {tr('Auto-fix')}
                   </button>
@@ -594,7 +822,7 @@ export default function EvmVsSvmDemo() {
 
             <p className="text-slate-300 mt-3 max-w-3xl">
               {tr(
-                'This simulation compares a sequential EVM-style pipeline with a Solana-style scheduler that can run non-conflicting transactions in parallel when accounts are declared upfront (account locks).'
+                'Why does Ethereum execute transactions one by one while Solana runs many at once? Not because of the virtual machine: Ethereum transactions don’t say which state they will touch, so nodes can’t know in advance which ones conflict. Solana transactions declare their accounts upfront, so its runtime (Sealevel) can lock them and run non-conflicting transactions in parallel.'
               )}
             </p>
 
@@ -610,6 +838,42 @@ export default function EvmVsSvmDemo() {
                   </span>
                 </span>
               ))}
+            </div>
+
+            {/* Next quest (guided path through the 8 quests) */}
+            <div className="mt-4 max-w-3xl rounded-xl border border-amber-800/60 bg-amber-950/20 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-amber-100">
+                  <ListTodo size={16} className="text-amber-300" />
+                  {nextQuest
+                    ? tr('Next quest ({{n}}/{{total}})', { n: questsDoneCount + 1, total: questSteps.length })
+                    : tr('All quests complete!')}
+                </div>
+                <div className="flex gap-1" aria-hidden>
+                  {questSteps.map((q) => (
+                    <span key={q.key} className={`h-1.5 w-4 rounded-full ${quests[q.key] ? 'bg-emerald-400' : 'bg-slate-700'}`} />
+                  ))}
+                </div>
+              </div>
+              {nextQuest ? (
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-slate-100">{nextQuest.text}</div>
+                    <div className="text-xs text-slate-400">{nextQuest.hint}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => point(nextQuest.target)}
+                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold hover:bg-amber-500"
+                  >
+                    {tr('Show me')}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-1 text-xs text-slate-300">
+                  {tr('You’ve explored declarations, conflicts, threads and ordering. Try your own transactions with the presets and the declaration toggles.')}
+                </div>
+              )}
             </div>
           </div>
 
@@ -644,7 +908,7 @@ export default function EvmVsSvmDemo() {
               {tr('Reset')}
             </button>
             {/* Was passing text/copyText, which LinkWithCopy doesn't accept: the link rendered empty. */}
-            <LinkWithCopy label="EVM vs Solana-style demo" href={typeof window !== 'undefined' ? window.location.href : ''} />
+            <LinkWithCopy label={tr('EVM vs Solana-style demo')} href={typeof window !== 'undefined' ? window.location.href : ''} />
           </div>
         </div>
 
@@ -665,7 +929,9 @@ export default function EvmVsSvmDemo() {
                 max={4}
                 value={threads}
                 onChange={(e) => setThreads(parseInt(e.target.value, 10))}
-                className="w-full"
+                data-hint="threads"
+                aria-label={tr('Parallel threads')}
+                className={`w-full rounded ${pulse('threads')}`}
               />
               <span className="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm">{threads}</span>
             </div>
@@ -677,9 +943,21 @@ export default function EvmVsSvmDemo() {
               <span className="px-2 py-1 rounded border border-emerald-700 bg-emerald-900/20 text-emerald-100">
                 {tr('Solana-style time')}: <span className="font-bold">{svmTime}</span> CU
               </span>
+              <EduTooltip
+                widthClassName="w-80"
+                text={tr(
+                  'EVM time = the sum of every transaction’s compute units (CU), since they run one after another. Solana-style time = for each wave, the CU of its slowest transaction (the others finish earlier and wait), added up over all waves. More threads = more transactions per wave, as long as they don’t conflict.'
+                )}
+              />
               <span className="px-2 py-1 rounded border border-slate-700 bg-slate-900 text-slate-200">
                 {tr('Speedup')}: <span className="font-bold text-emerald-300">{speedup.toFixed(2)}×</span>
               </span>
+              <EduTooltip
+                widthClassName="w-80"
+                text={tr(
+                  'Both sides use the same compute units (CU) per transaction, so the speedup only reflects scheduling: which transactions can run at the same time. Real chains also differ in VM speed, hardware and block limits.'
+                )}
+              />
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
@@ -700,9 +978,19 @@ export default function EvmVsSvmDemo() {
                   <button
                     type="button"
                     onClick={runEvmAll}
-                    className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm font-semibold"
+                    data-hint="run"
+                    className={`px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm font-semibold ${pulse('run')}`}
                   >
                     {tr('Run all')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetEvm}
+                    disabled={evmIndex === 0}
+                    className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-sm"
+                    aria-label={tr('Reset EVM execution')}
+                  >
+                    <RefreshCw size={14} />
                   </button>
                 </div>
               </div>
@@ -719,14 +1007,23 @@ export default function EvmVsSvmDemo() {
                     disabled={svmWaveIndex >= waves.length}
                     className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-sm font-semibold"
                   >
-                    {tr('Step')}
+                    {tr('Step wave')}
                   </button>
                   <button
                     type="button"
                     onClick={runSvmAll}
-                    className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm font-semibold"
+                    className={`px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm font-semibold ${pulse('run')}`}
                   >
-                    {tr('Run all')}
+                    {tr('Run all waves')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetSvm}
+                    disabled={svmWaveIndex === 0}
+                    className="px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-sm"
+                    aria-label={tr('Reset Solana-style execution')}
+                  >
+                    <RefreshCw size={14} />
                   </button>
                 </div>
               </div>
@@ -796,7 +1093,17 @@ export default function EvmVsSvmDemo() {
               sectionHighlight === 'waves' ? 'border-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]' : 'border-slate-800'
             }`}
           >
-            <div className="text-sm font-semibold text-slate-200">{tr('Solana-style waves (from declarations)')}</div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-semibold text-slate-200">{tr('Solana-style waves (from declarations)')}</div>
+              <button
+                type="button"
+                onClick={showLocks}
+                data-hint="locks"
+                className={`text-xs px-2 py-1 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 ${pulse('locks')}`}
+              >
+                {tr('Show lock timeline')}
+              </button>
+            </div>
             <div className="mt-3 space-y-2">
               {waves.map((w, idx) => (
                 <div key={idx} className="rounded-lg border border-slate-700 bg-slate-900/30 p-2">
@@ -833,6 +1140,58 @@ export default function EvmVsSvmDemo() {
                 <div className="font-semibold text-slate-300">{tr('Debug')}</div>
                 <div>{tr('Conflicts are computed from declared read/write sets (account locks).')}</div>
                 <div>{tr('A wave can contain up to N txs (threads) if none conflict.')}</div>
+                <div className="rounded-lg border border-amber-900/60 bg-amber-950/20 p-2 text-amber-100/90">
+                  {tr(
+                    'Simplification: here waves run in lockstep (a wave waits for its slowest transaction before the next one starts) and transactions are packed in list order. Real Solana schedulers start a transaction as soon as its account locks are free and prioritise by fee, so the speedup shown here is a lower bound.'
+                  )}
+                </div>
+
+                {/* Conflict rules (matrix) */}
+                <div>
+                  <div className="font-semibold text-slate-300 mb-1">{tr('Conflict rules (same account)')}</div>
+                  <table className="text-[11px] border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="border border-slate-800 px-2 py-1" />
+                        <th className="border border-slate-800 px-2 py-1 text-blue-200">{tr('READ')}</th>
+                        <th className="border border-slate-800 px-2 py-1 text-emerald-200">{tr('WRITE')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(['r', 'w'] as const).map((rowMode) => (
+                        <tr key={rowMode}>
+                          <th className={`border border-slate-800 px-2 py-1 ${rowMode === 'r' ? 'text-blue-200' : 'text-emerald-200'}`}>
+                            {rowMode === 'r' ? tr('READ') : tr('WRITE')}
+                          </th>
+                          {(['r', 'w'] as const).map((colMode) => {
+                            const clash = rowMode === 'w' || colMode === 'w';
+                            return (
+                              <td key={colMode} className={`border border-slate-800 px-2 py-1 ${clash ? 'text-red-300' : 'text-emerald-300'}`}>
+                                {clash ? tr('conflict: one waits') : tr('no conflict: shared')}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Computed conflicts between transactions */}
+                <div>
+                  <div className="font-semibold text-slate-300 mb-1">{tr('Computed conflicts (from declarations)')}</div>
+                  {conflictList.length === 0 ? (
+                    <div className="text-emerald-300">{tr('No two transactions conflict: everything can run in parallel.')}</div>
+                  ) : (
+                    <ul className="space-y-0.5 font-mono text-[11px] text-slate-300">
+                      {conflictList.map((p) => (
+                        <li key={`${p.a}-${p.b}`}>
+                          TX #{p.a} ↔ TX #{p.b}: {p.accounts.map((c) => `${c.account} (${c.modes})`).join(', ')}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
                 {/* Account lock timeline (accounts × waves) */}
                 <div className="mt-2">
@@ -914,6 +1273,9 @@ export default function EvmVsSvmDemo() {
                               : 'text-slate-300'
                       }`}
                     >
+                      <span className="text-slate-500">
+                        {new Date(l.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </span>{' '}
                       [{l.scope}] {l.message}
                     </div>
                   ))
@@ -931,6 +1293,38 @@ export default function EvmVsSvmDemo() {
           </div>
         </div>
 
+        {/* Visual overview: timeline + access diagram */}
+        <div className="mt-6 grid grid-cols-1 xl:grid-cols-5 gap-6">
+          <div className="xl:col-span-3 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+            <div className="text-sm font-semibold text-slate-200">{tr('Who runs when')}</div>
+            <div className="mt-1 text-xs text-slate-400">
+              {tr('The same transactions, run one by one (top) and in parallel waves (bottom). Step through either side to watch the bars fill in.')}
+            </div>
+            <div className="mt-3 sm:pl-6">
+              <ExecutionTimeline
+                txs={txs}
+                waves={waves}
+                threads={threads}
+                evmDone={evmIndex}
+                svmDoneWaves={svmWaveIndex}
+                svmStatus={Object.fromEntries(
+                  Object.entries(svmOut).map(([id, o]) => [id, o.status === 'failed' ? 'failed' : 'ok'])
+                )}
+                tr={tr}
+              />
+            </div>
+          </div>
+          <div className="xl:col-span-2 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+            <div className="text-sm font-semibold text-slate-200">{tr('Who touches what')}</div>
+            <div className="mt-1 text-xs text-slate-400">
+              {tr('Each arrow is an account a transaction reads or writes. Transactions that write the same account can’t run in the same wave.')}
+            </div>
+            <div className="mt-3">
+              <AccessDiagram txs={txs} accounts={allAccounts} tr={tr} />
+            </div>
+          </div>
+        </div>
+
         {/* TX list */}
         <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
           <div className="flex items-center justify-between gap-3">
@@ -938,11 +1332,32 @@ export default function EvmVsSvmDemo() {
             <button
               type="button"
               onClick={addTxPreset}
-              className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200"
+              data-hint="add-tx"
+              className={`inline-flex items-center gap-2 text-xs px-2 py-1 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 ${pulse('add-tx')}`}
             >
               <Plus size={14} />
               {tr('Add tx')}
             </button>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-slate-400">{tr('Presets')}:</span>
+            {[
+              { label: tr('Default (missing declaration)'), onClick: loadPresetDefault, hint: '' },
+              { label: tr('Mostly independent'), onClick: loadPresetDisjointAccounts, hint: 'preset-independent' },
+              { label: tr('High conflict (same pool)'), onClick: loadPresetMevOrdering, hint: 'preset-ordering' },
+              { label: tr('Mixed: swaps + transfers'), onClick: loadPresetSolanaConflicts, hint: '' },
+              { label: tr('Oracle-heavy (many reads, one write)'), onClick: loadPresetOracleHeavy, hint: 'preset-oracle' }
+            ].map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={p.onClick}
+                data-hint={p.hint || undefined}
+                className={`px-2 py-1 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 ${p.hint ? pulse(p.hint) : ''}`}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
           <div className="mt-3 space-y-3">
             {txs.map((tx, idx) => {
@@ -977,7 +1392,7 @@ export default function EvmVsSvmDemo() {
                         {tr('EVM')}: <OutcomePill out={evmOut[tx.id]} /> &nbsp;|&nbsp; {tr('Solana-style')}: <OutcomePill out={svmOut[tx.id]} />
                       </div>
 
-                      <MissingDeclBox out={svmOut[tx.id]} />
+                      <MissingDeclBox out={svmOut[tx.id]} tr={tr} />
 
                       {tx.id === 2 && missing ? (
                         <div className="mt-2 text-xs text-amber-300">
@@ -985,7 +1400,8 @@ export default function EvmVsSvmDemo() {
                       <button
                         type="button"
                         onClick={autoFixTx2}
-                        className="ml-2 inline-flex items-center px-2 py-1 rounded border border-amber-700 bg-amber-900/20 text-amber-100 text-[11px] hover:bg-amber-900/30"
+                        data-hint="autofix"
+                        className={`ml-2 inline-flex items-center px-2 py-1 rounded border border-amber-700 bg-amber-900/20 text-amber-100 text-[11px] hover:bg-amber-900/30 ${pulse('autofix')}`}
                       >
                         {tr('Auto-fix')}
                       </button>
@@ -997,13 +1413,7 @@ export default function EvmVsSvmDemo() {
                       </div>
 
                       <div className="mt-2 text-xs text-slate-400">
-                        {tr('Why this wave')}: {(() => {
-                          const dbg = scheduleDebugByTxId.get(tx.id);
-                          if (!dbg) return tr('No scheduling info');
-                          if (dbg.attempts.length === 0) return tr('No earlier wave existed');
-                          const firstReason = dbg.attempts[dbg.attempts.length - 1]?.reason;
-                          return firstReason ? firstReason : tr('Conflicts or wave full');
-                        })()}
+                        {tr('Why this wave')}: {whyThisWave(tx)}
                       </div>
 
                       <div className="mt-1 text-xs text-slate-400 flex items-center gap-2">
@@ -1016,7 +1426,7 @@ export default function EvmVsSvmDemo() {
                             const dbg = scheduleDebugByTxId.get(tx.id);
                             if (!dbg) return tr('No scheduling debug available.');
                             if (dbg.attempts.length === 0) return tr('Placed in the first wave.');
-                            const lines = dbg.attempts.map((a) => `Wave ${a.wave + 1}: ${a.reason}`);
+                            const lines = dbg.attempts.map(attemptText);
                             return `${tr('Why not earlier waves?')}\n` + lines.join('\n');
                           })()}
                         />
@@ -1110,6 +1520,12 @@ export default function EvmVsSvmDemo() {
               <div className="mt-2 text-[11px] text-slate-500">
                 {tr('This is one reason ordering is valuable: different ordering can lead to different outcomes and opportunities (MEV).')}
               </div>
+              <div className="mt-2 rounded-lg border border-slate-800 bg-slate-950/40 p-2 text-[11px] text-slate-400">
+                <span className="font-semibold text-slate-300">{tr('Hot accounts')}:</span>{' '}
+                {tr(
+                  'when many transactions write the same popular account (a busy pool, an oracle), they all serialise on it, whatever the number of threads. Solana also caps how much compute can write to a single account per block, so contention on hot accounts, not thread count, is often the real bottleneck.'
+                )}
+              </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
@@ -1122,13 +1538,14 @@ export default function EvmVsSvmDemo() {
                 <button
                   type="button"
                   onClick={swapOrderOfFirstTwoTxs}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
+                  data-hint="swap"
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs ${pulse('swap')}`}
                 >
                   {tr('Swap order (TX1 ↔ TX2)')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => guidedMode && highlightSection('timeline')}
+                  onClick={showLocks}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
                 >
                   {tr('Show locks')}
@@ -1155,7 +1572,7 @@ export default function EvmVsSvmDemo() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => guidedMode && highlightSection('waves')}
+                  onClick={() => highlightSection('waves')}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
                 >
                   {tr('Show waves')}
@@ -1185,6 +1602,9 @@ export default function EvmVsSvmDemo() {
             <li>
               <span className="font-semibold text-slate-200">{tr('Deterministic replay')}:</span> {tr('finalized blocks must be replayable by every node, so concurrency still needs a deterministic outcome.')}
             </li>
+            <li>
+              <span className="font-semibold text-slate-200">{tr('Hot accounts')}:</span> {tr('popular accounts (pools, oracles) serialise every transaction that writes them; Solana limits compute per writable account per block.')}
+            </li>
           </ul>
 
           <div className="mt-3 text-[11px] text-slate-500">
@@ -1208,14 +1628,14 @@ export default function EvmVsSvmDemo() {
             </button>
             <button
               type="button"
-              onClick={() => guidedMode && highlightSection('waves')}
+              onClick={() => highlightSection('waves')}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
             >
               {tr('Show waves')}
             </button>
             <button
               type="button"
-              onClick={() => guidedMode && highlightSection('timeline')}
+              onClick={showLocks}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
             >
               {tr('Show locks')}
@@ -1227,10 +1647,10 @@ export default function EvmVsSvmDemo() {
         <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
           <div className="text-sm font-semibold text-slate-200">{tr('Parallelism models (beyond this demo)')}</div>
           <div className="mt-2 text-sm text-slate-300">
-            {tr('Different ecosystems unlock parallel execution in different ways. Two common models are:')}
+            {tr('Different ecosystems unlock parallel execution in different ways. Three common models:')}
           </div>
 
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4">
               <div className="font-semibold text-slate-200">{tr('Solana-style: account locks')}</div>
               <ul className="mt-2 text-sm text-slate-300 list-disc pl-5 space-y-1">
@@ -1261,7 +1681,7 @@ export default function EvmVsSvmDemo() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => guidedMode && highlightSection('timeline')}
+                    onClick={showLocks}
                     className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
                   >
                     {tr('Show locks')}
@@ -1271,17 +1691,17 @@ export default function EvmVsSvmDemo() {
             </div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4">
-              <div className="font-semibold text-slate-200">{tr('Move/Aptos-style: resource (object) access')}</div>
+              <div className="font-semibold text-slate-200">{tr('Sui-style: declared objects')}</div>
               <ul className="mt-2 text-sm text-slate-300 list-disc pl-5 space-y-1">
-                <li>{tr('State is organized as resources/objects (e.g., per-account resources).')}</li>
-                <li>{tr('The system can sometimes infer read/write sets more directly from the program or resource paths.')}</li>
-                <li>{tr('Parallelism is enabled when transactions access different resources/objects.')}</li>
+                <li>{tr('State is a set of objects, and each transaction lists the objects it uses as inputs.')}</li>
+                <li>{tr('Like Solana, conflicts are known before execution, but at the level of individual objects rather than accounts.')}</li>
+                <li>{tr('Transactions that only use objects owned by their sender don’t conflict with anyone else; shared objects (like a pool) still have to be ordered.')}</li>
               </ul>
 
               <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
                 <div className="text-xs font-semibold text-slate-300">{tr('Concrete example')}</div>
                 <div className="mt-1 text-xs text-slate-400">
-                  {tr('If TX A updates Alice’s Coin resource and TX B updates Bob’s Coin resource, they may run in parallel because the resources are different. If both update the same shared resource, they must be serialized.')}
+                  {tr('If TX A spends a coin object owned by Alice and TX B spends one owned by Bob, they run in parallel. Two swaps on the same shared pool object must be ordered.')}
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -1290,11 +1710,11 @@ export default function EvmVsSvmDemo() {
                     onClick={loadPresetDisjointAccounts}
                     className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold"
                   >
-                    {tr('Load resource-style analogue')}
+                    {tr('Load object-style analogue')}
                   </button>
                   <button
                     type="button"
-                    onClick={() => guidedMode && highlightSection('timeline')}
+                    onClick={showLocks}
                     className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs"
                   >
                     {tr('Show locks')}
@@ -1302,14 +1722,57 @@ export default function EvmVsSvmDemo() {
                 </div>
 
                 <div className="mt-2 text-[11px] text-slate-500">
-                  {tr('Analogy: we use different accounts here as “different resources”, to illustrate the idea of finer-grained state access.')}
+                  {tr('Analogy: this demo uses separate accounts to stand in for separate objects.')}
                 </div>
               </div>
+            </div>
 
-              <div className="mt-2 text-[11px] text-slate-500">
-                {tr('This demo does not model Move; it highlights the idea that “what is locked” can be accounts or finer-grained objects/resources.')}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4">
+              <div className="font-semibold text-slate-200">{tr('Optimistic: Aptos (Block-STM) and parallel EVMs')}</div>
+              <ul className="mt-2 text-sm text-slate-300 list-disc pl-5 space-y-1">
+                <li>{tr('Transactions declare nothing. The runtime executes them in parallel anyway, recording what each one actually read and wrote.')}</li>
+                <li>{tr('When a transaction read something an earlier one (in block order) changed, it is re-executed. The final result is identical to running the block sequentially.')}</li>
+                <li>
+                  {tr('This is how Aptos runs Move transactions (Block-STM), and how parallel EVM implementations such as Monad and Sei run unmodified Ethereum contracts in parallel.')}
+                </li>
+              </ul>
+
+              <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+                <div className="text-xs font-semibold text-slate-300">{tr('Why it matters here')}</div>
+                <div className="mt-1 text-xs text-slate-400">
+                  {tr('Sequential execution is a property of how Ethereum orders and validates transactions, not of the EVM itself. The trade-off: no declarations needed, but conflicting transactions waste work on re-execution.')}
+                </div>
+                <div className="mt-3">
+                  <a
+                    href="/demo/parallel-executor"
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-blue-200"
+                  >
+                    {tr('See optimistic execution in the Parallel Transaction Executor demo →')}
+                  </a>
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="mt-3 text-[11px] text-slate-500">
+            {tr('This demo only simulates the declared-locks model; the other two are described for comparison.')}
+          </div>
+        </div>
+
+        {/* Further Reading (links checked 2026-11-23) */}
+        <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+          <h2 className="text-2xl font-bold mb-4 text-blue-300">📚 {tr('Further Reading')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+            {FURTHER_READING.map((group) => (
+              <div key={group.title}>
+                <div className="mb-1 text-sm font-semibold text-slate-200">{tr(group.title)}</div>
+                <div className="space-y-1.5">
+                  {group.links.map((l) => (
+                    <LinkWithCopy key={l.href} href={l.href} label={l.label} />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

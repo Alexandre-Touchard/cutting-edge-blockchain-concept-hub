@@ -6,6 +6,33 @@ Goal: restore the richer experience (step-by-step execution + logs + quests) and
 
 > Repo scan note: no existing `TODO`/`FIXME`/`HACK` markers were found in `src/**` at the time this list was created.
 
+## Status (2026-11-23): all items done
+
+| Item | Where |
+|---|---|
+| A1 step/run/reset per side | EVM: Step, Run all, Reset · Solana: Step wave, Run all waves, Reset; index/wave cursor shown |
+| A2 execution log | timestamped SYSTEM / EVM / SOLANA entries, Clear button |
+| A3 debug view | conflict matrix, computed conflict pairs, waves with durations, account lock timeline (hidden by default) |
+| A4 quests | 8 quests, persisted in the browser, reported to analytics |
+| A5 tx editor | move up/down, add, remove, toggle declarations; presets row (default, mostly independent, high conflict, mixed, oracle-heavy) |
+| B1 naming | "Solana-style" in UI; title "Sequential vs parallel execution: Ethereum (EVM) vs Solana (SVM)"; Sealevel explained |
+| B2 conflict rules | matrix in debug (R/R shared, R/W and W/W conflict) |
+| B3 scheduling vs execution | waves from declarations; execution fails on missing/insufficient declaration, otherwise logs the accounts it writes |
+| B4 compute units / threads | tooltip on the time chips (EVM = sum, Solana = sum of slowest per wave) + speedup caveat |
+| B5 lock timeline | debug timeline + per-tx "Why this wave" (wave full / conflicts with … on …) |
+| B6 optimistic parallelism | "Optimistic: Aptos (Block-STM) and parallel EVMs" card, link to Parallel Transaction Executor |
+| C1 guided intro | 60-second tour + guided mode |
+| C2 "why" labels | translated explanation per tx, incl. shared read locks and reordering ahead of a conflicting tx |
+| C3 jargon tooltips | concept chips: EVM, Solana-style, declarations, conflicts, account, state, wave |
+| C4 fix hint | inline hint + Auto-fix on TX #2 |
+| C5 error messages | failure box lists the missing accounts; explains a failed tx is still included and pays its fee |
+| D1 registry | title, description, tags, 3 takeaways, thumbnail, link preview |
+| D2 translations | full FR/ES (enforced by translationCoverage.test.ts) |
+| D3 QA | build + render smoke test (allDemos.smoke.test.tsx) + scheduler unit tests |
+| E1 account vs object parallelism | Solana / Sui / optimistic cards |
+| E2 MEV / ordering | "Ordering still matters (MEV)" section + ordering preset and quest |
+| E3 real-world constraints | propagation, builders, fee markets, deterministic replay, hot accounts |
+
 ---
 
 ## A) Restore feature parity with the richer version (UX depth)

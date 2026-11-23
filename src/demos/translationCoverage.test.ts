@@ -5,7 +5,7 @@ import { makeAutoKey } from './useDemoI18n';
 import { EN_GLOSSARY } from './glossary';
 
 /** Demos excluded until they are reworked (keep this list short). */
-const EXCLUDED = new Set(['evm-vs-svm']);
+const EXCLUDED = new Set<string>([]);
 const LANGS = ['fr', 'es'] as const;
 
 const sources = import.meta.glob<string>(['./impl/**/*.{ts,tsx}', '!./impl/**/*.test.{ts,tsx}'], {

@@ -35,7 +35,7 @@ export const DEMO_PREVIEWS: Record<string, { title: string; description: string 
   "state-channels": { title: "State Channels (Payment Channels)", description: "Lock deposits on L1, exchange signed updates off-chain, then settle cooperatively or via a dispute window." },
   "mev-pbs": { title: "MEV & PBS (MEV-Boost) simulator", description: "Interactive simulator for MEV (sandwiching, backrun arbitrage), bundles/private transactions, and proposer-builder separation (PBS)." },
   "stablecoin-depeg": { title: "Stablecoin Depeg Cascade", description: "Simulate two depeg cascades: (1) collateralized stablecoin liquidations and liquidity drains, and (2) Terra-style algorithmic reflexive collapse." },
-  "evm-vs-svm": { title: "EVM vs SVM", description: "A simulation of sequential (EVM-style) execution vs parallel (Solana-style) scheduling, and why parallel scheduling increases throughput when transactions do not conflict." },
+  "evm-vs-svm": { title: "Sequential vs Parallel Execution (EVM vs SVM)", description: "Run the same transactions one by one (Ethereum) and in parallel waves (Solana), and see why declaring accounts upfront enables parallelism, and what still forces transactions to wait." },
   "arkea-heist": { title: "Follow the Money: the Crédit Mutuel Arkéa Heist", description: "Step through a real 2026 bank heist, from a compromised supplier to instant transfers, crypto laundering and Monero, and see how on-chain analysts traced it. Every claim shows its confidence level and sources." }
 };
 

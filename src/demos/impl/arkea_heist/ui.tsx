@@ -4,23 +4,8 @@ import type { Confidence, Source } from './model';
 
 export type Tr = (english: string, opts?: Record<string, unknown>) => string;
 
-/**
- * "Click here first" hint, same pattern as the hub's other demos: pulse for a few
- * seconds after mount, stop early as soon as the user interacts.
- * Returns [active, stop].
- */
-export function useAttentionHint(durationMs = 10_000): [boolean, () => void] {
-  const [active, setActive] = React.useState(true);
-  React.useEffect(() => {
-    const t = window.setTimeout(() => setActive(false), durationMs);
-    return () => window.clearTimeout(t);
-  }, [durationMs]);
-  const stop = React.useCallback(() => setActive(false), []);
-  return [active, stop];
-}
-
-/** Classes for a hinted control (pulse is disabled under prefers-reduced-motion). */
-export const ATTENTION_CLASSES = 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950 motion-safe:animate-pulse';
+// The pulse hint now lives in src/ui/attention.ts (shared with other demos).
+export { ATTENTION_CLASSES, useAttentionHint } from '../../../ui/attention';
 
 export function ConfidenceBadge({ level, tr }: { level: Confidence; tr: Tr }) {
   const cfg: Record<Confidence, { icon: string; label: string; cls: string; tip: string }> = {

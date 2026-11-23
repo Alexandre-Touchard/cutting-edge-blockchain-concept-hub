@@ -17,6 +17,11 @@
       ],
       "dest": "/api/demo_preview?id=$1"
     },
+    {
+      "src": "^/map/?$",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|LinkedInBot|Twitterbot|Slackbot|Slack-ImgProxy|Discordbot|TelegramBot|WhatsApp|SkypeUriPreview|redditbot|Embedly|Pinterest|vkShare|Mastodon|Bluesky|Iframely).*" }],
+      "dest": "/api/demo_preview?page=map"
+    },
     { "src": "^/(?!api/|@|src/|node_modules/).*$", "dest": "/index.html" }
   ]
 }

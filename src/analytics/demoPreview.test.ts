@@ -1,7 +1,7 @@
 // Per-demo link previews: the crawler route in vercel.json and the HTML from api/demo_preview.ts.
 import { describe, expect, it } from 'vitest';
 import vercel from '../../vercel.json';
-import { DEMO_PREVIEWS, demoPreviewHtml } from '../../api/demo_preview';
+import { DEMO_PREVIEWS, demoPreviewHtml, pagePreviewHtml } from '../../api/demo_preview';
 import { demoMetaRegistry } from '../demos/demoRegistry';
 
 type Route = { src?: string; dest?: string; has?: Array<{ type: string; key: string; value: string }> };
@@ -62,5 +62,22 @@ describe('preview HTML', () => {
     expect(demoPreviewHtml('amm-demo')).toContain('AMM Math &amp; Impermanent Loss');
     expect(demoPreviewHtml('nope')).toBeNull();
     expect(demoPreviewHtml('<script>')).toBeNull();
+  });
+});
+
+describe('map preview', () => {
+  it('sends crawlers on /map to the preview function, before the SPA fallback', () => {
+    const mapRoute = routes.find((r) => r.dest === '/api/demo_preview?page=map')!;
+    expect(new RegExp(mapRoute.src!).test('/map')).toBe(true);
+    expect(new RegExp(mapRoute.src!).test('/map/')).toBe(true);
+    expect(new RegExp(mapRoute.has![0].value).test('LinkedInBot/1.0')).toBe(true);
+    expect(routes.indexOf(mapRoute)).toBeLessThan(routes.findIndex((r) => r.dest === '/index.html'));
+  });
+
+  it('returns the map title and canonical URL', () => {
+    const html = pagePreviewHtml('map')!;
+    expect(html).toContain('<meta property="og:title" content="Blockchain Ecosystem Map · Blockchain Learning Hub" />');
+    expect(html).toContain('<link rel="canonical" href="https://blockchain-demo-hub.vercel.app/map" />');
+    expect(pagePreviewHtml('nope')).toBeNull();
   });
 });

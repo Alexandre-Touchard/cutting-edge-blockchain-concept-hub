@@ -407,7 +407,6 @@
     "showFilters": "Afficher les filtres",
     "pitch": "Comprenez vraiment les blockchains en les manipulant : {{count}} simulations gratuites, sans inscription.",
     "ctaStart": "Commencer par les bases",
-    "ctaNew": "Nouveau : {{title}}",
     "stats": {
       "demos": "{{count}} démos interactives",
       "quests": "{{count}} quêtes d’apprentissage",
@@ -471,7 +470,8 @@
       "close": "Fermer"
     },
     "hidePaths": "Masquer les parcours",
-    "showPaths": "Afficher les parcours"
+    "showPaths": "Afficher les parcours",
+    "ctaMap": "Explorer la carte de l’écosystème"
   },
   "quests": {
     "title": "Quêtes d’apprentissage",
@@ -481,5 +481,8 @@
     "next": "Prochaine quête ({{n}}/{{total}})",
     "allDone": "Toutes les quêtes sont terminées !",
     "allDoneHint": "Bravo. Continuez à jouer avec les réglages pour explorer d’autres scénarios."
+  },
+  "map": {
+    "englishOnly": "Cette carte n’est disponible qu’en anglais pour le moment."
   }
 }

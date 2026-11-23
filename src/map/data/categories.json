@@ -1,0 +1,74 @@
+[
+  {
+    "id": "ethereum",
+    "name": "Ethereum ecosystem",
+    "kind": "Chains",
+    "color": "#818cf8"
+  },
+  {
+    "id": "restaking",
+    "name": "Restaking & data availability",
+    "kind": "Tools",
+    "color": "#2dd4bf"
+  },
+  {
+    "id": "oracles",
+    "name": "Oracles & data",
+    "kind": "Tools",
+    "color": "#38bdf8"
+  },
+  {
+    "id": "interop",
+    "name": "Cross-chain & interoperability",
+    "kind": "Tools",
+    "color": "#f472b6"
+  },
+  {
+    "id": "interchain",
+    "name": "Interchain (Cosmos & Polkadot)",
+    "kind": "Chains",
+    "color": "#c084fc"
+  },
+  {
+    "id": "altl1",
+    "name": "Alternative L1s",
+    "kind": "Chains",
+    "color": "#a3e635"
+  },
+  {
+    "id": "privacy",
+    "name": "Privacy",
+    "kind": "Chains",
+    "color": "#94a3b8"
+  },
+  {
+    "id": "bitcoin",
+    "name": "Bitcoin ecosystem",
+    "kind": "Chains",
+    "color": "#fb923c"
+  },
+  {
+    "id": "stablecoins",
+    "name": "Stablecoins & on/off-ramps",
+    "kind": "Apps",
+    "color": "#4ade80"
+  },
+  {
+    "id": "defi",
+    "name": "DeFi",
+    "kind": "Apps",
+    "color": "#facc15"
+  },
+  {
+    "id": "wallets",
+    "name": "Wallets, identity & consumer apps",
+    "kind": "Apps",
+    "color": "#f87171"
+  },
+  {
+    "id": "devtools",
+    "name": "Developer tools & infrastructure",
+    "kind": "Tools",
+    "color": "#60a5fa"
+  }
+]

@@ -396,7 +396,6 @@
     "showFilters": "Mostrar filtros",
     "pitch": "Entiende de verdad las blockchains jugando con ellas: {{count}} simulaciones gratis y sin registro.",
     "ctaStart": "Empezar por lo básico",
-    "ctaNew": "Nuevo: {{title}}",
     "stats": {
       "demos": "{{count}} demos interactivas",
       "quests": "{{count}} misiones de aprendizaje",
@@ -460,7 +459,8 @@
       "close": "Cerrar"
     },
     "hidePaths": "Ocultar las rutas",
-    "showPaths": "Mostrar las rutas"
+    "showPaths": "Mostrar las rutas",
+    "ctaMap": "Explorar el mapa del ecosistema"
   },
   "quests": {
     "title": "Misiones de aprendizaje",
@@ -470,5 +470,8 @@
     "next": "Siguiente misión ({{n}}/{{total}})",
     "allDone": "¡Todas las misiones completadas!",
     "allDoneHint": "Buen trabajo. Sigue experimentando con los controles para explorar otros escenarios."
+  },
+  "map": {
+    "englishOnly": "Por ahora, este mapa solo está disponible en inglés."
   }
 }

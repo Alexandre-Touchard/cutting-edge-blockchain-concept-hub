@@ -6,6 +6,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import { usePageAnalytics } from './analytics/usePageAnalytics';
 
 const AdminPage = React.lazy(() => import('./pages/AdminPage'));
+const MapPage = React.lazy(() => import('./pages/MapPage'));
 
 export default function App() {
   usePageAnalytics();
@@ -15,6 +16,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HubPage />} />
         <Route path="/demo/:demoId" element={<DemoPage />} />
+        <Route path="/map" element={<MapPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/a/:slug/analytics" element={<AnalyticsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

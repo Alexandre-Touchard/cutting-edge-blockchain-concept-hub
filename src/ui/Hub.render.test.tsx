@@ -38,6 +38,9 @@ describe('Hub', () => {
     const html = render(demos);
     expect(html).toContain(`${live} hands-on simulations`);
     expect(html).toContain('Start with the basics');
+    expect(html).toContain('href="/map"');
+    expect(html).toContain('Explore the ecosystem map');
+    expect(html).not.toContain('New: ');
     expect(html).toContain('free, no sign-up');
     expect(html).toContain('learning quests');
   });

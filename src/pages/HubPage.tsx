@@ -49,6 +49,7 @@ export default function HubPage() {
             trackEvent('demo_start', { demoId, path: '/' });
             navigate(`/demo/${demoId}`);
           }}
+          onOpenMap={() => navigate('/map')}
         />
 
       </div>

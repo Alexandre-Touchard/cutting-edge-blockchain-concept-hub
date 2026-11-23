@@ -1,0 +1,929 @@
+[
+  {
+    "id": "arbitrum--settles-on--ethereum",
+    "from": "arbitrum",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Posts transaction batches to Ethereum; wrong results can be challenged with fraud proofs",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "optimism--settles-on--ethereum",
+    "from": "optimism",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Posts transaction batches to Ethereum; wrong results can be challenged with fault proofs",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "base--settles-on--ethereum",
+    "from": "base",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Posts transaction batches to Ethereum; its results are checked with TEE and ZK proofs",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "zksync-era--settles-on--ethereum",
+    "from": "zksync-era",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Publishes state data and validity (ZK) proofs that Ethereum checks",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "starknet--settles-on--ethereum",
+    "from": "starknet",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Posts state data and STARK validity proofs to Ethereum, which verifies them",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "linea--settles-on--ethereum",
+    "from": "linea",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Posts transaction data and validity (ZK) proofs to Ethereum, which verifies them",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "scroll--settles-on--ethereum",
+    "from": "scroll",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Posts transaction data and validity (ZK) proofs to Ethereum, which verifies them",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "lightning--settles-on--bitcoin",
+    "from": "lightning",
+    "to": "bitcoin",
+    "type": "settles-on",
+    "label": "Payment channels are opened and closed with Bitcoin transactions",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "apechain--settles-on--arbitrum",
+    "from": "apechain",
+    "to": "arbitrum",
+    "type": "settles-on",
+    "label": "Arbitrum Orbit L3 that settles on Arbitrum One; a committee mostly keeps its data",
+    "strength": 3,
+    "confidence": "check"
+  },
+  {
+    "id": "xai--settles-on--arbitrum",
+    "from": "xai",
+    "to": "arbitrum",
+    "type": "settles-on",
+    "label": "Arbitrum Orbit L3 that settles on Arbitrum One; a committee keeps its data",
+    "strength": 3,
+    "confidence": "check"
+  },
+  {
+    "id": "coinbase--gateway--bitcoin",
+    "from": "coinbase",
+    "to": "bitcoin",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw BTC to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "coinbase--gateway--ethereum",
+    "from": "coinbase",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw ETH to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "coinbase--gateway--cardano",
+    "from": "coinbase",
+    "to": "cardano",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw ADA to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "coinbase--gateway--usdc",
+    "from": "coinbase",
+    "to": "usdc",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw USDC; Coinbase helped launch USDC with Circle",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "kraken--gateway--bitcoin",
+    "from": "kraken",
+    "to": "bitcoin",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw BTC to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "kraken--gateway--ethereum",
+    "from": "kraken",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw ETH to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "kraken--gateway--solana",
+    "from": "kraken",
+    "to": "solana",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw SOL to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "kraken--gateway--cardano",
+    "from": "kraken",
+    "to": "cardano",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw ADA to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "kraken--gateway--polkadot",
+    "from": "kraken",
+    "to": "polkadot",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw DOT to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "etherscan--gateway--ethereum",
+    "from": "etherscan",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Lets anyone look up Ethereum transactions, addresses and contracts",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "etherscan--gateway--arbitrum",
+    "from": "etherscan",
+    "to": "arbitrum",
+    "type": "gateway",
+    "label": "Runs Arbiscan, an explorer to look up Arbitrum One transactions and contracts",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "etherscan--gateway--optimism",
+    "from": "etherscan",
+    "to": "optimism",
+    "type": "gateway",
+    "label": "Runs Optimistic Etherscan, an explorer to look up OP Mainnet transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "etherscan--gateway--base",
+    "from": "etherscan",
+    "to": "base",
+    "type": "gateway",
+    "label": "Runs BaseScan, an explorer to look up Base transactions and contracts",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "metamask--gateway--ethereum",
+    "from": "metamask",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Wallet that holds keys and lets users sign Ethereum transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "metamask--gateway--linea",
+    "from": "metamask",
+    "to": "linea",
+    "type": "gateway",
+    "label": "Has Linea built in as a network, so users can sign Linea transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "metamask--gateway--base",
+    "from": "metamask",
+    "to": "base",
+    "type": "gateway",
+    "label": "Lets users add Base as a network and sign Base transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "metamask--gateway--arbitrum",
+    "from": "metamask",
+    "to": "arbitrum",
+    "type": "gateway",
+    "label": "Lets users add Arbitrum One as a network and sign its transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "metamask--gateway--ens",
+    "from": "metamask",
+    "to": "ens",
+    "type": "gateway",
+    "label": "Lets users send funds to an ENS name like alice.eth instead of a long address",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "metamask--gateway--opensea",
+    "from": "metamask",
+    "to": "opensea",
+    "type": "gateway",
+    "label": "Lets users connect to OpenSea and sign NFT listings, offers and purchases",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "alchemy--gateway--ethereum",
+    "from": "alchemy",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Gives developers node and API access to read and write Ethereum data",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "alchemy--gateway--base",
+    "from": "alchemy",
+    "to": "base",
+    "type": "gateway",
+    "label": "Gives developers node and API access to read and write Base data",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "alchemy--gateway--arbitrum",
+    "from": "alchemy",
+    "to": "arbitrum",
+    "type": "gateway",
+    "label": "Gives developers node and API access to read and write Arbitrum data",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "alchemy--gateway--solana",
+    "from": "alchemy",
+    "to": "solana",
+    "type": "gateway",
+    "label": "Gives developers node and API access to read and write Solana data",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "the-graph--gateway--ethereum",
+    "from": "the-graph",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Indexes Ethereum data so apps can query it quickly through subgraphs",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "the-graph--gateway--uniswap",
+    "from": "the-graph",
+    "to": "uniswap",
+    "type": "gateway",
+    "label": "Hosts subgraphs that index Uniswap pools, swaps and prices for apps to query",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "the-graph--gateway--aave",
+    "from": "the-graph",
+    "to": "aave",
+    "type": "gateway",
+    "label": "Hosts subgraphs that index Aave deposits, loans and rates for apps to query",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "phantom--gateway--solana",
+    "from": "phantom",
+    "to": "solana",
+    "type": "gateway",
+    "label": "Wallet that holds keys and lets users sign Solana transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "phantom--gateway--jupiter",
+    "from": "phantom",
+    "to": "jupiter",
+    "type": "gateway",
+    "label": "Lets users connect to Jupiter and sign token swaps on Solana",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "monero--bridges--bitcoin",
+    "from": "monero",
+    "to": "bitcoin",
+    "type": "bridges",
+    "label": "Atomic-swap tools let users trade XMR and BTC directly, with no custodian",
+    "strength": 2,
+    "confidence": "check"
+  },
+  {
+    "id": "wormhole--bridges--solana",
+    "from": "wormhole",
+    "to": "solana",
+    "type": "bridges",
+    "label": "Moves messages and tokens between Solana and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "wormhole--bridges--ethereum",
+    "from": "wormhole",
+    "to": "ethereum",
+    "type": "bridges",
+    "label": "Moves messages and tokens between Ethereum and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "wormhole--bridges--bnb-chain",
+    "from": "wormhole",
+    "to": "bnb-chain",
+    "type": "bridges",
+    "label": "Moves messages and tokens between BNB Chain and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "layerzero--bridges--ethereum",
+    "from": "layerzero",
+    "to": "ethereum",
+    "type": "bridges",
+    "label": "Carries messages and tokens between Ethereum and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "layerzero--bridges--arbitrum",
+    "from": "layerzero",
+    "to": "arbitrum",
+    "type": "bridges",
+    "label": "Carries messages and tokens between Arbitrum One and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "layerzero--bridges--avalanche",
+    "from": "layerzero",
+    "to": "avalanche",
+    "type": "bridges",
+    "label": "Carries messages and tokens between Avalanche and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "layerzero--bridges--bnb-chain",
+    "from": "layerzero",
+    "to": "bnb-chain",
+    "type": "bridges",
+    "label": "Carries messages and tokens between BNB Chain and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "layerzero--bridges--iota",
+    "from": "layerzero",
+    "to": "iota",
+    "type": "bridges",
+    "label": "LayerZero and its Stargate bridge connect IOTA Mainnet to other chains since Dec 2025",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "ibc--bridges--cosmos-hub",
+    "from": "ibc",
+    "to": "cosmos-hub",
+    "type": "bridges",
+    "label": "Connects the Cosmos Hub to other Cosmos chains to move tokens and messages",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "ibc--bridges--osmosis",
+    "from": "ibc",
+    "to": "osmosis",
+    "type": "bridges",
+    "label": "Connects Osmosis to other Cosmos chains, bringing in tokens to trade",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "ibc--bridges--dydx-chain",
+    "from": "ibc",
+    "to": "dydx-chain",
+    "type": "bridges",
+    "label": "Connects dYdX Chain to other Cosmos chains, e.g. to bring in USDC",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "base--built-with--optimism",
+    "from": "base",
+    "to": "optimism",
+    "type": "built-with",
+    "label": "Started on the OP Stack like OP Mainnet; since 2026 runs its own OP Stack-compatible code",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "osmosis--built-with--cosmos-hub",
+    "from": "osmosis",
+    "to": "cosmos-hub",
+    "type": "built-with",
+    "label": "Built with the Cosmos SDK, the same framework as the Cosmos Hub",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "dydx-chain--built-with--cosmos-hub",
+    "from": "dydx-chain",
+    "to": "cosmos-hub",
+    "type": "built-with",
+    "label": "Built with the Cosmos SDK, the same framework as the Cosmos Hub",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "celestia--built-with--cosmos-hub",
+    "from": "celestia",
+    "to": "cosmos-hub",
+    "type": "built-with",
+    "label": "Built with the Cosmos SDK, the same framework as the Cosmos Hub",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "base--built-by--coinbase",
+    "from": "base",
+    "to": "coinbase",
+    "type": "built-by",
+    "label": "Developed and run by Coinbase, which operates its sequencer",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "linea--same-builder--metamask",
+    "from": "linea",
+    "to": "metamask",
+    "type": "same-builder",
+    "label": "Built by Consensys, the same company that makes MetaMask",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "eigenlayer--deployed-on--ethereum",
+    "from": "eigenlayer",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its restaking contracts run on Ethereum, where users restake ETH and staked ETH",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "lido--deployed-on--ethereum",
+    "from": "lido",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Runs on Ethereum: stake ETH and receive stETH, a token that tracks the staked ETH",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "uniswap--deployed-on--ethereum",
+    "from": "uniswap",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its token-swap contracts run on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "uniswap--deployed-on--base",
+    "from": "uniswap",
+    "to": "base",
+    "type": "deployed-on",
+    "label": "Its token-swap contracts run on Base",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "uniswap--deployed-on--arbitrum",
+    "from": "uniswap",
+    "to": "arbitrum",
+    "type": "deployed-on",
+    "label": "Its token-swap contracts run on Arbitrum One",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "uniswap--deployed-on--optimism",
+    "from": "uniswap",
+    "to": "optimism",
+    "type": "deployed-on",
+    "label": "Its token-swap contracts run on OP Mainnet",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "aave--deployed-on--ethereum",
+    "from": "aave",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its lending and borrowing markets run on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "aave--deployed-on--base",
+    "from": "aave",
+    "to": "base",
+    "type": "deployed-on",
+    "label": "Its lending and borrowing markets run on Base",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "aave--deployed-on--arbitrum",
+    "from": "aave",
+    "to": "arbitrum",
+    "type": "deployed-on",
+    "label": "Its lending and borrowing markets run on Arbitrum One",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "aave--deployed-on--avalanche",
+    "from": "aave",
+    "to": "avalanche",
+    "type": "deployed-on",
+    "label": "Its lending and borrowing markets run on Avalanche",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "sky--deployed-on--ethereum",
+    "from": "sky",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its contracts for the DAI and USDS stablecoins run on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "curve--deployed-on--ethereum",
+    "from": "curve",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its stablecoin swap pools run on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "safe--deployed-on--ethereum",
+    "from": "safe",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its multi-signature wallet contracts run on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "safe--deployed-on--base",
+    "from": "safe",
+    "to": "base",
+    "type": "deployed-on",
+    "label": "Its multi-signature wallet contracts run on Base",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "safe--deployed-on--arbitrum",
+    "from": "safe",
+    "to": "arbitrum",
+    "type": "deployed-on",
+    "label": "Its multi-signature wallet contracts run on Arbitrum One",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "safe--deployed-on--optimism",
+    "from": "safe",
+    "to": "optimism",
+    "type": "deployed-on",
+    "label": "Its multi-signature wallet contracts run on OP Mainnet",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "ens--deployed-on--ethereum",
+    "from": "ens",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its name registry runs on Ethereum, mapping names like alice.eth to addresses",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "opensea--deployed-on--ethereum",
+    "from": "opensea",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Marketplace for buying and selling NFTs and tokens on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "opensea--deployed-on--solana",
+    "from": "opensea",
+    "to": "solana",
+    "type": "deployed-on",
+    "label": "Supports trading Solana tokens and, since Aug 2026, Solana NFTs",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "openzeppelin--deployed-on--ethereum",
+    "from": "openzeppelin",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its audited open-source contract library is used to build Ethereum smart contracts",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "jupiter--deployed-on--solana",
+    "from": "jupiter",
+    "to": "solana",
+    "type": "deployed-on",
+    "label": "Runs on Solana, routing token swaps across many Solana exchanges",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "usdt--deployed-on--bnb-chain",
+    "from": "usdt",
+    "to": "bnb-chain",
+    "type": "deployed-on",
+    "label": "On BNB Chain it is \"Binance-Peg\" USDT, issued by Binance and backed by USDT it holds",
+    "strength": 2,
+    "confidence": "check"
+  },
+  {
+    "id": "usdc--issues--ethereum",
+    "from": "usdc",
+    "to": "ethereum",
+    "type": "issues",
+    "label": "Circle issues native USDC directly on Ethereum, not a bridged copy",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--issues--solana",
+    "from": "usdc",
+    "to": "solana",
+    "type": "issues",
+    "label": "Circle issues native USDC directly on Solana, not a bridged copy",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--issues--base",
+    "from": "usdc",
+    "to": "base",
+    "type": "issues",
+    "label": "Circle issues native USDC directly on Base, not a bridged copy",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--issues--avalanche",
+    "from": "usdc",
+    "to": "avalanche",
+    "type": "issues",
+    "label": "Circle issues native USDC directly on Avalanche, not a bridged copy",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdt--issues--ethereum",
+    "from": "usdt",
+    "to": "ethereum",
+    "type": "issues",
+    "label": "Tether issues USDT natively on Ethereum",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdt--issues--solana",
+    "from": "usdt",
+    "to": "solana",
+    "type": "issues",
+    "label": "Tether issues USDT natively on Solana",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "chainlink--data-feed--ethereum",
+    "from": "chainlink",
+    "to": "ethereum",
+    "type": "data-feed",
+    "label": "Provides price feeds and other data to smart contracts on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "chainlink--data-feed--arbitrum",
+    "from": "chainlink",
+    "to": "arbitrum",
+    "type": "data-feed",
+    "label": "Provides price feeds and other data to smart contracts on Arbitrum One",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "chainlink--data-feed--avalanche",
+    "from": "chainlink",
+    "to": "avalanche",
+    "type": "data-feed",
+    "label": "Provides price feeds and other data to smart contracts on Avalanche",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "chainlink--data-feed--bnb-chain",
+    "from": "chainlink",
+    "to": "bnb-chain",
+    "type": "data-feed",
+    "label": "Provides price feeds and other data to smart contracts on BNB Chain",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "chainlink--data-feed--zksync-era",
+    "from": "chainlink",
+    "to": "zksync-era",
+    "type": "data-feed",
+    "label": "Provides price feeds and other data to smart contracts on zkSync Era",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "chainlink--data-feed--aave",
+    "from": "chainlink",
+    "to": "aave",
+    "type": "data-feed",
+    "label": "Its price feeds tell Aave what collateral is worth, which decides liquidations",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "pyth--data-feed--solana",
+    "from": "pyth",
+    "to": "solana",
+    "type": "data-feed",
+    "label": "Publishes frequently updated price feeds for apps on Solana",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "pyth--data-feed--jupiter",
+    "from": "pyth",
+    "to": "jupiter",
+    "type": "data-feed",
+    "label": "One of the price sources Jupiter uses, e.g. as a check and fallback for Jupiter Perps",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "eigenda--data-availability--ethereum",
+    "from": "eigenda",
+    "to": "ethereum",
+    "type": "data-availability",
+    "label": "Offers Ethereum rollups a place to publish their data, more cheaply than Ethereum itself",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "celestia--data-availability--ethereum",
+    "from": "celestia",
+    "to": "ethereum",
+    "type": "data-availability",
+    "label": "Offers Ethereum rollups a separate chain to publish their data, more cheaply than Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "lido--collateral--aave",
+    "from": "lido",
+    "to": "aave",
+    "type": "collateral",
+    "label": "Its staked ETH token (stETH, wrapped as wstETH) can be used as collateral on Aave",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "lido--collateral--eigenlayer",
+    "from": "lido",
+    "to": "eigenlayer",
+    "type": "collateral",
+    "label": "Its staked ETH token, stETH, can be restaked on EigenLayer",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--collateral--aave",
+    "from": "usdc",
+    "to": "aave",
+    "type": "collateral",
+    "label": "USDC is deposited on Aave to earn interest and borrowed by other users",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--collateral--sky",
+    "from": "usdc",
+    "to": "sky",
+    "type": "collateral",
+    "label": "USDC held in Sky's reserves helps back the DAI and USDS stablecoins",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--collateral--curve",
+    "from": "usdc",
+    "to": "curve",
+    "type": "collateral",
+    "label": "USDC is pooled with other stablecoins in Curve pools for swaps",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--collateral--dydx-chain",
+    "from": "usdc",
+    "to": "dydx-chain",
+    "type": "collateral",
+    "label": "USDC is the collateral traders deposit on dYdX Chain",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "usdt--collateral--curve",
+    "from": "usdt",
+    "to": "curve",
+    "type": "collateral",
+    "label": "USDT is pooled with other stablecoins in Curve pools for swaps",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "eigenlayer--secures--eigenda",
+    "from": "eigenlayer",
+    "to": "eigenda",
+    "type": "secures",
+    "label": "Restaked ETH backs the operators that store and serve EigenDA's data",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "flashbots--gateway--ethereum",
+    "from": "flashbots",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "MEV-Boost links Ethereum validators to block builders; Protect sends private transactions",
+    "strength": 2,
+    "confidence": "high"
+  }
+]

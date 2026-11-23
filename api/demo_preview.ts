@@ -41,6 +41,15 @@ export const DEMO_PREVIEWS: Record<string, { title: string; description: string 
   "makerdao-vault": { title: "Minting DAI: MakerDAO Vaults & Liquidations", description: "Lock ETH in a vault, mint DAI, and watch the market move: collateral ratio, liquidation price, flash crashes, a one-hour oracle delay, and what a liquidation really costs." }
 };
 
+/** Previews for hub pages that are not demos (path, title, description). */
+export const PAGE_PREVIEWS: Record<string, { path: string; title: string; description: string }> = {
+  map: {
+    path: "/map",
+    title: "Blockchain Ecosystem Map",
+    description: "An explorable map of 50 blockchains, apps and tools: which chains settle on which, which apps run where, and how they connect. Every node links to the hands-on demos that explain it."
+  }
+};
+
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -49,7 +58,16 @@ function esc(s: string): string {
 export function demoPreviewHtml(id: string): string | null {
   const demo = DEMO_PREVIEWS[id];
   if (!demo) return null;
-  const url = `${SITE_URL}/demo/${encodeURIComponent(id)}`;
+  return previewHtml(`${SITE_URL}/demo/${encodeURIComponent(id)}`, demo, 'Open the interactive demo');
+}
+
+/** The HTML served to crawlers for a non-demo page such as /map (null if unknown). */
+export function pagePreviewHtml(page: string): string | null {
+  const p = PAGE_PREVIEWS[page];
+  return p ? previewHtml(`${SITE_URL}${p.path}`, p, 'Open the page') : null;
+}
+
+function previewHtml(url: string, demo: { title: string; description: string }, linkText: string): string {
   const title = `${demo.title} · ${SITE_NAME}`;
   const meta = [
     ['description', demo.description],
@@ -83,15 +101,15 @@ export function demoPreviewHtml(id: string): string | null {
   <body>
     <h1>${esc(demo.title)}</h1>
     <p>${esc(demo.description)}</p>
-    <p><a href="${esc(url)}">Open the interactive demo</a></p>
+    <p><a href="${esc(url)}">${esc(linkText)}</a></p>
   </body>
 </html>`;
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
-  const raw = req.query.id;
-  const id = (Array.isArray(raw) ? raw[0] : raw) ?? '';
-  const html = demoPreviewHtml(id);
+  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? '';
+  const page = first(req.query.page);
+  const html = page ? pagePreviewHtml(page) : demoPreviewHtml(first(req.query.id));
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=3600');
   if (!html) {

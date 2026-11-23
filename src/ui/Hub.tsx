@@ -15,6 +15,7 @@ import {
   Info,
   Layers,
   Lock,
+  Map as MapIcon,
   Play,
   Route,
   Search,
@@ -89,13 +90,16 @@ function Thumb({ demo, size }: { demo: DemoMeta; size: 'sm' | 'lg' }) {
 export default function Hub({
   demos,
   onOpenDemo,
-  onStartDemo
+  onStartDemo,
+  onOpenMap
 }: {
   demos: DemoMeta[];
   /** Opens the details modal. */
   onOpenDemo: (demo: DemoMeta) => void;
   /** Opens the demo itself. */
   onStartDemo: (demoId: string) => void;
+  /** Opens the ecosystem map (in-app navigation; falls back to a plain link). */
+  onOpenMap?: () => void;
 }) {
   const { t } = useTranslation();
   const [showDonate, setShowDonate] = useState(false);
@@ -532,17 +536,19 @@ export default function Hub({
                   {t('hub.ctaStart', { defaultValue: 'Start with the basics' })}
                   <ArrowRight size={18} />
                 </button>
-                {spotlight ? (
-                  <button
-                    type="button"
-                    onClick={() => onStartDemo(spotlight.id)}
-                    className="inline-flex max-w-full items-center gap-2 rounded-xl border border-pink-500/60 bg-slate-900/70 px-4 py-2.5 text-sm font-semibold text-pink-100 hover:border-pink-400 hover:bg-slate-900"
-                  >
-                    <Sparkles size={16} className="shrink-0 text-pink-300" />
-                    <span className="truncate">{t('hub.ctaNew', { defaultValue: 'New: {{title}}', title: spotlight.title })}</span>
-                    <ArrowRight size={16} className="shrink-0" />
-                  </button>
-                ) : null}
+                <a
+                  href="/map"
+                  onClick={(e) => {
+                    if (!onOpenMap) return;
+                    e.preventDefault();
+                    onOpenMap();
+                  }}
+                  className="inline-flex max-w-full items-center gap-2 rounded-xl border border-pink-500/60 bg-slate-900/70 px-4 py-2.5 text-sm font-semibold text-pink-100 hover:border-pink-400 hover:bg-slate-900"
+                >
+                  <MapIcon size={16} className="shrink-0 text-pink-300" />
+                  <span className="truncate">{t('hub.ctaMap', { defaultValue: 'Explore the ecosystem map' })}</span>
+                  <ArrowRight size={16} className="shrink-0" />
+                </a>
               </div>
 
               {/* Selling points: one muted line (demo count and "free" are already in the pitch). */}

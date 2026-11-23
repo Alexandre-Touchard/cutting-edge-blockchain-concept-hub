@@ -47,7 +47,6 @@
     "showFilters": "Show filters",
     "pitch": "Learn how blockchains really work by playing with them: {{count}} hands-on simulations, free, no sign-up.",
     "ctaStart": "Start with the basics",
-    "ctaNew": "New: {{title}}",
     "stats": {
       "demos": "{{count}} interactive demos",
       "quests": "{{count}} learning quests",
@@ -111,7 +110,8 @@
       "close": "Close"
     },
     "hidePaths": "Hide learning paths",
-    "showPaths": "Show learning paths"
+    "showPaths": "Show learning paths",
+    "ctaMap": "Explore the ecosystem map"
   },
   "demos": {
     "mev-pbs": {
@@ -193,5 +193,8 @@
     "next": "Next quest ({{n}}/{{total}})",
     "allDone": "All quests complete!",
     "allDoneHint": "Nice work. Keep experimenting with the controls to explore other scenarios."
+  },
+  "map": {
+    "englishOnly": "This map is available in English only for now."
   }
 }

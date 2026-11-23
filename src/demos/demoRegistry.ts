@@ -9,6 +9,24 @@ import type { DemoMeta } from '../ui/Hub';
 const demo13Thumb = new URL('../public/photo/Demo13.png', import.meta.url).href;
 
 export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
+  'makerdao-vault': {
+    id: 'makerdao-vault',
+    title: 'Minting DAI: MakerDAO Vaults & Liquidations',
+    category: 'defi',
+    difficulty: 'Beginner',
+    thumbnail: '🏦',
+    description:
+      'Lock ETH in a vault, mint DAI, and watch the market move: collateral ratio, liquidation price, flash crashes, a one-hour oracle delay, and what a liquidation really costs.',
+    concepts: ['Vault (CDP)', 'Collateral Ratio', 'Liquidation Price', 'Liquidation', 'Liquidation Penalty', 'Oracle Security Module', 'Bad Debt', 'Stablecoin'],
+    keyTakeaways: [
+      'Minting DAI creates new money against your ETH; your safety is the collateral ratio, and its mirror image the liquidation price.',
+      'Below the liquidation ratio, an auction sells your ETH automatically to repay the debt plus a penalty; you keep the DAI and get the leftover ETH back.',
+      'A sudden crash can jump past liquidation prices and leave bad debt that the whole system must cover, as on Black Thursday in 2020.'
+    ],
+    tags: ['MakerDAO', 'DAI', 'Vaults', 'Liquidations'],
+    learningQuestsTotal: 7,
+    addedAt: '2026-11-23'
+  },
   'hashes-merkle-signatures': {
     id: 'hashes-merkle-signatures',
     title: 'Hashes, Merkle Trees & Signatures',

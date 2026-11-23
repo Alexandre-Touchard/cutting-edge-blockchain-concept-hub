@@ -164,6 +164,21 @@
         "2": "ECDSA",
         "3": "Criptografía"
       }
+    },
+    "makerdao-vault": {
+      "title": "Acuñar DAI: bóvedas de MakerDAO y liquidaciones",
+      "description": "Bloquea ETH en una bóveda, acuña DAI y mira cómo se mueve el mercado: ratio de colateralización, precio de liquidación, desplomes repentinos, el retraso de una hora del oráculo y lo que cuesta de verdad una liquidación.",
+      "keyTakeaways": {
+        "0": "Acuñar DAI crea dinero nuevo contra tu ETH; tu seguridad es el ratio de colateralización, y su reflejo, el precio de liquidación.",
+        "1": "Por debajo del ratio de liquidación, una subasta vende tu ETH automáticamente para pagar la deuda más una penalización; te quedas los DAI y recuperas el ETH sobrante.",
+        "2": "Un desplome repentino puede saltarse los precios de liquidación y dejar deuda incobrable que todo el sistema debe cubrir, como en el Black Thursday de 2020."
+      },
+      "tags": {
+        "0": "MakerDAO",
+        "1": "DAI",
+        "2": "Bóvedas",
+        "3": "Liquidaciones"
+      }
     }
   },
   "glossary": {
@@ -325,7 +340,13 @@
     "Sibling Hash": "El hash vecino de un nodo en el mismo nivel, con el que se combina para calcular el padre. Una prueba de Merkle es la lista de hermanos en el camino hacia la raíz.",
     "Digital Signature": "Valor calculado a partir de un mensaje y una clave privada. Cualquiera con la clave pública correspondiente puede comprobar que el titular de la clave aprobó exactamente ese mensaje; cualquier cambio en el mensaje la invalida.",
     "Public Key": "La mitad compartible de un par de claves. Otros la usan para verificar tus firmas; en las blockchains, tu dirección se deriva de ella.",
-    "Private Key": "La mitad secreta de un par de claves, usada para firmar. Quien la tiene controla los fondos de la dirección correspondiente, así que nunca debe compartirse."
+    "Private Key": "La mitad secreta de un par de claves, usada para firmar. Quien la tiene controla los fondos de la dirección correspondiente, así que nunca debe compartirse.",
+    "Vault (CDP)": "Smart contract que guarda tu colateral (p. ej., ETH) y te permite acuñar DAI contra él. También llamado CDP (posición de deuda colateralizada). Recuperas el colateral al devolver los DAI.",
+    "Collateral Ratio": "Valor del colateral dividido por la deuda. 1 ETH a 2.000 $ que respalda 1.000 DAI es un 200 %. Por debajo del ratio de liquidación (p. ej., 150 %), la bóveda puede ser liquidada.",
+    "Liquidation Price": "Precio del colateral al que una bóveda alcanza el ratio de liquidación: deuda × ratio de liquidación ÷ cantidad de colateral. Acuñar más lo sube; devolver o añadir colateral lo baja.",
+    "Liquidation Penalty": "Cargo adicional que se suma a la deuda cuando se liquida una bóveda (el 13 % fue durante mucho tiempo el valor de las bóvedas ETH-A de Maker). Se paga con el colateral del propietario.",
+    "Oracle Security Module": "El retraso del feed de precios de Maker: el protocolo usa precios de hace una hora. Da tiempo para frenar un precio erróneo o manipulado, y a los dueños de bóvedas para reaccionar.",
+    "Bad Debt": "Deuda que queda sin pagar tras una liquidación porque el colateral se vendió por menos que la deuda. El protocolo debe cubrirla; en Maker, con su excedente y después acuñando y vendiendo MKR."
   },
   "app": {
     "title": "Centro de aprendizaje de Blockchain",

@@ -37,7 +37,8 @@ export const DEMO_PREVIEWS: Record<string, { title: string; description: string 
   "stablecoin-depeg": { title: "Stablecoin Depeg Cascade", description: "Simulate two depeg cascades: (1) collateralized stablecoin liquidations and liquidity drains, and (2) Terra-style algorithmic reflexive collapse." },
   "evm-vs-svm": { title: "Sequential vs Parallel Execution (EVM vs SVM)", description: "Run the same transactions one by one (Ethereum) and in parallel waves (Solana), and see why declaring accounts upfront enables parallelism, and what still forces transactions to wait." },
   "arkea-heist": { title: "Follow the Money: the Crédit Mutuel Arkéa Heist", description: "Step through a real 2026 bank heist, from a compromised supplier to instant transfers, crypto laundering and Monero, and see how on-chain analysts traced it. Every claim shows its confidence level and sources." },
-  "hashes-merkle-signatures": { title: "Hashes, Merkle Trees & Signatures", description: "Change one transaction and watch the change ripple up a Merkle tree to the root. Then play with SHA-256, prove a transaction is in a block with a few hashes, sign and verify messages, and try to forge a signed block." }
+  "hashes-merkle-signatures": { title: "Hashes, Merkle Trees & Signatures", description: "Change one transaction and watch the change ripple up a Merkle tree to the root. Then play with SHA-256, prove a transaction is in a block with a few hashes, sign and verify messages, and try to forge a signed block." },
+  "makerdao-vault": { title: "Minting DAI: MakerDAO Vaults & Liquidations", description: "Lock ETH in a vault, mint DAI, and watch the market move: collateral ratio, liquidation price, flash crashes, a one-hour oracle delay, and what a liquidation really costs." }
 };
 
 function esc(s: string): string {

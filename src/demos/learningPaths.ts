@@ -19,7 +19,7 @@ export const LEARNING_PATHS: LearningPath[] = [
     id: 'defi',
     title: 'DeFi fundamentals',
     description: 'Exchanges without order books, stablecoins under stress, and who profits from transaction ordering.',
-    demoIds: ['amm-demo', 'stablecoin-depeg', 'mev-pbs']
+    demoIds: ['amm-demo', 'makerdao-vault', 'stablecoin-depeg', 'mev-pbs']
   },
   {
     id: 'scaling',

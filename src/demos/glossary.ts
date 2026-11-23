@@ -133,6 +133,13 @@ export type GlossaryKey =
   | 'Stablecoin Freeze'
   | 'Cross-Chain Bridge'
   | 'Instant Exchange'
+  // MakerDAO vaults
+  | 'Vault (CDP)'
+  | 'Collateral Ratio'
+  | 'Liquidation Price'
+  | 'Liquidation Penalty'
+  | 'Oracle Security Module'
+  | 'Bad Debt'
   // Hashes, Merkle trees & signatures
   | 'Hash Function'
   | 'Avalanche Effect'
@@ -456,6 +463,19 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
     'The shareable half of a key pair. Others use it to verify your signatures; on blockchains your address is derived from it.',
   'Private Key':
     'The secret half of a key pair, used to sign. Whoever holds it controls the funds of the matching address, so it must never be shared.',
+  // MakerDAO vaults
+  'Vault (CDP)':
+    'A smart contract that holds your collateral (e.g. ETH) and lets you mint DAI against it. Also called a CDP (collateralized debt position). You get the collateral back by repaying the DAI.',
+  'Collateral Ratio':
+    'Value of the collateral divided by the debt. 1 ETH at $2,000 backing 1,000 DAI is 200%. Below the liquidation ratio (e.g. 150%), the vault can be liquidated.',
+  'Liquidation Price':
+    'The collateral price at which a vault reaches the liquidation ratio: debt × liquidation ratio ÷ amount of collateral. Minting more raises it; repaying or adding collateral lowers it.',
+  'Liquidation Penalty':
+    'An extra charge added to the debt when a vault is liquidated (13% was the long-standing value for Maker’s ETH-A vaults). It is paid from the owner’s collateral.',
+  'Oracle Security Module':
+    'Maker’s price-feed delay: the protocol uses prices that are one hour old. It gives time to stop a bad or manipulated price, and gives vault owners time to react.',
+  'Bad Debt':
+    'Debt left unpaid after a liquidation because the collateral sold for less than the debt. The protocol must cover it, in Maker’s case from its surplus and then by minting and selling MKR.',
   'Instant Exchange':
     'A swap service that converts one crypto asset into another without an account, often with light identity checks. Popular for quickly changing assets and chains during laundering.',
   'Monero':

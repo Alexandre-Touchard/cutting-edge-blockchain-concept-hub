@@ -175,6 +175,21 @@
         "2": "ECDSA",
         "3": "Cryptographie"
       }
+    },
+    "makerdao-vault": {
+      "title": "Créer des DAI : coffres MakerDAO et liquidations",
+      "description": "Bloquez de l’ETH dans un coffre, créez des DAI et regardez le marché bouger : ratio de collatéralisation, prix de liquidation, krachs éclair, délai d’une heure de l’oracle, et ce que coûte vraiment une liquidation.",
+      "keyTakeaways": {
+        "0": "Créer des DAI, c’est émettre de la nouvelle monnaie contre votre ETH ; votre sécurité, c’est le ratio de collatéralisation, et son reflet, le prix de liquidation.",
+        "1": "Sous le ratio de liquidation, une enchère vend automatiquement votre ETH pour rembourser la dette plus une pénalité ; vous gardez les DAI et récupérez l’ETH restant.",
+        "2": "Un krach soudain peut sauter par-dessus les prix de liquidation et laisser une dette irrécouvrable que tout le système doit couvrir, comme lors du Black Thursday de 2020."
+      },
+      "tags": {
+        "0": "MakerDAO",
+        "1": "DAI",
+        "2": "Coffres",
+        "3": "Liquidations"
+      }
     }
   },
   "glossary": {
@@ -336,7 +351,13 @@
     "Sibling Hash": "Le hash voisin d’un nœud au même niveau, avec lequel il est combiné pour calculer le parent. Une preuve de Merkle est la liste des frères sur le chemin vers la racine.",
     "Digital Signature": "Valeur calculée à partir d’un message et d’une clé privée. Quiconque possède la clé publique correspondante peut vérifier que le détenteur de la clé a approuvé exactement ce message ; toute modification du message l’invalide.",
     "Public Key": "La moitié partageable d’une paire de clés. Les autres l’utilisent pour vérifier vos signatures ; sur les blockchains, votre adresse en est dérivée.",
-    "Private Key": "La moitié secrète d’une paire de clés, utilisée pour signer. Qui la détient contrôle les fonds de l’adresse correspondante : elle ne doit jamais être partagée."
+    "Private Key": "La moitié secrète d’une paire de clés, utilisée pour signer. Qui la détient contrôle les fonds de l’adresse correspondante : elle ne doit jamais être partagée.",
+    "Vault (CDP)": "Smart contract qui détient votre collatéral (par ex. de l’ETH) et vous permet de créer des DAI en échange. Aussi appelé CDP (position de dette collatéralisée). Vous récupérez le collatéral en remboursant les DAI.",
+    "Collateral Ratio": "Valeur du collatéral divisée par la dette. 1 ETH à 2 000 $ pour 1 000 DAI de dette, c’est 200 %. Sous le ratio de liquidation (par ex. 150 %), le coffre peut être liquidé.",
+    "Liquidation Price": "Prix du collatéral auquel un coffre atteint le ratio de liquidation : dette × ratio de liquidation ÷ quantité de collatéral. Créer plus de DAI l’augmente ; rembourser ou ajouter du collatéral le baisse.",
+    "Liquidation Penalty": "Frais supplémentaires ajoutés à la dette quand un coffre est liquidé (13 % fut longtemps la valeur des coffres ETH-A de Maker). Ils sont payés avec le collatéral du propriétaire.",
+    "Oracle Security Module": "Le délai du flux de prix de Maker : le protocole utilise des prix vieux d’une heure. Cela laisse le temps d’arrêter un prix erroné ou manipulé, et aux propriétaires de coffres de réagir.",
+    "Bad Debt": "Dette restée impayée après une liquidation parce que le collatéral s’est vendu moins cher que la dette. Le protocole doit la couvrir ; chez Maker, avec son surplus puis en créant et vendant des MKR."
   },
   "app": {
     "title": "Centre d’apprentissage Blockchain",

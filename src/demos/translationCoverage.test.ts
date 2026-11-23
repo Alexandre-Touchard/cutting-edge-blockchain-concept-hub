@@ -28,7 +28,8 @@ function demoIdOf(file: string, src: string): string | null {
       evm_vs_svm: 'evm-vs-svm',
       amm: 'amm-demo',
       stablecoin_depeg: 'stablecoin-depeg',
-      hashes_merkle: 'hashes-merkle-signatures'
+      hashes_merkle: 'hashes-merkle-signatures',
+      makerdao_vault: 'makerdao-vault'
     } as Record<string, string>
   )[folder] ?? null;
 }

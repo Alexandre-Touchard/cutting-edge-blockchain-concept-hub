@@ -168,6 +168,21 @@
         "2": "ECDSA",
         "3": "Cryptography"
       }
+    },
+    "makerdao-vault": {
+      "title": "Minting DAI: MakerDAO Vaults & Liquidations",
+      "description": "Lock ETH in a vault, mint DAI, and watch the market move: collateral ratio, liquidation price, flash crashes, a one-hour oracle delay, and what a liquidation really costs.",
+      "keyTakeaways": {
+        "0": "Minting DAI creates new money against your ETH; your safety is the collateral ratio, and its mirror image the liquidation price.",
+        "1": "Below the liquidation ratio, an auction sells your ETH automatically to repay the debt plus a penalty; you keep the DAI and get the leftover ETH back.",
+        "2": "A sudden crash can jump past liquidation prices and leave bad debt that the whole system must cover, as on Black Thursday in 2020."
+      },
+      "tags": {
+        "0": "MakerDAO",
+        "1": "DAI",
+        "2": "Vaults",
+        "3": "Liquidations"
+      }
     }
   },
   "quests": {

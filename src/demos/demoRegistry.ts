@@ -9,6 +9,24 @@ import type { DemoMeta } from '../ui/Hub';
 const demo13Thumb = new URL('../public/photo/Demo13.png', import.meta.url).href;
 
 export const demoMetaRegistry: Record<string, Partial<DemoMeta>> = {
+  'hashes-merkle-signatures': {
+    id: 'hashes-merkle-signatures',
+    title: 'Hashes, Merkle Trees & Signatures',
+    category: 'security',
+    difficulty: 'Beginner',
+    thumbnail: '🔐',
+    description:
+      'Change one transaction and watch the change ripple up a Merkle tree to the root. Then play with SHA-256, prove a transaction is in a block with a few hashes, sign and verify messages, and try to forge a signed block.',
+    concepts: ['Hash Function', 'Avalanche Effect', 'Merkle Tree', 'Merkle Root', 'Merkle Proof', 'Digital Signature', 'Public Key', 'Private Key'],
+    keyTakeaways: [
+      'A hash is a fixed-size fingerprint: the same input always gives the same hash, and a one-character change gives a completely different one.',
+      'A Merkle root commits to every transaction below it, and a proof of just log₂(n) hashes shows that one transaction is in the block.',
+      'A signature proves that the holder of a private key approved exactly this message; anyone can check it with the public key.'
+    ],
+    tags: ['SHA-256', 'Merkle tree', 'ECDSA', 'Cryptography'],
+    learningQuestsTotal: 8,
+    addedAt: '2026-11-23'
+  },
   'automated-market-maker-demo': {
     id: 'amm-demo',
     learningQuestsTotal: 5,

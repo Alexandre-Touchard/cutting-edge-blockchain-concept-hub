@@ -133,6 +133,16 @@ export type GlossaryKey =
   | 'Stablecoin Freeze'
   | 'Cross-Chain Bridge'
   | 'Instant Exchange'
+  // Hashes, Merkle trees & signatures
+  | 'Hash Function'
+  | 'Avalanche Effect'
+  | 'Merkle Tree'
+  | 'Merkle Proof'
+  | 'Merkle Leaf'
+  | 'Sibling Hash'
+  | 'Digital Signature'
+  | 'Public Key'
+  | 'Private Key'
   | 'Monero'
   | 'On-chain Analytics'
   | 'Third-Party Risk'
@@ -427,6 +437,25 @@ export const EN_GLOSSARY: Record<GlossaryKey, string> = {
     'Centralised stablecoin issuers such as Circle (USDC) and Tether (USDT) can blacklist an address so its tokens cannot move. It only works while stolen funds are still held in that stablecoin.',
   'Cross-Chain Bridge':
     'A protocol that moves value from one blockchain to another, usually by locking or burning tokens on the source chain and releasing them on the destination. Tracing must then continue on the other chain.',
+  // Hashes, Merkle trees & signatures
+  'Hash Function':
+    'A function that turns any input into a fixed-size fingerprint (SHA-256: 256 bits). The same input always gives the same hash, a tiny change gives a completely different one, and you can’t work back from the hash to the input.',
+  'Avalanche Effect':
+    'The property that changing a single bit of the input flips about half of the output bits, so similar inputs get unrelated hashes.',
+  'Merkle Tree':
+    'A tree of hashes: transactions are hashed (leaves), then pairs of hashes are hashed together level by level until one root remains. Changing any transaction changes the root.',
+  'Merkle Proof':
+    'The few sibling hashes needed to recompute the root from one leaf. It proves a transaction is in a block with about log₂(n) hashes instead of all n transactions.',
+  'Merkle Leaf':
+    'A node at the bottom of a Merkle tree: the hash of one transaction (or other data item).',
+  'Sibling Hash':
+    'The hash next to a node on the same level, which it is paired with to compute the parent. A Merkle proof is the list of siblings on the path to the root.',
+  'Digital Signature':
+    'A value computed from a message and a private key. Anyone with the matching public key can check that the key holder approved exactly this message; any change to the message breaks it.',
+  'Public Key':
+    'The shareable half of a key pair. Others use it to verify your signatures; on blockchains your address is derived from it.',
+  'Private Key':
+    'The secret half of a key pair, used to sign. Whoever holds it controls the funds of the matching address, so it must never be shared.',
   'Instant Exchange':
     'A swap service that converts one crypto asset into another without an account, often with light identity checks. Popular for quickly changing assets and chains during laundering.',
   'Monero':

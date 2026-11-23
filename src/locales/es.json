@@ -149,6 +149,21 @@
         "3": "Si la base fee sube por encima de max fee, la tx se ignora hasta que baje (o la reemplazas)",
         "4": "Acelerar/cancelar reemplaza la tx pendiente (mismo nonce) y suele requerir un bump de tarifas (≈10%)"
       }
+    },
+    "hashes-merkle-signatures": {
+      "title": "Hashes, árboles de Merkle y firmas",
+      "description": "Cambia una transacción y mira cómo el cambio sube por el árbol de Merkle hasta la raíz. Luego juega con SHA-256, demuestra que una transacción está en un bloque con unos pocos hashes, firma y verifica mensajes, e intenta falsificar un bloque firmado.",
+      "keyTakeaways": {
+        "0": "Un hash es una huella de tamaño fijo: la misma entrada siempre da el mismo hash, y cambiar un solo carácter da uno completamente distinto.",
+        "1": "Una raíz de Merkle compromete todas las transacciones que tiene debajo, y una prueba de solo log₂(n) hashes muestra que una transacción está en el bloque.",
+        "2": "Una firma demuestra que el titular de una clave privada aprobó exactamente ese mensaje; cualquiera puede comprobarla con la clave pública."
+      },
+      "tags": {
+        "0": "SHA-256",
+        "1": "Árbol de Merkle",
+        "2": "ECDSA",
+        "3": "Criptografía"
+      }
     }
   },
   "glossary": {
@@ -301,7 +316,16 @@
     "Columns/Node": "Cuántas columnas de datos almacena cada nodo. Con 64 columnas en total, 16 columnas/nodo significa que cada nodo almacena el 25% de los datos.",
     "Samples/Node": "Cuántas columnas aleatorias muestrea cada nodo para verificar la disponibilidad. Más muestras aumentan la confianza pero usan más ancho de banda.",
     "Coverage": "Factor de redundancia medio: cuántos nodos almacenan cada columna. Mayor cobertura mejora la tolerancia a fallos si los nodos se desconectan.",
-    "Availability": "Se confirma cuando los nodos pueden recuperar las muestras asignadas. Esto implica estadísticamente que todo el blob está disponible con una confianza muy alta."
+    "Availability": "Se confirma cuando los nodos pueden recuperar las muestras asignadas. Esto implica estadísticamente que todo el blob está disponible con una confianza muy alta.",
+    "Hash Function": "Función que convierte cualquier entrada en una huella de tamaño fijo (SHA-256: 256 bits). La misma entrada siempre da el mismo hash, un cambio mínimo da uno completamente distinto, y no se puede volver del hash a la entrada.",
+    "Avalanche Effect": "Propiedad por la que cambiar un solo bit de la entrada invierte cerca de la mitad de los bits de salida: entradas parecidas dan hashes sin relación.",
+    "Merkle Tree": "Árbol de hashes: las transacciones se hashean (hojas) y luego los hashes se combinan de dos en dos, nivel a nivel, hasta que queda una sola raíz. Cambiar cualquier transacción cambia la raíz.",
+    "Merkle Proof": "Los pocos hashes hermanos necesarios para recalcular la raíz a partir de una hoja. Demuestra que una transacción está en un bloque con unos log₂(n) hashes en lugar de las n transacciones.",
+    "Merkle Leaf": "Nodo en la base de un árbol de Merkle: el hash de una transacción (u otro dato).",
+    "Sibling Hash": "El hash vecino de un nodo en el mismo nivel, con el que se combina para calcular el padre. Una prueba de Merkle es la lista de hermanos en el camino hacia la raíz.",
+    "Digital Signature": "Valor calculado a partir de un mensaje y una clave privada. Cualquiera con la clave pública correspondiente puede comprobar que el titular de la clave aprobó exactamente ese mensaje; cualquier cambio en el mensaje la invalida.",
+    "Public Key": "La mitad compartible de un par de claves. Otros la usan para verificar tus firmas; en las blockchains, tu dirección se deriva de ella.",
+    "Private Key": "La mitad secreta de un par de claves, usada para firmar. Quien la tiene controla los fondos de la dirección correspondiente, así que nunca debe compartirse."
   },
   "app": {
     "title": "Centro de aprendizaje de Blockchain",
@@ -381,7 +405,7 @@
     "paths": {
       "basics": {
         "title": "Fundamentos de blockchain",
-        "description": "Empieza aquí: cómo funcionan realmente los bloques, las transacciones, las wallets y los tokens."
+        "description": "Empieza aquí: cómo funcionan realmente los hashes, las firmas, los bloques, las transacciones, las wallets y los tokens."
       },
       "defi": {
         "title": "Fundamentos de DeFi",

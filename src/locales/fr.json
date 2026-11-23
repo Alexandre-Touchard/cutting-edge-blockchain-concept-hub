@@ -160,6 +160,21 @@
         "3": "Monero",
         "4": "Réponse à incident"
       }
+    },
+    "hashes-merkle-signatures": {
+      "title": "Hashs, arbres de Merkle et signatures",
+      "description": "Modifiez une transaction et regardez le changement remonter l’arbre de Merkle jusqu’à la racine. Puis jouez avec SHA-256, prouvez qu’une transaction est dans un bloc avec quelques hashs, signez et vérifiez des messages, et tentez de falsifier un bloc signé.",
+      "keyTakeaways": {
+        "0": "Un hash est une empreinte de taille fixe : la même entrée donne toujours le même hash, et un seul caractère modifié en donne un complètement différent.",
+        "1": "Une racine de Merkle engage toutes les transactions en dessous d’elle, et une preuve de seulement log₂(n) hashs montre qu’une transaction est dans le bloc.",
+        "2": "Une signature prouve que le détenteur d’une clé privée a approuvé exactement ce message ; n’importe qui peut la vérifier avec la clé publique."
+      },
+      "tags": {
+        "0": "SHA-256",
+        "1": "Arbre de Merkle",
+        "2": "ECDSA",
+        "3": "Cryptographie"
+      }
     }
   },
   "glossary": {
@@ -312,7 +327,16 @@
     "Columns/Node": "Nombre de colonnes de données stockées par chaque nœud. Avec 64 colonnes au total, 16 colonnes/nœud signifie que chaque nœud stocke 25% des données.",
     "Samples/Node": "Nombre de colonnes aléatoires échantillonnées par chaque nœud pour vérifier la disponibilité. Plus d’échantillons augmente la confiance mais consomme plus de bande passante.",
     "Coverage": "Facteur de redondance moyen : nombre de nœuds qui stockent chaque colonne. Une couverture plus élevée améliore la tolérance aux pannes si des nœuds se déconnectent.",
-    "Availability": "Confirmée quand les nœuds peuvent récupérer les échantillons qui leur sont attribués. Statistiquement, cela implique que tout le blob est disponible avec une très forte confiance."
+    "Availability": "Confirmée quand les nœuds peuvent récupérer les échantillons qui leur sont attribués. Statistiquement, cela implique que tout le blob est disponible avec une très forte confiance.",
+    "Hash Function": "Fonction qui transforme n’importe quelle entrée en une empreinte de taille fixe (SHA-256 : 256 bits). La même entrée donne toujours le même hash, un infime changement en donne un tout autre, et on ne peut pas remonter du hash à l’entrée.",
+    "Avalanche Effect": "Propriété selon laquelle changer un seul bit de l’entrée inverse environ la moitié des bits de sortie : des entrées proches donnent des hashs sans rapport.",
+    "Merkle Tree": "Arbre de hashs : les transactions sont hachées (feuilles), puis les hashs sont hachés deux à deux, niveau par niveau, jusqu’à obtenir une seule racine. Modifier une transaction change la racine.",
+    "Merkle Proof": "Les quelques hashs frères nécessaires pour recalculer la racine à partir d’une feuille. Elle prouve qu’une transaction est dans un bloc avec environ log₂(n) hashs au lieu des n transactions.",
+    "Merkle Leaf": "Nœud au bas d’un arbre de Merkle : le hash d’une transaction (ou d’une autre donnée).",
+    "Sibling Hash": "Le hash voisin d’un nœud au même niveau, avec lequel il est combiné pour calculer le parent. Une preuve de Merkle est la liste des frères sur le chemin vers la racine.",
+    "Digital Signature": "Valeur calculée à partir d’un message et d’une clé privée. Quiconque possède la clé publique correspondante peut vérifier que le détenteur de la clé a approuvé exactement ce message ; toute modification du message l’invalide.",
+    "Public Key": "La moitié partageable d’une paire de clés. Les autres l’utilisent pour vérifier vos signatures ; sur les blockchains, votre adresse en est dérivée.",
+    "Private Key": "La moitié secrète d’une paire de clés, utilisée pour signer. Qui la détient contrôle les fonds de l’adresse correspondante : elle ne doit jamais être partagée."
   },
   "app": {
     "title": "Centre d’apprentissage Blockchain",
@@ -392,7 +416,7 @@
     "paths": {
       "basics": {
         "title": "Les bases de la blockchain",
-        "description": "Commencez ici : comment fonctionnent vraiment les blocs, les transactions, les portefeuilles et les jetons."
+        "description": "Commencez ici : comment fonctionnent vraiment les hashs, les signatures, les blocs, les transactions, les portefeuilles et les jetons."
       },
       "defi": {
         "title": "Les fondamentaux de la DeFi",

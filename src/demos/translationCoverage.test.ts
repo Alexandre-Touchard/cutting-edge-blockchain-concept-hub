@@ -27,7 +27,8 @@ function demoIdOf(file: string, src: string): string | null {
       wallet_tx: 'wallet-tx-lifecycle',
       evm_vs_svm: 'evm-vs-svm',
       amm: 'amm-demo',
-      stablecoin_depeg: 'stablecoin-depeg'
+      stablecoin_depeg: 'stablecoin-depeg',
+      hashes_merkle: 'hashes-merkle-signatures'
     } as Record<string, string>
   )[folder] ?? null;
 }
@@ -75,7 +76,8 @@ const ALLOW_IDENTICAL = new Set<string>([
   'Stablecoins (USDC/DAI)',
   'EIP-4844 (proto-danksharding) →',
   '{{from}} → {{to}} ({{value}} ETH)',
-  'Swap + Permit (tx)'
+  'Swap + Permit (tx)',
+  '= hash({{left}} ‖ {{right}})'
 ]);
 
 describe('translation quality', () => {

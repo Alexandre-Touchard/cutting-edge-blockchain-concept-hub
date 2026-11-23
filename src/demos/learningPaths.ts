@@ -12,8 +12,8 @@ export const LEARNING_PATHS: LearningPath[] = [
   {
     id: 'basics',
     title: 'Blockchain basics',
-    description: 'Start here: how blocks, transactions, wallets and tokens actually work.',
-    demoIds: ['ethereum-blockchain', 'wallet-tx-lifecycle', 'erc-standards', 'evm-vs-svm']
+    description: 'Start here: how hashes, signatures, blocks, transactions, wallets and tokens actually work.',
+    demoIds: ['hashes-merkle-signatures', 'ethereum-blockchain', 'wallet-tx-lifecycle', 'erc-standards', 'evm-vs-svm']
   },
   {
     id: 'defi',

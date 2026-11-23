@@ -54,7 +54,12 @@ export function newlyCompleted(defs: QuestDef[], saved: Record<string, boolean>)
   return defs.filter((d) => d.done && !saved[d.id]).map((d) => d.id);
 }
 
-export function useDemoQuests(demoId: string, defs: QuestDef[]): DemoQuests {
+export type DemoQuestsOptions = {
+  /** Called before "Show me" scrolls to a target, e.g. to open the step or tab that contains it. */
+  onPoint?: (target: string) => void;
+};
+
+export function useDemoQuests(demoId: string, defs: QuestDef[], options: DemoQuestsOptions = {}): DemoQuests {
   const [saved, setSaved] = usePersistedQuests(demoId, () => Object.fromEntries(defs.map((d) => [d.id, false])) as Record<string, boolean>);
 
   // Persist completions derived from state (monotonic).
@@ -76,7 +81,16 @@ export function useDemoQuests(demoId: string, defs: QuestDef[]): DemoQuests {
   useReportQuestProgress(demoId, doneCount, defs.length);
 
   // Point at the first quest's control on arrival; stop pulsing when the quest changes.
-  const { point, clear, pulse } = usePulseTarget();
+  const { point: pointRaw, clear, pulse } = usePulseTarget();
+  const onPointRef = useRef(options.onPoint);
+  onPointRef.current = options.onPoint;
+  const point = useCallback(
+    (key: string, scroll = true) => {
+      if (scroll) onPointRef.current?.(key); // a silent arrival hint never switches views
+      pointRaw(key, scroll);
+    },
+    [pointRaw]
+  );
   useEffect(() => {
     if (next?.target) point(next.target, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps

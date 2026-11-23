@@ -77,7 +77,7 @@
     "paths": {
       "basics": {
         "title": "Blockchain basics",
-        "description": "Start here: how blocks, transactions, wallets and tokens actually work."
+        "description": "Start here: how hashes, signatures, blocks, transactions, wallets and tokens actually work."
       },
       "defi": {
         "title": "DeFi fundamentals",
@@ -152,6 +152,21 @@
         "2": "Wallets check affordability using the cap: value + gasLimit × maxFee (not today’s effective price)",
         "3": "If base fee rises above max fee, the tx is ignored until base fee drops (or you replace it)",
         "4": "Speed up / cancel replaces the pending tx (same nonce) and typically requires a fee bump (≈10%)"
+      }
+    },
+    "hashes-merkle-signatures": {
+      "title": "Hashes, Merkle Trees & Signatures",
+      "description": "Change one transaction and watch the change ripple up a Merkle tree to the root. Then play with SHA-256, prove a transaction is in a block with a few hashes, sign and verify messages, and try to forge a signed block.",
+      "keyTakeaways": {
+        "0": "A hash is a fixed-size fingerprint: the same input always gives the same hash, and a one-character change gives a completely different one.",
+        "1": "A Merkle root commits to every transaction below it, and a proof of just log₂(n) hashes shows that one transaction is in the block.",
+        "2": "A signature proves that the holder of a private key approved exactly this message; anyone can check it with the public key."
+      },
+      "tags": {
+        "0": "SHA-256",
+        "1": "Merkle tree",
+        "2": "ECDSA",
+        "3": "Cryptography"
       }
     }
   },

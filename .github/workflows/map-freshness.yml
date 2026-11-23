@@ -1,0 +1,22 @@
+name: Map freshness
+
+# Monthly check of the ecosystem map: broken source links and nodes not verified for 6 months.
+# A failed run means the map needs a content review; the report is in the run summary.
+on:
+  schedule:
+    - cron: '0 7 1 * *' # 07:00 UTC on the 1st of every month
+  workflow_dispatch:
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check source links and review dates
+        run: node scripts/map-freshness.mjs --out="$GITHUB_STEP_SUMMARY"

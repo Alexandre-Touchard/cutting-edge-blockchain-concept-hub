@@ -370,7 +370,8 @@
     "backToHub": "Retour au hub",
     "demoNotFound": "Démo introuvable",
     "unknownDemoId": "Identifiant de démo inconnu : {{id}}",
-    "nowViewing": "Vous consultez"
+    "nowViewing": "Vous consultez",
+    "seeOnMap": "Voir sur la carte"
   },
   "modal": {
     "demoDetails": "Détails de la démo",

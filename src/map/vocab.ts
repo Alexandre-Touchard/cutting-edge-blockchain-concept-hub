@@ -1,5 +1,5 @@
 // Shared UI vocabulary and styles for the ecosystem map (edge colours, layer and kind names).
-import type { EdgeType, Kind, MapNode } from './types';
+import type { Consensus, EdgeType, Kind, MapNode, RollupType, Vm } from './types';
 
 export type Tr = (english: string, opts?: Record<string, unknown>) => string;
 
@@ -51,4 +51,16 @@ export function layerName(n: Pick<MapNode, 'layer' | 'subBand'>, tr: Tr): string
 export function monthYear(iso: string, lang?: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(lang, { month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+export function vmName(v: Vm, tr: Tr): string {
+  return { evm: tr('EVM'), svm: tr('SVM (Solana VM)'), move: tr('Move'), other: tr('Other execution environment') }[v];
+}
+
+export function consensusName(c: Consensus, tr: Tr): string {
+  return { pow: tr('Proof of work'), pos: tr('Proof of stake'), other: tr('Other consensus') }[c];
+}
+
+export function rollupName(r: RollupType, tr: Tr): string {
+  return { optimistic: tr('Optimistic rollup'), zk: tr('ZK rollup') }[r];
 }

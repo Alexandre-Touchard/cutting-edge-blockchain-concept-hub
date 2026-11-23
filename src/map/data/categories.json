@@ -6,6 +6,12 @@
     "color": "#818cf8"
   },
   {
+    "id": "frameworks",
+    "name": "Frameworks & stacks",
+    "kind": "Tools",
+    "color": "#e879f9"
+  },
+  {
     "id": "restaking",
     "name": "Restaking & data availability",
     "kind": "Tools",

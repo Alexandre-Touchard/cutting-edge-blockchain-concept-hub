@@ -359,7 +359,8 @@
     "backToHub": "Volver al hub",
     "demoNotFound": "Demo no encontrada",
     "unknownDemoId": "ID de demo desconocido: {{id}}",
-    "nowViewing": "Viendo"
+    "nowViewing": "Viendo",
+    "seeOnMap": "Ver en el mapa"
   },
   "modal": {
     "demoDetails": "Detalles de la demo",

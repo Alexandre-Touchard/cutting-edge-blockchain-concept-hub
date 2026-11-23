@@ -1,0 +1,110 @@
+[
+  {
+    "id": "more-l1s",
+    "name": "More Layer 1s",
+    "members": [
+      "cardano",
+      "iota",
+      "aptos",
+      "sui",
+      "tron",
+      "ton",
+      "near",
+      "hyperliquid"
+    ]
+  },
+  {
+    "id": "eth-l2s",
+    "name": "Ethereum Layer 2s",
+    "members": [
+      "arbitrum",
+      "optimism",
+      "base",
+      "zksync-era",
+      "starknet",
+      "linea",
+      "scroll",
+      "unichain",
+      "mantle",
+      "taiko",
+      "ink"
+    ]
+  },
+  {
+    "id": "defi-dex",
+    "name": "Decentralised exchanges",
+    "members": [
+      "uniswap",
+      "curve",
+      "raydium",
+      "jupiter"
+    ]
+  },
+  {
+    "id": "defi-lending",
+    "name": "Lending",
+    "members": [
+      "aave",
+      "compound",
+      "morpho"
+    ]
+  },
+  {
+    "id": "defi-yield",
+    "name": "Staking & yield",
+    "members": [
+      "lido",
+      "pendle",
+      "jito"
+    ]
+  },
+  {
+    "id": "stablecoins",
+    "name": "Stablecoins",
+    "members": [
+      "usdc",
+      "usdt",
+      "pyusd",
+      "eurc",
+      "ethena"
+    ]
+  },
+  {
+    "id": "exchanges",
+    "name": "Centralised exchanges",
+    "members": [
+      "coinbase",
+      "kraken",
+      "binance"
+    ]
+  },
+  {
+    "id": "wallets",
+    "name": "Wallets",
+    "members": [
+      "metamask",
+      "phantom",
+      "safe",
+      "ledger",
+      "trust-wallet"
+    ]
+  },
+  {
+    "id": "analytics",
+    "name": "Analytics & forensics",
+    "members": [
+      "dune",
+      "arkham",
+      "chainalysis"
+    ]
+  },
+  {
+    "id": "contract-tooling",
+    "name": "Smart-contract tooling",
+    "members": [
+      "openzeppelin",
+      "hardhat",
+      "foundry"
+    ]
+  }
+]

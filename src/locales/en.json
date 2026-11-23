@@ -10,7 +10,8 @@
     "backToHub": "Back to Hub",
     "demoNotFound": "Demo not found",
     "unknownDemoId": "Unknown demo id: {{id}}",
-    "nowViewing": "Now viewing"
+    "nowViewing": "Now viewing",
+    "seeOnMap": "See it on the map"
   },
   "modal": {
     "demoDetails": "Demo details",

@@ -4,10 +4,10 @@ import { ArrowDown, ArrowUp, ExternalLink, Play, X } from 'lucide-react';
 import type { DemoMeta } from '../ui/Hub';
 import type { MapData } from './data';
 import { otherEnd } from './data';
-import { Chip, NodeShape } from './MapCanvas';
-import type { EdgeType, MapNode } from './types';
+import { NodeChips, NodeShape } from './MapCanvas';
+import type { EdgeType, MapNode, Tour } from './types';
 import { EDGE_TYPES } from './types';
-import { EDGE_STYLE, edgeTypeName, kindName, layerName, monthYear, type Tr } from './vocab';
+import { EDGE_STYLE, consensusName, edgeTypeName, kindName, layerName, monthYear, rollupName, vmName, type Tr } from './vocab';
 
 // ---------------------------------------------------------------------------
 // Detail panel
@@ -20,7 +20,9 @@ export function DetailPanel({
   tr,
   lang,
   onNavigate,
-  onClose
+  onClose,
+  onDemoClick,
+  onCollapseGroup
 }: {
   node: MapNode;
   data: MapData;
@@ -29,8 +31,9 @@ export function DetailPanel({
   lang?: string;
   onNavigate: (id: string) => void;
   onClose: () => void;
+  onDemoClick?: (demoId: string) => void;
+  onCollapseGroup?: () => void;
 }) {
-  const cat = data.categoryById.get(node.category)!;
   const edges = data.edgesOf.get(node.id) ?? [];
   const byType = EDGE_TYPES.map((t) => ({ t, list: edges.filter((e) => e.type === t) })).filter((g) => g.list.length);
   return (
@@ -41,17 +44,29 @@ export function DetailPanel({
       <div className="flex items-start justify-between gap-2">
         <div>
           <h2 className="text-xl font-bold text-white">{node.name}</h2>
-          <div className="mt-1 flex flex-wrap gap-1">
-            <Chip>{kindName(node.kind, tr)}</Chip>
-            <Chip>{layerName(node, tr)}</Chip>
-            <Chip color={cat.color}>{tr(cat.name)}</Chip>
-          </div>
+          <NodeChips node={node} data={data} tr={tr} />
+          {node.cluster ? (
+            <p className="mt-1 text-[11px] text-slate-400">
+              {tr('Part of the group: {{name}}', { name: data.clusterById.get(node.cluster)?.name ?? node.cluster })}
+              {onCollapseGroup ? (
+                <button type="button" onClick={onCollapseGroup} className="ml-2 text-blue-300 hover:underline">
+                  {tr('Collapse the group')}
+                </button>
+              ) : null}
+            </p>
+          ) : null}
         </div>
         <button type="button" onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label={tr('Close details')}>
           <X size={18} />
         </button>
       </div>
       <p className="mt-1 text-[11px] text-slate-500">{tr('Last verified: {{date}}', { date: monthYear(node.verifiedOn, lang) })}</p>
+
+      {node.status === 'discontinued' ? (
+        <p className="mt-3 rounded-lg border border-amber-800 bg-amber-950/40 p-2 text-xs text-amber-100">
+          {tr('Discontinued: this project has shut down. It stays on the map as a reminder that chains and apps can disappear.')}
+        </p>
+      ) : null}
 
       <Section title={tr('In one line')}>
         <p className="text-sm text-slate-200">{node.summary}</p>
@@ -131,7 +146,7 @@ export function DetailPanel({
                   {body}
                 </div>
               ) : (
-                <a key={id} href={`/demo/${id}`} className="block rounded-lg border border-slate-700 bg-slate-900 p-2 hover:border-amber-500/70">
+                <a key={id} href={`/demo/${id}`} onClick={() => onDemoClick?.(id)} className="block rounded-lg border border-slate-700 bg-slate-900 p-2 hover:border-amber-500/70">
                   {body}
                 </a>
               );
@@ -178,7 +193,7 @@ function EdgeSwatch({ type }: { type: EdgeType }) {
 // List view
 // ---------------------------------------------------------------------------
 
-type SortKey = 'name' | 'layer' | 'category' | 'connections' | 'demos';
+type SortKey = 'name' | 'layer' | 'category' | 'vm' | 'consensus' | 'connections' | 'demos';
 
 export function ListView({ data, nodes, tr, onSelect, selectedId }: { data: MapData; nodes: MapNode[]; tr: Tr; onSelect: (id: string) => void; selectedId: string | null }) {
   const [sort, setSort] = useState<{ key: SortKey; asc: boolean }>({ key: 'layer', asc: true });
@@ -190,6 +205,10 @@ export function ListView({ data, nodes, tr, onSelect, selectedId }: { data: MapD
           ? n.layer * 10 + (n.subBand === 'app-tool' ? 1 : 0)
           : sort.key === 'category'
             ? data.categoryById.get(n.category)!.name
+            : sort.key === 'vm'
+            ? (n.vm ?? '~')
+            : sort.key === 'consensus'
+            ? (n.consensus ?? n.rollupType ?? '~')
             : sort.key === 'connections'
               ? data.edgesOf.get(n.id)!.length
               : n.demos.length;
@@ -212,13 +231,15 @@ export function ListView({ data, nodes, tr, onSelect, selectedId }: { data: MapD
 
   return (
     <div className="h-full overflow-auto p-4">
-      <table className="w-full min-w-[640px] text-sm">
+      <table className="w-full min-w-[820px] text-sm">
         <caption className="sr-only">{tr('All nodes of the ecosystem map')}</caption>
         <thead className="sticky top-0 bg-slate-950 text-xs uppercase tracking-wide text-slate-400">
           <tr>
             {head('name', tr('Name'))}
             {head('layer', tr('Layer'))}
             {head('category', tr('Category'))}
+            {head('vm', tr('Execution'))}
+            {head('consensus', tr('Consensus / rollup'))}
             {head('connections', tr('Connections'))}
             {head('demos', tr('Demos'))}
           </tr>
@@ -235,10 +256,13 @@ export function ListView({ data, nodes, tr, onSelect, selectedId }: { data: MapD
                     </svg>
                     {n.name}
                   </button>
+                  {n.status === 'discontinued' ? <span className="ml-2 text-[10px] text-amber-300">{tr('Discontinued')}</span> : null}
                   <div className="text-xs text-slate-400">{n.summary}</div>
                 </td>
                 <td className="px-3 py-2 text-slate-300">{layerName(n, tr)}</td>
                 <td className="px-3 py-2 text-slate-300">{tr(cat.name)}</td>
+                <td className="px-3 py-2 text-slate-300">{n.vm ? vmName(n.vm, tr) : '—'}</td>
+                <td className="px-3 py-2 text-slate-300">{n.consensus ? consensusName(n.consensus, tr) : n.rollupType ? rollupName(n.rollupType, tr) : '—'}</td>
                 <td className="px-3 py-2 text-slate-300">{data.edgesOf.get(n.id)!.length}</td>
                 <td className="px-3 py-2 text-slate-300">{n.demos.length ? `▶ ${n.demos.length}` : '—'}</td>
               </tr>
@@ -284,6 +308,18 @@ export function Legend({ data, tr, onClose }: { data: MapData; tr: Tr; onClose: 
           <span className="text-amber-300">▶</span>
           {tr('has a demo')}
         </span>
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="18" height="18" viewBox="-10 -10 20 20" aria-hidden>
+            <circle r="8" fill="#94a3b8" fillOpacity="0.25" stroke="#94a3b8" strokeDasharray="3 2" />
+          </svg>
+          {tr('group: click to expand')}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="16" height="16" viewBox="-10 -10 20 20" aria-hidden>
+            <NodeShape kind="chain" x={0} y={0} r={7} fill="#64748b" dashed />
+          </svg>
+          {tr('discontinued')}
+        </span>
       </div>
       <h4 className="mt-3 font-semibold text-slate-200">{tr('Colours (categories)')}</h4>
       <ul className="mt-1 grid grid-cols-1 gap-0.5">
@@ -307,5 +343,108 @@ export function Legend({ data, tr, onClose }: { data: MapData; tr: Tr; onClose: 
         {tr('Sizes are uniform on purpose: no prices, market caps or rankings. Inclusion is not an endorsement.')}
       </p>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Guided tour
+// ---------------------------------------------------------------------------
+
+export function TourPanel({
+  tour,
+  step,
+  data,
+  demos,
+  tr,
+  onStep,
+  onExit,
+  onDetails,
+  onDemoClick
+}: {
+  tour: Tour;
+  /** 0..steps.length (the last index shows the ending with demo cards). */
+  step: number;
+  data: MapData;
+  demos: Map<string, DemoMeta>;
+  tr: Tr;
+  onStep: (i: number) => void;
+  onExit: () => void;
+  onDetails: (nodeId: string) => void;
+  onDemoClick?: (demoId: string) => void;
+}) {
+  const ending = step >= tour.steps.length;
+  const s = tour.steps[Math.min(step, tour.steps.length - 1)];
+  const node = data.nodeById.get(s.node)!;
+  return (
+    <section
+      aria-label={tr('Guided tour: {{title}}', { title: tour.title })}
+      aria-live="polite"
+      className="absolute bottom-3 left-14 right-3 z-20 max-w-md rounded-xl border border-amber-700/70 bg-slate-950 p-3 shadow-2xl sm:left-16"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-300">
+          {tr('Tour')} · {ending ? tr('Done') : tr('Step {{i}} of {{n}}', { i: step + 1, n: tour.steps.length })}
+        </div>
+        <button type="button" onClick={onExit} className="rounded p-0.5 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label={tr('Exit the tour')}>
+          <X size={14} />
+        </button>
+      </div>
+      <h2 className="mt-0.5 text-sm font-bold text-white">{tour.title}</h2>
+      <div className="mt-1 flex gap-1" aria-hidden>
+        {tour.steps.map((_, i) => (
+          <span key={i} className={`h-1 flex-1 rounded-full ${i < step || ending ? 'bg-amber-400' : i === step ? 'bg-amber-200' : 'bg-slate-700'}`} />
+        ))}
+      </div>
+      {ending ? (
+        <>
+          <p className="mt-2 text-sm text-slate-200">{tr('Go deeper with a hands-on demo:')}</p>
+          <div className="mt-2 space-y-1.5">
+            {tour.demos.map((id) => {
+              const d = demos.get(id);
+              if (!d) return null;
+              return d.status === 'coming_soon' ? (
+                <div key={id} className="rounded-lg border border-slate-800 p-2 text-xs text-slate-500">
+                  {d.title} · {tr('Coming soon')}
+                </div>
+              ) : (
+                <a key={id} href={`/demo/${id}`} onClick={() => onDemoClick?.(id)} className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs font-semibold text-white hover:border-amber-500/70">
+                  <Play size={12} className="text-amber-300" />
+                  {d.title}
+                </a>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="mt-2 text-xs font-semibold text-slate-300">{node.name}</div>
+          <p className="mt-0.5 text-sm leading-snug text-slate-100">{s.text}</p>
+        </>
+      )}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onStep(step - 1)}
+          disabled={step === 0}
+          className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs hover:bg-slate-800 disabled:opacity-30"
+        >
+          ← {tr('Back')}
+        </button>
+        {ending ? (
+          <button type="button" onClick={onExit} className="rounded-lg bg-amber-600 px-3 py-1 text-xs font-semibold hover:bg-amber-500">
+            {tr('Close the tour')}
+          </button>
+        ) : (
+          <button type="button" onClick={() => onStep(step + 1)} className="rounded-lg bg-amber-600 px-3 py-1 text-xs font-semibold hover:bg-amber-500">
+            {step === tour.steps.length - 1 ? tr('Finish') : tr('Next')} →
+          </button>
+        )}
+        {!ending ? (
+          <button type="button" onClick={() => onDetails(node.id)} className="ml-auto text-xs text-blue-300 hover:underline">
+            {tr('Details about {{name}}', { name: node.name })}
+          </button>
+        ) : null}
+      </div>
+    </section>
   );
 }

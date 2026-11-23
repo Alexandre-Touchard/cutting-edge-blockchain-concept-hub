@@ -450,42 +450,6 @@
     "confidence": "high"
   },
   {
-    "id": "base--built-with--optimism",
-    "from": "base",
-    "to": "optimism",
-    "type": "built-with",
-    "label": "Started on the OP Stack like OP Mainnet; since 2026 runs its own OP Stack-compatible code",
-    "strength": 2,
-    "confidence": "high"
-  },
-  {
-    "id": "osmosis--built-with--cosmos-hub",
-    "from": "osmosis",
-    "to": "cosmos-hub",
-    "type": "built-with",
-    "label": "Built with the Cosmos SDK, the same framework as the Cosmos Hub",
-    "strength": 2,
-    "confidence": "high"
-  },
-  {
-    "id": "dydx-chain--built-with--cosmos-hub",
-    "from": "dydx-chain",
-    "to": "cosmos-hub",
-    "type": "built-with",
-    "label": "Built with the Cosmos SDK, the same framework as the Cosmos Hub",
-    "strength": 2,
-    "confidence": "high"
-  },
-  {
-    "id": "celestia--built-with--cosmos-hub",
-    "from": "celestia",
-    "to": "cosmos-hub",
-    "type": "built-with",
-    "label": "Built with the Cosmos SDK, the same framework as the Cosmos Hub",
-    "strength": 2,
-    "confidence": "high"
-  },
-  {
     "id": "base--built-by--coinbase",
     "from": "base",
     "to": "coinbase",
@@ -925,5 +889,995 @@
     "label": "MEV-Boost links Ethereum validators to block builders; Protect sends private transactions",
     "strength": 2,
     "confidence": "high"
+  },
+  {
+    "id": "optimism--built-with--op-stack",
+    "from": "optimism",
+    "to": "op-stack",
+    "type": "built-with",
+    "label": "Built with the OP Stack; OP Mainnet is the framework's reference chain",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "base--built-with--op-stack",
+    "from": "base",
+    "to": "op-stack",
+    "type": "built-with",
+    "label": "Started on the OP Stack; in 2026 it moved to its own OP Stack-compatible code",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "unichain--built-with--op-stack",
+    "from": "unichain",
+    "to": "op-stack",
+    "type": "built-with",
+    "label": "Built with the OP Stack",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "ink--built-with--op-stack",
+    "from": "ink",
+    "to": "op-stack",
+    "type": "built-with",
+    "label": "Built with the OP Stack",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "mantle--built-with--op-stack",
+    "from": "mantle",
+    "to": "op-stack",
+    "type": "built-with",
+    "label": "Built on OP Stack code, with OP Succinct adding ZK validity proofs",
+    "strength": 2,
+    "confidence": "check"
+  },
+  {
+    "id": "apechain--built-with--arbitrum-orbit",
+    "from": "apechain",
+    "to": "arbitrum-orbit",
+    "type": "built-with",
+    "label": "Launched with Arbitrum Orbit as an L3 on top of Arbitrum One",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "xai--built-with--arbitrum-orbit",
+    "from": "xai",
+    "to": "arbitrum-orbit",
+    "type": "built-with",
+    "label": "Launched with Arbitrum Orbit as an L3 on top of Arbitrum One",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "degen-chain--built-with--arbitrum-orbit",
+    "from": "degen-chain",
+    "to": "arbitrum-orbit",
+    "type": "built-with",
+    "label": "Was launched with Arbitrum Orbit as an L3 on Base; shut down on 31 Aug 2026",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "arbitrum--built-with--arbitrum-orbit",
+    "from": "arbitrum",
+    "to": "arbitrum-orbit",
+    "type": "built-with",
+    "label": "Orbit lets teams launch chains with the same Nitro technology as Arbitrum One",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "zksync-era--built-with--zk-stack",
+    "from": "zksync-era",
+    "to": "zk-stack",
+    "type": "built-with",
+    "label": "Built with the ZK Stack, which other teams also use to launch their own ZK chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "cosmos-hub--built-with--cosmos-sdk",
+    "from": "cosmos-hub",
+    "to": "cosmos-sdk",
+    "type": "built-with",
+    "label": "Built with the Cosmos SDK",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "osmosis--built-with--cosmos-sdk",
+    "from": "osmosis",
+    "to": "cosmos-sdk",
+    "type": "built-with",
+    "label": "Built with the Cosmos SDK as its own exchange-focused chain",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "dydx-chain--built-with--cosmos-sdk",
+    "from": "dydx-chain",
+    "to": "cosmos-sdk",
+    "type": "built-with",
+    "label": "Built with the Cosmos SDK as its own chain for trading perpetual futures",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "celestia--built-with--cosmos-sdk",
+    "from": "celestia",
+    "to": "cosmos-sdk",
+    "type": "built-with",
+    "label": "Built with the Cosmos SDK, adapted to store and serve rollup data",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "axelar--built-with--cosmos-sdk",
+    "from": "axelar",
+    "to": "cosmos-sdk",
+    "type": "built-with",
+    "label": "Built with the Cosmos SDK",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "polkadot--built-with--polkadot-sdk",
+    "from": "polkadot",
+    "to": "polkadot-sdk",
+    "type": "built-with",
+    "label": "Its node software is built with the Polkadot SDK, which includes Substrate",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "avail--built-with--polkadot-sdk",
+    "from": "avail",
+    "to": "polkadot-sdk",
+    "type": "built-with",
+    "label": "Built with Substrate (part of the Polkadot SDK), but not connected to Polkadot",
+    "strength": 2,
+    "confidence": "check"
+  },
+  {
+    "id": "zcash--built-with--bitcoin",
+    "from": "zcash",
+    "to": "bitcoin",
+    "type": "built-with",
+    "label": "Started as a fork of Bitcoin's code, adding zero-knowledge shielded transactions",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "layerzero--bridges--aptos",
+    "from": "layerzero",
+    "to": "aptos",
+    "type": "bridges",
+    "label": "Carries messages and tokens between Aptos and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "wormhole--bridges--aptos",
+    "from": "wormhole",
+    "to": "aptos",
+    "type": "bridges",
+    "label": "Moves messages and tokens between Aptos and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "wormhole--bridges--sui",
+    "from": "wormhole",
+    "to": "sui",
+    "type": "bridges",
+    "label": "Moves messages and tokens between Sui and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--issues--aptos",
+    "from": "usdc",
+    "to": "aptos",
+    "type": "issues",
+    "label": "Circle issues native USDC directly on Aptos, not a bridged copy",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--issues--sui",
+    "from": "usdc",
+    "to": "sui",
+    "type": "issues",
+    "label": "Circle issues native USDC directly on Sui, not a bridged copy",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--issues--near",
+    "from": "usdc",
+    "to": "near",
+    "type": "issues",
+    "label": "Circle issues native USDC directly on NEAR, not a bridged copy",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--issues--polygon-pos",
+    "from": "usdc",
+    "to": "polygon-pos",
+    "type": "issues",
+    "label": "Circle issues native USDC on Polygon PoS; an older bridged USDC.e also exists",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--issues--hyperliquid",
+    "from": "usdc",
+    "to": "hyperliquid",
+    "type": "issues",
+    "label": "Circle issues native USDC on HyperEVM, usable on Hyperliquid's trading layer",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdt--issues--aptos",
+    "from": "usdt",
+    "to": "aptos",
+    "type": "issues",
+    "label": "Tether issues USDT natively on Aptos",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdt--issues--tron",
+    "from": "usdt",
+    "to": "tron",
+    "type": "issues",
+    "label": "Tether issues USDT natively on TRON",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "usdt--issues--ton",
+    "from": "usdt",
+    "to": "ton",
+    "type": "issues",
+    "label": "Tether issues USDT natively on TON",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "binance--gateway--bitcoin",
+    "from": "binance",
+    "to": "bitcoin",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw BTC to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "binance--gateway--ethereum",
+    "from": "binance",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw ETH to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "binance--gateway--bnb-chain",
+    "from": "binance",
+    "to": "bnb-chain",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw BNB to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "binance--gateway--solana",
+    "from": "binance",
+    "to": "solana",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw SOL to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "binance--gateway--tron",
+    "from": "binance",
+    "to": "tron",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw TRX to their own wallet",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "bnb-chain--built-by--binance",
+    "from": "bnb-chain",
+    "to": "binance",
+    "type": "built-by",
+    "label": "Started by Binance, which still supports its development",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "aave--deployed-on--polygon-pos",
+    "from": "aave",
+    "to": "polygon-pos",
+    "type": "deployed-on",
+    "label": "Its lending and borrowing markets run on Polygon PoS",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "chainlink--data-feed--polygon-pos",
+    "from": "chainlink",
+    "to": "polygon-pos",
+    "type": "data-feed",
+    "label": "Provides price feeds and other data to smart contracts on Polygon PoS",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "stacks--settles-on--bitcoin",
+    "from": "stacks",
+    "to": "bitcoin",
+    "type": "settles-on",
+    "label": "Anchors its blocks to Bitcoin; its miners spend BTC to produce them (Proof of Transfer)",
+    "strength": 3,
+    "confidence": "check"
+  },
+  {
+    "id": "bitcoin--secures--rootstock",
+    "from": "bitcoin",
+    "to": "rootstock",
+    "type": "secures",
+    "label": "Bitcoin mining pools can also mine Rootstock blocks at the same time (merged mining)",
+    "strength": 3,
+    "confidence": "check"
+  },
+  {
+    "id": "unichain--settles-on--ethereum",
+    "from": "unichain",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Posts transaction batches to Ethereum; wrong results can be challenged with fault proofs",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "mantle--settles-on--ethereum",
+    "from": "mantle",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Posts its data to Ethereum blobs, with ZK validity proofs that Ethereum checks",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "taiko--settles-on--ethereum",
+    "from": "taiko",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Based rollup: its blocks are proposed through Ethereum, and proofs are checked there",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "ink--settles-on--ethereum",
+    "from": "ink",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Posts transaction batches to Ethereum; wrong results can be challenged with fault proofs",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "aztec--settles-on--ethereum",
+    "from": "aztec",
+    "to": "ethereum",
+    "type": "settles-on",
+    "label": "Privacy ZK rollup: posts state updates and validity proofs to Ethereum, which checks them",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "degen-chain--settles-on--base",
+    "from": "degen-chain",
+    "to": "base",
+    "type": "settles-on",
+    "label": "Settled on Base as an L3 until it shut down on 31 Aug 2026",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "uniswap--deployed-on--unichain",
+    "from": "uniswap",
+    "to": "unichain",
+    "type": "deployed-on",
+    "label": "Its token-swap contracts run on Unichain, the L2 built by Uniswap Labs",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "ink--built-by--kraken",
+    "from": "ink",
+    "to": "kraken",
+    "type": "built-by",
+    "label": "Kraken's Ethereum L2, developed by the exchange's team",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "compound--deployed-on--ethereum",
+    "from": "compound",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its lending markets (Compound III) run on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "compound--deployed-on--base",
+    "from": "compound",
+    "to": "base",
+    "type": "deployed-on",
+    "label": "Its lending markets (Compound III) run on Base",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "compound--deployed-on--arbitrum",
+    "from": "compound",
+    "to": "arbitrum",
+    "type": "deployed-on",
+    "label": "Its lending markets (Compound III) run on Arbitrum One",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "morpho--deployed-on--ethereum",
+    "from": "morpho",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its lending markets and vaults run on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "morpho--deployed-on--base",
+    "from": "morpho",
+    "to": "base",
+    "type": "deployed-on",
+    "label": "Its lending markets and vaults run on Base",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "pendle--deployed-on--ethereum",
+    "from": "pendle",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its yield-trading markets run on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "pendle--deployed-on--arbitrum",
+    "from": "pendle",
+    "to": "arbitrum",
+    "type": "deployed-on",
+    "label": "Its yield-trading markets run on Arbitrum One",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "raydium--deployed-on--solana",
+    "from": "raydium",
+    "to": "solana",
+    "type": "deployed-on",
+    "label": "Its token-swap pools run on Solana",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "jito--deployed-on--solana",
+    "from": "jito",
+    "to": "solana",
+    "type": "deployed-on",
+    "label": "Runs on Solana: liquid staking (JitoSOL) and block-building tools for validators",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "jupiter--gateway--raydium",
+    "from": "jupiter",
+    "to": "raydium",
+    "type": "gateway",
+    "label": "Routes users' swaps through Raydium pools when they give a better price",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "ethena--deployed-on--ethereum",
+    "from": "ethena",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its contracts for the USDe synthetic dollar run on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "pyusd--issues--ethereum",
+    "from": "pyusd",
+    "to": "ethereum",
+    "type": "issues",
+    "label": "Paxos issues PYUSD for PayPal natively on Ethereum",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "pyusd--issues--solana",
+    "from": "pyusd",
+    "to": "solana",
+    "type": "issues",
+    "label": "Paxos issues PYUSD for PayPal natively on Solana",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "eurc--issues--ethereum",
+    "from": "eurc",
+    "to": "ethereum",
+    "type": "issues",
+    "label": "Circle issues EURC, its euro stablecoin, natively on Ethereum",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "eurc--issues--base",
+    "from": "eurc",
+    "to": "base",
+    "type": "issues",
+    "label": "Circle issues EURC, its euro stablecoin, natively on Base",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "eurc--issues--avalanche",
+    "from": "eurc",
+    "to": "avalanche",
+    "type": "issues",
+    "label": "Circle issues EURC, its euro stablecoin, natively on Avalanche",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "eurc--issues--solana",
+    "from": "eurc",
+    "to": "solana",
+    "type": "issues",
+    "label": "Circle issues EURC, its euro stablecoin, natively on Solana",
+    "strength": 3,
+    "confidence": "high"
+  },
+  {
+    "id": "ledger--gateway--ethereum",
+    "from": "ledger",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Hardware wallet that keeps keys offline and signs Ethereum transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "ledger--gateway--bitcoin",
+    "from": "ledger",
+    "to": "bitcoin",
+    "type": "gateway",
+    "label": "Hardware wallet that keeps keys offline and signs Bitcoin transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "ledger--gateway--solana",
+    "from": "ledger",
+    "to": "solana",
+    "type": "gateway",
+    "label": "Hardware wallet that keeps keys offline and signs Solana transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "trust-wallet--gateway--ethereum",
+    "from": "trust-wallet",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Mobile wallet that holds keys and lets users sign Ethereum transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "trust-wallet--gateway--bnb-chain",
+    "from": "trust-wallet",
+    "to": "bnb-chain",
+    "type": "gateway",
+    "label": "Mobile wallet that holds keys and lets users sign BNB Chain transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "trust-wallet--gateway--solana",
+    "from": "trust-wallet",
+    "to": "solana",
+    "type": "gateway",
+    "label": "Mobile wallet that holds keys and lets users sign Solana transactions",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "polymarket--deployed-on--polygon-pos",
+    "from": "polymarket",
+    "to": "polygon-pos",
+    "type": "deployed-on",
+    "label": "Its prediction-market contracts run on Polygon PoS",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "usdc--collateral--polymarket",
+    "from": "usdc",
+    "to": "polymarket",
+    "type": "collateral",
+    "label": "Backs pUSD 1:1, the token used to trade on Polymarket since 2026 (before: USDC.e)",
+    "strength": 2,
+    "confidence": "check"
+  },
+  {
+    "id": "farcaster--deployed-on--optimism",
+    "from": "farcaster",
+    "to": "optimism",
+    "type": "deployed-on",
+    "label": "Its account and key registries run on OP Mainnet; posts are stored offchain",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "infura--gateway--ethereum",
+    "from": "infura",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Gives developers node and API access to read and write Ethereum data",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "infura--gateway--linea",
+    "from": "infura",
+    "to": "linea",
+    "type": "gateway",
+    "label": "Gives developers node and API access to read and write Linea data",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "infura--same-builder--metamask",
+    "from": "infura",
+    "to": "metamask",
+    "type": "same-builder",
+    "label": "Both made by Consensys; MetaMask uses Infura by default to reach networks",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "hardhat--gateway--ethereum",
+    "from": "hardhat",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Lets developers compile, test and deploy Ethereum smart contracts",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "foundry--gateway--ethereum",
+    "from": "foundry",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Command-line toolkit to compile, test and deploy Ethereum contracts in Solidity",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "chronicle--data-feed--sky",
+    "from": "chronicle",
+    "to": "sky",
+    "type": "data-feed",
+    "label": "Began as Maker's oracle and supplies collateral prices for Sky's vaults",
+    "strength": 2,
+    "confidence": "check"
+  },
+  {
+    "id": "chronicle--data-feed--ethereum",
+    "from": "chronicle",
+    "to": "ethereum",
+    "type": "data-feed",
+    "label": "Provides verifiable price feeds to smart contracts on Ethereum",
+    "strength": 2,
+    "confidence": "check"
+  },
+  {
+    "id": "redstone--data-feed--ethereum",
+    "from": "redstone",
+    "to": "ethereum",
+    "type": "data-feed",
+    "label": "Provides price feeds to smart contracts on Ethereum, pushed or pulled on demand",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "dune--gateway--ethereum",
+    "from": "dune",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Lets anyone query Ethereum data with SQL and build dashboards",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "dune--gateway--solana",
+    "from": "dune",
+    "to": "solana",
+    "type": "gateway",
+    "label": "Lets anyone query Solana data with SQL and build dashboards",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "dune--gateway--base",
+    "from": "dune",
+    "to": "base",
+    "type": "gateway",
+    "label": "Lets anyone query Base data with SQL and build dashboards",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "arkham--gateway--ethereum",
+    "from": "arkham",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Labels addresses and traces fund flows on Ethereum",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "arkham--gateway--bitcoin",
+    "from": "arkham",
+    "to": "bitcoin",
+    "type": "gateway",
+    "label": "Labels addresses and traces fund flows on Bitcoin",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "chainalysis--gateway--bitcoin",
+    "from": "chainalysis",
+    "to": "bitcoin",
+    "type": "gateway",
+    "label": "Analytics and tracing tools that businesses and investigators use on Bitcoin",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "chainalysis--gateway--ethereum",
+    "from": "chainalysis",
+    "to": "ethereum",
+    "type": "gateway",
+    "label": "Analytics and tracing tools that businesses and investigators use on Ethereum",
+    "strength": 1,
+    "confidence": "high"
+  },
+  {
+    "id": "axelar--bridges--ethereum",
+    "from": "axelar",
+    "to": "ethereum",
+    "type": "bridges",
+    "label": "Passes messages and tokens between Ethereum, Cosmos chains and other networks",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "axelar--bridges--osmosis",
+    "from": "axelar",
+    "to": "osmosis",
+    "type": "bridges",
+    "label": "Brings tokens from Ethereum and other chains to Osmosis, e.g. axlUSDC",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "across--bridges--ethereum",
+    "from": "across",
+    "to": "ethereum",
+    "type": "bridges",
+    "label": "Its hub pool on Ethereum repays relayers who fill fast transfers between chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "across--bridges--arbitrum",
+    "from": "across",
+    "to": "arbitrum",
+    "type": "bridges",
+    "label": "Moves tokens between Arbitrum One and other chains; relayers fill transfers fast",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "across--bridges--base",
+    "from": "across",
+    "to": "base",
+    "type": "bridges",
+    "label": "Moves tokens between Base and other chains; relayers fill transfers fast",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "hyperlane--bridges--ethereum",
+    "from": "hyperlane",
+    "to": "ethereum",
+    "type": "bridges",
+    "label": "Passes messages and tokens between Ethereum and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "hyperlane--bridges--solana",
+    "from": "hyperlane",
+    "to": "solana",
+    "type": "bridges",
+    "label": "Passes messages and tokens between Solana and other chains, including EVM chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "hyperlane--bridges--arbitrum",
+    "from": "hyperlane",
+    "to": "arbitrum",
+    "type": "bridges",
+    "label": "Passes messages and tokens between Arbitrum One and other chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "cctp--bridges--ethereum",
+    "from": "cctp",
+    "to": "ethereum",
+    "type": "bridges",
+    "label": "Burns USDC on Ethereum and mints native USDC on another chain, or the reverse",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "cctp--bridges--solana",
+    "from": "cctp",
+    "to": "solana",
+    "type": "bridges",
+    "label": "Burns USDC on Solana and mints native USDC on another chain, or the reverse",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "cctp--bridges--base",
+    "from": "cctp",
+    "to": "base",
+    "type": "bridges",
+    "label": "Burns USDC on Base and mints native USDC on another chain, or the reverse",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "cctp--bridges--avalanche",
+    "from": "cctp",
+    "to": "avalanche",
+    "type": "bridges",
+    "label": "Burns USDC on Avalanche and mints native USDC on another chain, or the reverse",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "cctp--built-by--usdc",
+    "from": "cctp",
+    "to": "usdc",
+    "type": "built-by",
+    "label": "Circle's own protocol for moving native USDC between chains",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "etherfi--deployed-on--ethereum",
+    "from": "etherfi",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Runs on Ethereum: stake ETH and receive eETH, a liquid restaking token",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "etherfi--collateral--eigenlayer",
+    "from": "etherfi",
+    "to": "eigenlayer",
+    "type": "collateral",
+    "label": "Restakes the ETH users deposit through EigenLayer",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "symbiotic--deployed-on--ethereum",
+    "from": "symbiotic",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its restaking contracts run on Ethereum and accept various tokens as collateral",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "avail--data-availability--ethereum",
+    "from": "avail",
+    "to": "ethereum",
+    "type": "data-availability",
+    "label": "Offers Ethereum rollups a separate chain to publish their data, instead of Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "railgun--deployed-on--ethereum",
+    "from": "railgun",
+    "to": "ethereum",
+    "type": "deployed-on",
+    "label": "Its private-transaction contracts run on Ethereum",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "railgun--deployed-on--polygon-pos",
+    "from": "railgun",
+    "to": "polygon-pos",
+    "type": "deployed-on",
+    "label": "Its private-transaction contracts run on Polygon PoS",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "railgun--deployed-on--arbitrum",
+    "from": "railgun",
+    "to": "arbitrum",
+    "type": "deployed-on",
+    "label": "Its private-transaction contracts run on Arbitrum One",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "railgun--deployed-on--bnb-chain",
+    "from": "railgun",
+    "to": "bnb-chain",
+    "type": "deployed-on",
+    "label": "Its private-transaction contracts run on BNB Chain",
+    "strength": 2,
+    "confidence": "high"
+  },
+  {
+    "id": "coinbase--gateway--zcash",
+    "from": "coinbase",
+    "to": "zcash",
+    "type": "gateway",
+    "label": "Lets users buy, sell and withdraw ZEC, but only to transparent (unshielded) addresses",
+    "strength": 1,
+    "confidence": "check"
   }
 ]

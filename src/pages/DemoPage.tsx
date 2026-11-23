@@ -2,7 +2,7 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { recordDemoVisit } from '../demos/questProgress';
 import { applyDemoStatusOverrides, fetchDemoStatusOverrides, type DemoStatusOverrides } from '../demos/demoStatusOverrides';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, ChevronUp, ListTodo, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, ListTodo, Map as MapIcon, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { loadDemos } from '../demos/loadDemos';
 import EduTooltip from '../ui/EduTooltip';
@@ -134,6 +134,16 @@ export default function DemoPage() {
               <span className="font-semibold">{questsTotal}</span>
               <span className="text-slate-400">{questsFolded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}</span>
             </button>
+
+            {/* Every demo is linked from at least one node of the ecosystem map (checked by a test). */}
+            <Link
+              to={`/map?demoId=${demo.meta.id}`}
+              onClick={() => trackEvent('map:from-demo', { demoId: demo.meta.id, path: location.pathname })}
+              className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 whitespace-nowrap"
+            >
+              <MapIcon size={14} />
+              {t('nav.seeOnMap', { defaultValue: 'See it on the map' })}
+            </Link>
           </div>
 
           <div className="min-w-0 text-right flex items-center gap-3">
@@ -142,6 +152,14 @@ export default function DemoPage() {
               <div className="font-semibold truncate">{demo.meta.title}</div>
             </div>
             <LanguageSwitcher className="md:hidden" />
+            <Link
+              to={`/map?demoId=${demo.meta.id}`}
+              aria-label={t('nav.seeOnMap', { defaultValue: 'See it on the map' })}
+              title={t('nav.seeOnMap', { defaultValue: 'See it on the map' })}
+              className="md:hidden inline-flex items-center px-2 py-1 rounded-lg border border-slate-700 bg-slate-800 text-slate-200"
+            >
+              <MapIcon size={14} />
+            </Link>
 
             {/* Mobile: learning quests widget next to language switcher */}
             <button

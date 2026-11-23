@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "map:freshness": "node scripts/map-freshness.mjs"
   },
   "dependencies": {
     "i18next": "^25.8.13",

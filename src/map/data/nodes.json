@@ -9,6 +9,8 @@
     "kind": "chain",
     "layer": 1,
     "category": "bitcoin",
+    "vm": "other",
+    "consensus": "pow",
     "summary": "The first cryptocurrency network: a proof-of-work blockchain for sending and holding bitcoin (BTC) without a central operator.",
     "goodToKnow": [
       "Bitcoin's scripting language is deliberately limited; it does not run general-purpose smart contracts the way Ethereum does.",
@@ -46,6 +48,8 @@
     "kind": "chain",
     "layer": 1,
     "category": "ethereum",
+    "vm": "evm",
+    "consensus": "pos",
     "summary": "Proof-of-stake blockchain that runs smart contracts on the EVM; it also serves as the settlement layer for many rollups.",
     "goodToKnow": [
       "Ethereum switched from proof of work to proof of stake in September 2022 (\"the Merge\").",
@@ -84,6 +88,8 @@
     "kind": "chain",
     "layer": 1,
     "category": "altl1",
+    "vm": "svm",
+    "consensus": "pos",
     "summary": "Proof-of-stake layer-1 blockchain designed for high throughput, running transactions in parallel with its own virtual machine (SVM).",
     "goodToKnow": [
       "Transactions declare in advance which accounts they read and write, which lets the runtime execute non-conflicting ones in parallel.",
@@ -120,6 +126,8 @@
     "kind": "chain",
     "layer": 1,
     "category": "altl1",
+    "vm": "evm",
+    "consensus": "pos",
     "summary": "Blockchain ecosystem started by Binance; its main network, BNB Smart Chain, is an EVM-compatible chain paying fees in BNB.",
     "goodToKnow": [
       "BNB Smart Chain uses a small, permissioned-by-stake validator set (Proof of Staked Authority), trading decentralisation for low fees and speed.",
@@ -152,6 +160,8 @@
     "kind": "chain",
     "layer": 1,
     "category": "altl1",
+    "vm": "evm",
+    "consensus": "pos",
     "summary": "Proof-of-stake network of interoperable chains; its C-Chain runs EVM smart contracts and others can launch their own Avalanche L1s.",
     "goodToKnow": [
       "The primary network has three chains: C-Chain (smart contracts), X-Chain (asset transfers) and P-Chain (validators and L1 management).",
@@ -182,6 +192,9 @@
     "kind": "chain",
     "layer": 1,
     "category": "altl1",
+    "cluster": "more-l1s",
+    "vm": "other",
+    "consensus": "pos",
     "summary": "Proof-of-stake layer-1 blockchain using the Ouroboros protocol and an extended UTXO model for its native ADA and smart contracts.",
     "goodToKnow": [
       "Cardano uses an extended UTXO (eUTXO) model, closer to Bitcoin's than to Ethereum's account model, so contracts are written differently.",
@@ -212,6 +225,9 @@
     "kind": "chain",
     "layer": 1,
     "category": "altl1",
+    "cluster": "more-l1s",
+    "vm": "move",
+    "consensus": "pos",
     "summary": "Layer-1 network that started as a DAG \"Tangle\" ledger and, since its 2025 Rebased upgrade, is a validator-run proof-of-stake chain.",
     "goodToKnow": [
       "The \"Rebased\" upgrade (mainnet 5 May 2025) replaced the original Tangle design. The hub's DAG demo shows that historical Tangle design, not today's IOTA.",
@@ -249,6 +265,8 @@
     "kind": "chain",
     "layer": 1,
     "category": "interchain",
+    "vm": "other",
+    "consensus": "pos",
     "summary": "Proof-of-stake blockchain at the centre of the Cosmos ecosystem, connected to other Cosmos SDK chains through IBC.",
     "goodToKnow": [
       "\"Cosmos\" usually means the whole ecosystem of independent chains built with the Cosmos SDK; the Cosmos Hub is just one of them.",
@@ -279,6 +297,8 @@
     "kind": "chain",
     "layer": 1,
     "category": "interchain",
+    "vm": "other",
+    "consensus": "pos",
     "summary": "Cosmos SDK blockchain built around a decentralised exchange (AMM) for swapping tokens that arrive from other chains over IBC.",
     "goodToKnow": [
       "App-chain: a blockchain built for one application, with its own validators.",
@@ -311,6 +331,8 @@
     "kind": "chain",
     "layer": 1,
     "category": "interchain",
+    "vm": "other",
+    "consensus": "pos",
     "summary": "Cosmos SDK blockchain dedicated to trading perpetual futures, with its order book run by the chain's validators.",
     "goodToKnow": [
       "App-chain: a blockchain built for one application, with its own validators.",
@@ -344,6 +366,8 @@
     "kind": "chain",
     "layer": 1,
     "category": "interchain",
+    "vm": "other",
+    "consensus": "pos",
     "summary": "Proof-of-stake network whose relay chain provides shared security to connected chains (parachains) that exchange messages via XCM.",
     "goodToKnow": [
       "Polkadot Hub (the system chain for assets and smart contracts) enabled smart contracts on mainnet in January 2026.",
@@ -373,6 +397,8 @@
     "kind": "chain",
     "layer": 1,
     "category": "privacy",
+    "vm": "other",
+    "consensus": "pow",
     "summary": "Proof-of-work cryptocurrency designed for private payments, hiding the sender, receiver and amount of every transaction.",
     "goodToKnow": [
       "Privacy is on by default: ring signatures hide the sender, stealth addresses hide the receiver and RingCT hides amounts, which is why on-chain tracing stops there.",
@@ -443,6 +469,9 @@
     "kind": "chain",
     "layer": 2,
     "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "evm",
+    "rollupType": "optimistic",
     "summary": "Ethereum optimistic rollup that runs transactions off-chain and posts their data to Ethereum, with fraud proofs to settle disputes.",
     "goodToKnow": [
       "Optimistic: results are assumed valid unless challenged, so native withdrawals to Ethereum take about a week.",
@@ -478,6 +507,9 @@
     "kind": "chain",
     "layer": 2,
     "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "evm",
+    "rollupType": "optimistic",
     "summary": "Ethereum optimistic rollup built with the OP Stack; it posts transaction data to Ethereum and uses fault proofs for withdrawals.",
     "goodToKnow": [
       "\"Optimism\" is also the name of the foundation and of the Optimism Collective; OP Mainnet is the specific chain.",
@@ -509,6 +541,9 @@
     "kind": "chain",
     "layer": 2,
     "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "evm",
+    "rollupType": "optimistic",
     "summary": "Ethereum optimistic rollup incubated by Coinbase; it runs transactions off-chain and settles them on Ethereum.",
     "goodToKnow": [
       "Base launched on Optimism's OP Stack; with its Azul upgrade (mainnet 28 May 2026) it switched to its own base/base node software.",
@@ -548,6 +583,9 @@
     "kind": "chain",
     "layer": 2,
     "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "evm",
+    "rollupType": "zk",
     "summary": "Ethereum zk-rollup (validity rollup) that proves its batches to Ethereum with zero-knowledge proofs; it is EVM-compatible.",
     "goodToKnow": [
       "Validity proofs mean withdrawals do not need a week-long challenge period, though proof generation adds some delay.",
@@ -581,6 +619,9 @@
     "kind": "chain",
     "layer": 2,
     "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "other",
+    "rollupType": "zk",
     "summary": "Ethereum validity rollup that uses STARK proofs; smart contracts are written in the Cairo language rather than for the EVM.",
     "goodToKnow": [
       "Starknet is not EVM-compatible: Solidity contracts and Ethereum tooling need adaptation.",
@@ -613,6 +654,9 @@
     "kind": "chain",
     "layer": 2,
     "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "evm",
+    "rollupType": "zk",
     "summary": "Ethereum zk-rollup developed by Consensys that executes EVM transactions and proves them to Ethereum with zero-knowledge proofs.",
     "goodToKnow": [
       "Gas is paid in ETH, not in the LINEA token.",
@@ -644,6 +688,9 @@
     "kind": "chain",
     "layer": 2,
     "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "evm",
+    "rollupType": "zk",
     "summary": "Ethereum zk-rollup that executes EVM transactions and proves them to Ethereum with zero-knowledge proofs.",
     "goodToKnow": [
       "Aims for compatibility with Ethereum at the bytecode level, so most Ethereum contracts and tools work unchanged.",
@@ -676,6 +723,8 @@
     "layer": 3,
     "subBand": "l3-chain",
     "category": "ethereum",
+    "vm": "evm",
+    "rollupType": "optimistic",
     "summary": "Arbitrum Orbit L3 for the ApeCoin ecosystem that settles on Arbitrum One and uses APE as its gas token.",
     "goodToKnow": [
       "\"L3\" has no single agreed definition; here it means a chain that settles on an L2 rather than directly on Ethereum.",
@@ -710,6 +759,8 @@
     "layer": 3,
     "subBand": "l3-chain",
     "category": "ethereum",
+    "vm": "evm",
+    "rollupType": "optimistic",
     "summary": "Gaming-focused Arbitrum Orbit L3 that settles on Arbitrum One and uses a data availability committee (AnyTrust).",
     "goodToKnow": [
       "\"L3\" has no single agreed definition; here it means a chain that settles on an L2 rather than directly on Ethereum.",
@@ -744,6 +795,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "defi",
+    "cluster": "defi-dex",
     "summary": "Decentralised exchange protocol where users swap tokens against liquidity pools priced by an automated market maker (AMM).",
     "goodToKnow": [
       "\"Uniswap\" can mean the on-chain protocol, the Uniswap Labs web app, or the UNI governance token.",
@@ -779,6 +831,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "defi",
+    "cluster": "defi-lending",
     "summary": "Decentralised lending protocol where users deposit crypto to earn interest or borrow against collateral.",
     "goodToKnow": [
       "Loans are over-collateralised; if collateral value falls too far, positions can be liquidated automatically.",
@@ -812,6 +865,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "defi",
+    "cluster": "defi-yield",
     "summary": "Liquid staking protocol for Ethereum: users stake ETH and receive stETH, a token that tracks their staked ETH and rewards.",
     "goodToKnow": [
       "stETH is a claim on staked ETH; it can trade slightly away from 1 ETH on markets, and redemptions go through a withdrawal queue.",
@@ -888,6 +942,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "defi",
+    "cluster": "defi-dex",
     "summary": "Decentralised exchange whose AMM pools are designed for swapping similar-value assets, such as stablecoins, with low price impact.",
     "goodToKnow": [
       "Its stableswap formula keeps prices tight while a pool is balanced; when one asset depegs, the pool fills up with it.",
@@ -922,6 +977,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "defi",
+    "cluster": "defi-dex",
     "summary": "Swap aggregator on Solana that routes trades across many exchanges to find a price; it also offers other trading products.",
     "goodToKnow": [
       "An aggregator does not hold liquidity itself; it splits and routes orders through other Solana DEXs.",
@@ -952,6 +1008,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "stablecoins",
+    "cluster": "stablecoins",
     "summary": "Dollar stablecoin issued by Circle, redeemable 1:1 for US dollars and backed by cash and short-term US government assets.",
     "goodToKnow": [
       "Centrally issued: Circle can freeze USDC held at specific addresses.",
@@ -988,6 +1045,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "stablecoins",
+    "cluster": "stablecoins",
     "summary": "Dollar stablecoin issued by Tether, intended to be redeemable 1:1 for US dollars and backed by Tether's reserves.",
     "goodToKnow": [
       "Centrally issued: Tether can freeze USDT held at specific addresses.",
@@ -1023,6 +1081,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "stablecoins",
+    "cluster": "exchanges",
     "summary": "Centralised exchange where users buy, sell and hold crypto with traditional money; it also incubated the Base network.",
     "goodToKnow": [
       "Centralised exchange (custodial): Coinbase holds users' keys, so funds there are an account balance, not self-custody.",
@@ -1049,6 +1108,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "stablecoins",
+    "cluster": "exchanges",
     "summary": "Centralised exchange where users buy, sell and hold crypto with traditional money; founded in 2011.",
     "goodToKnow": [
       "Centralised exchange (custodial): Kraken holds users' keys, so funds there are an account balance, not self-custody.",
@@ -1370,6 +1430,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "wallets",
+    "cluster": "wallets",
     "summary": "Self-custody wallet for Ethereum and other EVM chains, available as a browser extension and mobile app, developed by Consensys.",
     "goodToKnow": [
       "Self-custody: whoever has the Secret Recovery Phrase controls the funds; MetaMask cannot recover it.",
@@ -1401,6 +1462,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "wallets",
+    "cluster": "wallets",
     "summary": "Self-custody wallet app, originally for Solana and now supporting several other blockchains.",
     "goodToKnow": [
       "Self-custody: whoever has the recovery phrase controls the funds; Phantom cannot recover it."
@@ -1431,6 +1493,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "wallets",
+    "cluster": "wallets",
     "summary": "Smart contract wallet that can require several signatures (multisig) to approve a transaction; used to hold shared funds.",
     "goodToKnow": [
       "A Safe is a smart contract account, so it exists separately on each chain where it is deployed.",
@@ -1607,6 +1670,7 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "devtools",
+    "cluster": "contract-tooling",
     "summary": "Security company known for its open-source library of audited smart contract building blocks (ERC-20, ERC-721, access control).",
     "goodToKnow": [
       "Using OpenZeppelin Contracts reduces risk but does not make a project secure by itself; custom code still needs review.",
@@ -1626,6 +1690,1774 @@
       }
     ],
     "verifiedOn": "2026-11-23",
+    "confidence": "high"
+  },
+  {
+    "id": "op-stack",
+    "name": "OP Stack",
+    "aliases": [
+      "Optimism stack",
+      "Superchain",
+      "OP Stack chains"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "frameworks",
+    "summary": "Open-source software kit from Optimism for building Ethereum rollups; OP Mainnet, Unichain and Ink are built with it.",
+    "goodToKnow": [
+      "A framework, not a chain: each OP Stack chain runs separately, with its own operator and settings, but shares the same core code.",
+      "As of November 2026 it is used by OP Mainnet, Unichain, Ink, World Chain, Soneium, Celo and (modified) Mantle. Base launched on it, then moved to its own node software in 2026.",
+      "OP Stack chains are optimistic rollups with fault proofs by default, but some, such as Mantle, swap in ZK validity proofs."
+    ],
+    "demos": [
+      "rollup-simulation"
+    ],
+    "sources": [
+      {
+        "label": "OP Stack docs: getting started",
+        "url": "https://docs.optimism.io/stack/getting-started"
+      },
+      {
+        "label": "Optimism docs",
+        "url": "https://docs.optimism.io/"
+      },
+      {
+        "label": "Optimism",
+        "url": "https://www.optimism.io/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "arbitrum-orbit",
+    "name": "Arbitrum Orbit",
+    "aliases": [
+      "Arbitrum chains",
+      "Orbit chains",
+      "Arbitrum Nitro"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "frameworks",
+    "summary": "Offchain Labs' kit for launching custom chains on Arbitrum's Nitro software; ApeChain and Xai are built with it.",
+    "goodToKnow": [
+      "As of November 2026 the official docs call these \"Arbitrum chains\"; \"Orbit\" is the earlier name, still widely used.",
+      "A chain can settle on Ethereum or on an Arbitrum L2 (making it an L3), use a custom gas token, and post data in full (Rollup) or to a committee (AnyTrust).",
+      "Degen Chain was also built with it until it shut down on 31 August 2026."
+    ],
+    "demos": [
+      "rollup-simulation"
+    ],
+    "sources": [
+      {
+        "label": "Arbitrum docs: launch an Arbitrum chain",
+        "url": "https://docs.arbitrum.io/launch-arbitrum-chain/overview/introduction"
+      },
+      {
+        "label": "Arbitrum docs",
+        "url": "https://docs.arbitrum.io/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "zk-stack",
+    "name": "ZK Stack",
+    "aliases": [
+      "ZKsync Stack",
+      "Elastic Network",
+      "ZK Chains",
+      "ZKsync OS"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "frameworks",
+    "summary": "Matter Labs' open-source kit for building chains proven with zero-knowledge proofs; ZKsync Era is built with it.",
+    "goodToKnow": [
+      "As of November 2026, chains built with it include ZKsync Era and Lens Chain. Abstract, also built with it, announced it will shut down on 15 December 2026.",
+      "A chain can be a rollup (data posted to Ethereum) or a validium (data kept elsewhere), which changes what users have to trust.",
+      "Its components include ZKsync OS and the Airbender prover; chains built with it are sometimes called the Elastic Network."
+    ],
+    "demos": [
+      "rollup-simulation"
+    ],
+    "sources": [
+      {
+        "label": "ZKsync docs: ZK Stack",
+        "url": "https://docs.zksync.io/zk-stack"
+      },
+      {
+        "label": "ZKsync",
+        "url": "https://www.zksync.io/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "cosmos-sdk",
+    "name": "Cosmos SDK",
+    "aliases": [
+      "Cosmos",
+      "CometBFT",
+      "Tendermint",
+      "app-chain SDK"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "frameworks",
+    "summary": "Open-source Go framework for building application-specific blockchains; Cosmos Hub, Osmosis and dYdX Chain use it.",
+    "goodToKnow": [
+      "A toolkit, not a network: each chain built with it has its own validators and token, and can connect to others through IBC.",
+      "As of November 2026, chains built with it include Cosmos Hub, Osmosis, dYdX Chain, Celestia and Axelar. It is usually paired with CometBFT (formerly Tendermint) consensus.",
+      "\"Cosmos\" can mean this SDK, the Cosmos Hub chain, or the wider ecosystem of IBC-connected chains."
+    ],
+    "demos": [
+      "blockchain-interop"
+    ],
+    "sources": [
+      {
+        "label": "Cosmos SDK docs",
+        "url": "https://docs.cosmos.network/"
+      },
+      {
+        "label": "Cosmos",
+        "url": "https://cosmos.network/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "polkadot-sdk",
+    "name": "Polkadot SDK",
+    "aliases": [
+      "Substrate",
+      "FRAME",
+      "Cumulus"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "frameworks",
+    "summary": "Parity's open-source Rust toolkit (formerly Substrate) for building blockchains; Polkadot itself and Avail use it.",
+    "goodToKnow": [
+      "Brings Substrate, FRAME, Cumulus and the Polkadot node into one repository; chains can run on their own or connect to Polkadot.",
+      "As of November 2026, chains built with it include Polkadot, Kusama, Polkadot parachains and standalone chains such as Avail.",
+      "Building with the SDK does not by itself make a chain part of Polkadot or secured by it."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Polkadot SDK on GitHub",
+        "url": "https://github.com/paritytech/polkadot-sdk"
+      },
+      {
+        "label": "Polkadot docs: intro to Polkadot SDK",
+        "url": "https://docs.polkadot.com/develop/parachains/intro-polkadot-sdk/"
+      },
+      {
+        "label": "Polkadot SDK",
+        "url": "https://polkadot.com/platform/sdk"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "aptos",
+    "name": "Aptos",
+    "aliases": [
+      "APT",
+      "Aptos Network",
+      "Aptos Move"
+    ],
+    "kind": "chain",
+    "layer": 1,
+    "category": "altl1",
+    "cluster": "more-l1s",
+    "vm": "move",
+    "consensus": "pos",
+    "summary": "Proof-of-stake layer-1 blockchain that runs Move smart contracts and executes transactions in parallel (Block-STM).",
+    "goodToKnow": [
+      "Started by former members of Meta's Diem (Libra) project, as was Sui; both use Move, but their designs differ.",
+      "Block-STM runs transactions in parallel optimistically and re-executes those that conflict, so developers do not declare dependencies.",
+      "APT is the native token, used for fees and staking."
+    ],
+    "demos": [
+      "parallel-executor"
+    ],
+    "sources": [
+      {
+        "label": "Aptos developer docs",
+        "url": "https://aptos.dev/"
+      },
+      {
+        "label": "Aptos docs: blockchain deep dive",
+        "url": "https://aptos.dev/network/blockchain/blockchain-deep-dive"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "sui",
+    "name": "Sui",
+    "aliases": [
+      "SUI",
+      "Sui Network",
+      "Mysten Labs"
+    ],
+    "kind": "chain",
+    "layer": 1,
+    "category": "altl1",
+    "cluster": "more-l1s",
+    "vm": "move",
+    "consensus": "pos",
+    "summary": "Proof-of-stake layer-1 blockchain built around objects and the Move language, processing unrelated transactions in parallel.",
+    "goodToKnow": [
+      "Assets are objects with owners; transactions that touch only their own objects can be processed in parallel with others.",
+      "Developed by Mysten Labs, founded by former Meta Diem engineers; its Move dialect differs from Aptos's.",
+      "SUI is the native token, used for gas and staking; validators reach consensus with Mysticeti, a DAG-based protocol (as of November 2026)."
+    ],
+    "demos": [
+      "parallel-executor"
+    ],
+    "sources": [
+      {
+        "label": "Sui",
+        "url": "https://sui.io/"
+      },
+      {
+        "label": "Sui docs: consensus",
+        "url": "https://docs.sui.io/concepts/sui-architecture/consensus"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "tron",
+    "name": "TRON",
+    "aliases": [
+      "TRX",
+      "TRON network",
+      "TVM",
+      "TRC-20"
+    ],
+    "kind": "chain",
+    "layer": 1,
+    "category": "altl1",
+    "cluster": "more-l1s",
+    "vm": "evm",
+    "consensus": "pos",
+    "summary": "Delegated proof-of-stake layer-1 blockchain with an EVM-compatible virtual machine (TVM); Tether issues USDT on it.",
+    "goodToKnow": [
+      "27 elected \"Super Representatives\" produce blocks; TRX holders vote for them by staking.",
+      "The TVM runs Solidity contracts, but TRON addresses (starting with T), its fee model (energy and bandwidth) and tooling differ from Ethereum's.",
+      "Founded by Justin Sun; TRX is the native token."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "TRON",
+        "url": "https://tron.network/"
+      },
+      {
+        "label": "TRON developer docs: TVM",
+        "url": "https://developers.tron.network/docs/tvm"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "ton",
+    "name": "TON",
+    "aliases": [
+      "Toncoin",
+      "The Open Network",
+      "Telegram Open Network"
+    ],
+    "kind": "chain",
+    "layer": 1,
+    "category": "altl1",
+    "cluster": "more-l1s",
+    "vm": "other",
+    "consensus": "pos",
+    "summary": "Proof-of-stake layer-1 blockchain first designed by Telegram, now run by an independent community, with its own virtual machine.",
+    "goodToKnow": [
+      "Telegram dropped the project in 2020 after a US SEC lawsuit; the open-source network continued as \"The Open Network\", supported by the TON Foundation.",
+      "Its virtual machine (TVM) is neither the EVM nor TRON's TVM: contracts are written in languages like FunC, Tolk or Tact and talk by asynchronous messages.",
+      "Telegram's apps connect to TON (e.g. wallets and Mini Apps), but Telegram does not run the network."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "TON",
+        "url": "https://ton.org/"
+      },
+      {
+        "label": "TON docs",
+        "url": "https://docs.ton.org/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "near",
+    "name": "NEAR",
+    "aliases": [
+      "NEAR Protocol",
+      "Nightshade"
+    ],
+    "kind": "chain",
+    "layer": 1,
+    "category": "altl1",
+    "cluster": "more-l1s",
+    "vm": "other",
+    "consensus": "pos",
+    "summary": "Sharded proof-of-stake layer-1 blockchain whose smart contracts compile to WebAssembly, usually written in Rust or JavaScript.",
+    "goodToKnow": [
+      "Nightshade sharding splits the network into shards that process transactions in parallel; accounts have readable names like alice.near.",
+      "Not EVM-native: Ethereum tools do not work directly; an EVM environment (Aurora) runs as a separate project on top of NEAR.",
+      "Chain Signatures let NEAR accounts sign transactions on other blockchains (as of November 2026)."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "NEAR",
+        "url": "https://near.org/"
+      },
+      {
+        "label": "NEAR docs",
+        "url": "https://docs.near.org/"
+      },
+      {
+        "label": "NEAR docs: validators",
+        "url": "https://docs.near.org/protocol/network/validators"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "hyperliquid",
+    "name": "Hyperliquid",
+    "aliases": [
+      "HYPE",
+      "HyperCore",
+      "HyperEVM",
+      "HyperBFT",
+      "Hyperliquid L1"
+    ],
+    "kind": "chain",
+    "layer": 1,
+    "category": "altl1",
+    "cluster": "more-l1s",
+    "vm": "evm",
+    "consensus": "pos",
+    "summary": "Layer-1 blockchain built for trading: on-chain order books (HyperCore) plus an EVM smart-contract layer (HyperEVM).",
+    "goodToKnow": [
+      "HyperCore and HyperEVM are two parts of one chain, both secured by HyperBFT, a HotStuff-inspired proof-of-stake consensus (as of November 2026).",
+      "It has a much smaller validator set than Ethereum, which helps speed but concentrates control in fewer hands.",
+      "HYPE is the native token, used for gas and staking. Hyperliquid is its own L1, not an Ethereum L2 or rollup."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Hyperliquid docs",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs"
+      },
+      {
+        "label": "Hyperliquid docs: HyperCore",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/overview"
+      },
+      {
+        "label": "Hyperliquid docs: HyperEVM",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperevm"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "check"
+  },
+  {
+    "id": "polygon-pos",
+    "name": "Polygon PoS",
+    "aliases": [
+      "Polygon",
+      "MATIC",
+      "POL",
+      "Matic Network",
+      "Polygon PoS chain"
+    ],
+    "kind": "chain",
+    "layer": 1,
+    "category": "ethereum",
+    "vm": "evm",
+    "consensus": "pos",
+    "summary": "Proof-of-stake EVM chain that regularly checkpoints its state to Ethereum; often called a sidechain rather than a rollup.",
+    "goodToKnow": [
+      "Its own validators secure it: Ethereum stores checkpoints but does not verify each transaction, so it does not inherit Ethereum's security like a rollup.",
+      "POL replaced MATIC as the gas and staking token in September 2024; most MATIC has since been migrated to POL.",
+      "Hard forks in 2025–2026 (e.g. Heimdall v2, Rio, Giugliano) aimed at faster finality; as of November 2026 it remains a PoS chain, not a rollup."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Polygon PoS",
+        "url": "https://polygon.technology/polygon-pos"
+      },
+      {
+        "label": "Polygon docs: PoS overview",
+        "url": "https://docs.polygon.technology/pos/overview/"
+      },
+      {
+        "label": "Polygon blog: MATIC to POL migration",
+        "url": "https://polygon.technology/blog/matic-to-pol-migration-is-99-complete-everything-you-need-to-know"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "zcash",
+    "name": "Zcash",
+    "aliases": [
+      "ZEC",
+      "Zcash network"
+    ],
+    "kind": "chain",
+    "layer": 1,
+    "category": "privacy",
+    "vm": "other",
+    "consensus": "pow",
+    "summary": "Proof-of-work cryptocurrency that adds optional private (shielded) transactions using zero-knowledge proofs (zk-SNARKs).",
+    "goodToKnow": [
+      "Privacy is optional: transparent addresses work like Bitcoin's; only shielded transactions hide sender, receiver and amount.",
+      "Launched in 2016 from a fork of Bitcoin's code; ZEC is the native coin.",
+      "Crosslink, a proposed hybrid of proof of work and proof of stake, is being tested but is not active on mainnet as of November 2026."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Zcash",
+        "url": "https://z.cash/"
+      },
+      {
+        "label": "Zcash: shielded vs transparent",
+        "url": "https://z.cash/learn/what-is-the-difference-between-shielded-and-transparent-zcash/"
+      },
+      {
+        "label": "Zcash documentation",
+        "url": "https://zcash.readthedocs.io/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "stacks",
+    "name": "Stacks",
+    "aliases": [
+      "STX",
+      "sBTC",
+      "Clarity",
+      "Blockstack"
+    ],
+    "kind": "chain",
+    "layer": 2,
+    "category": "bitcoin",
+    "vm": "other",
+    "consensus": "other",
+    "summary": "Smart-contract network anchored to Bitcoin through Proof of Transfer; it calls itself a Bitcoin L2, a label some dispute.",
+    "goodToKnow": [
+      "Proof of Transfer: miners spend BTC to win Stacks blocks, and STX holders who lock (\"stack\") tokens can earn that BTC; blocks are anchored in Bitcoin transactions.",
+      "Critics call it a separate chain rather than a true L2: it has its own token (STX) and consensus, and Bitcoin does not verify its transactions.",
+      "Contracts use the Clarity language; sBTC is a 1:1 BTC-backed asset on Stacks, managed by a set of signers."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Stacks",
+        "url": "https://www.stacks.co/"
+      },
+      {
+        "label": "Stacks docs",
+        "url": "https://docs.stacks.co/"
+      },
+      {
+        "label": "Stacks docs: sBTC",
+        "url": "https://docs.stacks.co/concepts/sbtc"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "check"
+  },
+  {
+    "id": "rootstock",
+    "name": "Rootstock",
+    "aliases": [
+      "RSK",
+      "RBTC",
+      "PowPeg"
+    ],
+    "kind": "chain",
+    "layer": 2,
+    "category": "bitcoin",
+    "vm": "evm",
+    "consensus": "pow",
+    "summary": "EVM-compatible sidechain merge-mined with Bitcoin, using a two-way peg (PowPeg) that locks BTC to issue RBTC.",
+    "goodToKnow": [
+      "Often marketed as a \"Bitcoin L2\", but many classify it as a sidechain: it has its own consensus, and the peg relies on a federation of signers.",
+      "Bitcoin miners can mine it at the same time (merged mining), so it reuses Bitcoin's hash power without extra energy.",
+      "RBTC, pegged 1:1 to BTC, pays fees; PowPeg signers keep their keys in hardware security modules."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Rootstock",
+        "url": "https://rootstock.io/"
+      },
+      {
+        "label": "Rootstock docs: PowPeg",
+        "url": "https://dev.rootstock.io/concepts/powpeg/"
+      },
+      {
+        "label": "Rootstock docs: fundamentals",
+        "url": "https://dev.rootstock.io/concepts/fundamentals/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "check"
+  },
+  {
+    "id": "unichain",
+    "name": "Unichain",
+    "aliases": [
+      "Unichain mainnet",
+      "Uniswap chain"
+    ],
+    "kind": "chain",
+    "layer": 2,
+    "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "evm",
+    "rollupType": "optimistic",
+    "summary": "Ethereum optimistic rollup on the OP Stack, launched by Uniswap Labs for DeFi and fast trading.",
+    "goodToKnow": [
+      "The Uniswap protocol runs on many chains; Unichain is a separate network that Uniswap Labs launched (mainnet February 2025).",
+      "Like other OP Stack chains, withdrawals to Ethereum rely on fault proofs and a challenge period (as of November 2026).",
+      "Blocks are built inside a TEE and streamed as sub-second \"Flashblocks\" preconfirmations; final settlement still happens on Ethereum."
+    ],
+    "demos": [
+      "rollup-simulation"
+    ],
+    "sources": [
+      {
+        "label": "Unichain",
+        "url": "https://www.unichain.org/"
+      },
+      {
+        "label": "Unichain docs",
+        "url": "https://docs.unichain.org/docs"
+      },
+      {
+        "label": "Unichain docs: Flashblocks",
+        "url": "https://docs.unichain.org/docs/technical-information/flashblocks"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "mantle",
+    "name": "Mantle",
+    "aliases": [
+      "MNT",
+      "Mantle Network",
+      "BitDAO"
+    ],
+    "kind": "chain",
+    "layer": 2,
+    "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "evm",
+    "rollupType": "zk",
+    "summary": "Ethereum rollup on a modified OP Stack that uses ZK validity proofs (OP Succinct) and posts its data to Ethereum.",
+    "goodToKnow": [
+      "Started as an optimistic rollup; since September 2025 OP Succinct ZK proofs (SP1) validate its state, shortening withdrawals from about 7 days.",
+      "Data availability: Mantle used EigenDA from 2025, then moved to Ethereum blobs; its April 2026 Arsia upgrade removed EigenDA (as of November 2026).",
+      "MNT is the gas token; Mantle grew out of the BitDAO community."
+    ],
+    "demos": [
+      "rollup-simulation"
+    ],
+    "sources": [
+      {
+        "label": "Mantle",
+        "url": "https://www.mantle.xyz/"
+      },
+      {
+        "label": "Mantle docs",
+        "url": "https://docs.mantle.xyz/network"
+      },
+      {
+        "label": "Mantle op-geth v1.5.4 release (Arsia)",
+        "url": "https://github.com/mantle-xyz/op-geth/releases/tag/v1.5.4"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "check"
+  },
+  {
+    "id": "taiko",
+    "name": "Taiko",
+    "aliases": [
+      "Taiko Alethia",
+      "TAIKO",
+      "based rollup"
+    ],
+    "kind": "chain",
+    "layer": 2,
+    "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "evm",
+    "rollupType": "zk",
+    "summary": "Ethereum-equivalent \"based\" rollup: blocks are ordered via Ethereum L1 and proven with several proofs, including ZK.",
+    "goodToKnow": [
+      "\"Based\" means Ethereum L1 handles sequencing; as of November 2026, fast proposing is limited to whitelisted preconfirmers, with forced inclusion as a fallback.",
+      "Multi-proof: since the 2026 Unzen fork, each proven range needs two proofs from SGX (TEE), SP1 or RISC0, at least one of them a ZK proof.",
+      "The mainnet is called Taiko Alethia; ETH pays gas and TAIKO is the project's token."
+    ],
+    "demos": [
+      "rollup-simulation"
+    ],
+    "sources": [
+      {
+        "label": "Taiko",
+        "url": "https://taiko.xyz/"
+      },
+      {
+        "label": "Taiko docs: protocol overview",
+        "url": "https://docs.taiko.xyz/protocol/overview"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "check"
+  },
+  {
+    "id": "ink",
+    "name": "Ink",
+    "aliases": [
+      "Ink Chain",
+      "Kraken L2",
+      "Inkchain"
+    ],
+    "kind": "chain",
+    "layer": 2,
+    "category": "ethereum",
+    "cluster": "eth-l2s",
+    "vm": "evm",
+    "rollupType": "optimistic",
+    "summary": "Ethereum optimistic rollup on the OP Stack, launched by the Kraken exchange.",
+    "goodToKnow": [
+      "Ink is separate from Kraken's exchange: funds on Ink are in a self-custody wallet, not in a Kraken account balance.",
+      "Like other OP Stack chains, withdrawals to Ethereum rely on fault proofs and a challenge period (as of November 2026).",
+      "Mainnet launched in December 2024; it is one of the OP Stack chains in Optimism's Superchain."
+    ],
+    "demos": [
+      "rollup-simulation"
+    ],
+    "sources": [
+      {
+        "label": "Ink",
+        "url": "https://inkonchain.com/"
+      },
+      {
+        "label": "Ink docs: about",
+        "url": "https://docs.inkonchain.com/general/about"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "aztec",
+    "name": "Aztec",
+    "aliases": [
+      "Aztec Network",
+      "AZTEC",
+      "Aztec Alpha",
+      "Noir"
+    ],
+    "kind": "chain",
+    "layer": 2,
+    "category": "privacy",
+    "vm": "other",
+    "rollupType": "zk",
+    "summary": "Privacy-focused Ethereum ZK rollup whose smart contracts can keep balances and data private, with proofs made on users' devices.",
+    "goodToKnow": [
+      "As of November 2026 mainnet is in \"Alpha\": live with staking and user transactions, but called early, unaudited software. V6 (\"Tierra\") shipped in November 2026.",
+      "Contracts are written in Aztec.nr, based on the Noir language, not Solidity; it is not EVM-compatible.",
+      "Not the same as Aztec Connect, an earlier Aztec rollup that was shut down in 2024."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Aztec Network",
+        "url": "https://aztec.network/"
+      },
+      {
+        "label": "Aztec docs: Alpha network",
+        "url": "https://docs.aztec.network/participate/alpha"
+      },
+      {
+        "label": "Aztec docs",
+        "url": "https://docs.aztec.network/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "check"
+  },
+  {
+    "id": "degen-chain",
+    "name": "Degen Chain",
+    "aliases": [
+      "Degen L3",
+      "DEGEN",
+      "Degen Mainnet"
+    ],
+    "kind": "chain",
+    "layer": 3,
+    "subBand": "l3-chain",
+    "category": "ethereum",
+    "vm": "evm",
+    "rollupType": "optimistic",
+    "status": "discontinued",
+    "summary": "An Arbitrum Orbit L3 that settled on Base and used DEGEN for gas; it shut down on 31 August 2026.",
+    "goodToKnow": [
+      "Kept on the map as an example: chains can shut down, and users must move assets off before bridges and RPC services are switched off.",
+      "The DEGEN token lives on Base and continues; the team wound down the chain to focus on social products in the Base ecosystem.",
+      "It had multi-day outages in 2024, a known risk for small chains that rely on a single operator."
+    ],
+    "demos": [
+      "rollup-simulation"
+    ],
+    "sources": [
+      {
+        "label": "Alchemy: Degen mainnet deprecation notice",
+        "url": "https://www.alchemy.com/docs/reference/degen-deprecation-notice"
+      },
+      {
+        "label": "DEGEN",
+        "url": "https://www.degen.tips/"
+      },
+      {
+        "label": "Arbitrum docs: Arbitrum chains",
+        "url": "https://docs.arbitrum.io/launch-arbitrum-chain/overview/introduction"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "compound",
+    "name": "Compound",
+    "aliases": [
+      "COMP",
+      "Compound Finance",
+      "Compound III",
+      "Comet"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "defi",
+    "cluster": "defi-lending",
+    "summary": "Lending protocol where users supply crypto to earn interest and borrow against collateral, governed by COMP holders.",
+    "goodToKnow": [
+      "The current version, Compound III (\"Comet\"), runs separate markets that each lend one base asset such as USDC, unlike v2's shared pools.",
+      "Loans are overcollateralised: if collateral value falls too far, the position is liquidated.",
+      "cTokens belong to the older Compound v2; v3 is deployed on Ethereum and several L2s (as of November 2026)."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Compound",
+        "url": "https://compound.finance/"
+      },
+      {
+        "label": "Compound III docs",
+        "url": "https://docs.compound.finance/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "morpho",
+    "name": "Morpho",
+    "aliases": [
+      "MORPHO",
+      "Morpho Blue",
+      "Morpho Vaults",
+      "MetaMorpho"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "defi",
+    "cluster": "defi-lending",
+    "summary": "Lending protocol made of isolated, permissionless markets, plus curated vaults that spread deposits across them.",
+    "goodToKnow": [
+      "Each market pairs one collateral asset with one loan asset and fixed parameters, so risk stays isolated rather than pooled.",
+      "Vaults are managed by third-party curators who choose the markets; depositors take on the curator's risk choices.",
+      "Began as an optimiser on top of Aave and Compound before launching its own markets (Morpho Blue) in 2024; MORPHO is the governance token."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Morpho",
+        "url": "https://morpho.org/"
+      },
+      {
+        "label": "Morpho docs",
+        "url": "https://docs.morpho.org/"
+      },
+      {
+        "label": "Morpho docs: markets",
+        "url": "https://docs.morpho.org/learn/concepts/market/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "pendle",
+    "name": "Pendle",
+    "aliases": [
+      "PENDLE",
+      "Pendle Finance",
+      "PT",
+      "YT"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "defi",
+    "cluster": "defi-yield",
+    "summary": "DeFi protocol that splits yield-bearing tokens into principal (PT) and yield (YT) tokens so future yield can be traded.",
+    "goodToKnow": [
+      "Buying PT locks in a fixed yield until maturity; buying YT is a bet that the variable yield will be higher.",
+      "Users take on the underlying asset's risks plus smart-contract risk; YT is worth nothing after maturity.",
+      "PENDLE is the protocol's token; it is deployed on Ethereum and several other chains."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Pendle",
+        "url": "https://www.pendle.finance/"
+      },
+      {
+        "label": "Pendle docs",
+        "url": "https://docs.pendle.finance/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "raydium",
+    "name": "Raydium",
+    "aliases": [
+      "RAY",
+      "Raydium AMM",
+      "Raydium CLMM",
+      "LaunchLab"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "defi",
+    "cluster": "defi-dex",
+    "summary": "Decentralised exchange on Solana that uses automated market makers (AMMs) for token swaps and liquidity pools.",
+    "goodToKnow": [
+      "Offers standard constant-product pools and concentrated-liquidity pools; aggregators such as Jupiter often route trades through it.",
+      "Its LaunchLab lets anyone create and launch tokens; newly launched tokens carry high risk.",
+      "RAY is the protocol token."
+    ],
+    "demos": [
+      "amm-demo"
+    ],
+    "sources": [
+      {
+        "label": "Raydium",
+        "url": "https://raydium.io/"
+      },
+      {
+        "label": "Raydium docs",
+        "url": "https://docs.raydium.io/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "jito",
+    "name": "Jito",
+    "aliases": [
+      "JitoSOL",
+      "JTO",
+      "Jito Labs",
+      "Jito-Solana"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "defi",
+    "cluster": "defi-yield",
+    "summary": "Solana project offering the JitoSOL liquid-staking token and MEV infrastructure (a validator client and block engine).",
+    "goodToKnow": [
+      "Its validator client lets searchers pay tips to get transaction bundles included; tips are shared with validators and their stakers.",
+      "JitoSOL represents staked SOL plus staking and MEV rewards; it carries smart-contract and validator risks.",
+      "JTO is the governance token; critics note that Jito's block engine concentrates part of Solana's MEV flow."
+    ],
+    "demos": [
+      "mev-pbs"
+    ],
+    "sources": [
+      {
+        "label": "Jito docs",
+        "url": "https://www.jito.network/docs/"
+      },
+      {
+        "label": "Jito Labs docs: low-latency transaction send",
+        "url": "https://docs.jito.wtf/lowlatencytxnsend/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "binance",
+    "name": "Binance",
+    "aliases": [
+      "Binance.com",
+      "Binance Exchange"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "stablecoins",
+    "cluster": "exchanges",
+    "summary": "Centralised, custodial cryptocurrency exchange for trading, depositing and withdrawing crypto across many blockchains.",
+    "goodToKnow": [
+      "Custodial: Binance holds users' keys, so funds there are an account balance, not self-custody.",
+      "BNB Chain grew out of Binance and BNB is that chain's token; the exchange and the chain are separate things.",
+      "In 2023 Binance and founder Changpeng Zhao pleaded guilty in the US to anti-money-laundering violations; he was pardoned in October 2025."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Binance developer docs",
+        "url": "https://developers.binance.com/"
+      },
+      {
+        "label": "Binance on GitHub",
+        "url": "https://github.com/binance"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "ethena",
+    "name": "Ethena (USDe)",
+    "aliases": [
+      "USDe",
+      "sUSDe",
+      "ENA",
+      "Ethena Labs"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "stablecoins",
+    "cluster": "stablecoins",
+    "summary": "Protocol issuing USDe, a synthetic dollar backed by crypto hedged with short futures, not a fiat-backed stablecoin.",
+    "goodToKnow": [
+      "Core design: crypto such as ETH or BTC is paired with short perpetual/futures positions (delta-neutral). USDe is not backed by dollars in a bank.",
+      "As of November 2026 much of the backing has shifted to lending, stablecoins and tokenised assets; the mix changes over time and by governance.",
+      "Risks include negative funding rates, exchange or custodian failure and liquidity; sUSDe is the staked, yield-bearing version."
+    ],
+    "demos": [
+      "stablecoin-depeg"
+    ],
+    "sources": [
+      {
+        "label": "Ethena",
+        "url": "https://ethena.fi/"
+      },
+      {
+        "label": "Ethena docs",
+        "url": "https://docs.ethena.fi/"
+      },
+      {
+        "label": "Ethena docs: risks",
+        "url": "https://docs.ethena.fi/protocol-overview/risks"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "check"
+  },
+  {
+    "id": "pyusd",
+    "name": "PYUSD (PayPal)",
+    "aliases": [
+      "PayPal USD",
+      "PayPal stablecoin"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "stablecoins",
+    "cluster": "stablecoins",
+    "summary": "US-dollar stablecoin issued by Paxos for PayPal, redeemable 1:1 and backed by dollar deposits and short-term US Treasuries.",
+    "goodToKnow": [
+      "Paxos issues it and holds the reserves; PayPal brands it and offers it in its apps (launched August 2023).",
+      "Issued natively on Ethereum, Solana and other chains (as of November 2026); bridged versions on other chains are different tokens.",
+      "Centrally issued: the issuer can freeze tokens held at specific addresses."
+    ],
+    "demos": [
+      "erc-standards"
+    ],
+    "sources": [
+      {
+        "label": "Paxos: PYUSD",
+        "url": "https://www.paxos.com/pyusd"
+      },
+      {
+        "label": "PayPal newsroom",
+        "url": "https://newsroom.paypal-corp.com/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "eurc",
+    "name": "EURC (Circle)",
+    "aliases": [
+      "Euro Coin",
+      "EUROC",
+      "Circle euro"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "stablecoins",
+    "cluster": "stablecoins",
+    "summary": "Euro stablecoin issued by Circle, redeemable 1:1 for euros and backed by euro-denominated reserves.",
+    "goodToKnow": [
+      "Issued under the EU's MiCA rules by Circle's French entity (as of November 2026); it was formerly called Euro Coin (EUROC).",
+      "Issued natively on Ethereum, Solana, Avalanche, Base and other chains; it is a separate token from USDC.",
+      "Centrally issued: Circle can freeze tokens held at specific addresses."
+    ],
+    "demos": [
+      "erc-standards"
+    ],
+    "sources": [
+      {
+        "label": "Circle: EURC",
+        "url": "https://www.circle.com/eurc"
+      },
+      {
+        "label": "Circle developer docs: what is EURC",
+        "url": "https://developers.circle.com/stablecoins/what-is-eurc"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "ledger",
+    "name": "Ledger",
+    "aliases": [
+      "Ledger Nano",
+      "Ledger Live",
+      "Ledger Wallet",
+      "Ledger Stax",
+      "hardware wallet"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "wallets",
+    "cluster": "wallets",
+    "summary": "Company making hardware wallets: devices that keep private keys offline and sign transactions for many blockchains.",
+    "goodToKnow": [
+      "The device holds the keys; the Ledger Wallet app (formerly Ledger Live) or wallets like MetaMask show balances and prepare transactions.",
+      "Anyone with the 24-word recovery phrase can take the funds; Ledger never asks for it.",
+      "A 2020 customer-database leak exposed buyers' contact details and led to phishing; it did not expose keys."
+    ],
+    "demos": [
+      "wallet-tx-lifecycle"
+    ],
+    "sources": [
+      {
+        "label": "Ledger",
+        "url": "https://www.ledger.com/"
+      },
+      {
+        "label": "Ledger Wallet app",
+        "url": "https://www.ledger.com/ledger-wallet"
+      },
+      {
+        "label": "Ledger Academy",
+        "url": "https://www.ledger.com/academy"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "trust-wallet",
+    "name": "Trust Wallet",
+    "aliases": [
+      "TWT",
+      "Trust"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "wallets",
+    "cluster": "wallets",
+    "summary": "Self-custody mobile and browser wallet for many blockchains, owned by Binance.",
+    "goodToKnow": [
+      "Self-custody: keys stay on the user's device, so losing the recovery phrase means losing access.",
+      "Owned by Binance since 2018, but funds in Trust Wallet sit on-chain in the user's addresses, not in a Binance account.",
+      "In December 2025 a malicious Chrome extension update (v2.68) drained some users' wallets; the mobile app was not affected."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Trust Wallet",
+        "url": "https://trustwallet.com/"
+      },
+      {
+        "label": "Trust Wallet: v2.68 extension incident update",
+        "url": "https://trustwallet.com/blog/company/trust-wallet-browser-extension-v268-incident-community-update"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "polymarket",
+    "name": "Polymarket",
+    "aliases": [
+      "Polymarket US",
+      "POLY"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "wallets",
+    "summary": "Prediction market where users trade shares on the outcome of real-world events, settled in USDC on Polygon PoS.",
+    "goodToKnow": [
+      "Prices reflect traders' bets, not certainties; markets are resolved through UMA's optimistic oracle, and some outcomes have been disputed.",
+      "Access depends on the country; in the US it runs a separate, CFTC-regulated platform (as of November 2026).",
+      "As of November 2026 it runs on Polygon PoS; it has said it plans to move to another chain."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Polymarket on GitHub",
+        "url": "https://github.com/Polymarket"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "farcaster",
+    "name": "Farcaster",
+    "aliases": [
+      "Warpcast",
+      "FID",
+      "Snapchain",
+      "Frames"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "wallets",
+    "summary": "Decentralised social network protocol: accounts are registered on-chain and posts are stored on its own network (Snapchain).",
+    "goodToKnow": [
+      "Account IDs (FIDs) are registered in contracts on OP Mainnet; posts and other messages are kept off Ethereum on Snapchain.",
+      "Many apps (clients) can read the same accounts and posts; the main app was formerly called Warpcast.",
+      "Ownership changed twice in 2026: Neynar acquired it in January, then Network School in October (as of November 2026)."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Farcaster",
+        "url": "https://www.farcaster.xyz/"
+      },
+      {
+        "label": "Farcaster docs",
+        "url": "https://docs.farcaster.xyz/"
+      },
+      {
+        "label": "Farcaster docs: accounts",
+        "url": "https://docs.farcaster.xyz/learn/what-is-farcaster/accounts"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "infura",
+    "name": "Infura",
+    "aliases": [
+      "Infura API",
+      "Consensys Infura",
+      "MetaMask Developer"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "devtools",
+    "summary": "Hosted node service from Consensys that lets apps and wallets read and send blockchain data without running their own nodes.",
+    "goodToKnow": [
+      "MetaMask uses Infura by default for many networks, so an Infura outage or policy change can affect MetaMask users.",
+      "Using a provider means trusting it for correct data and uptime; it can also see request metadata such as IP addresses.",
+      "As of November 2026 its documentation is published under MetaMask's developer services."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Infura",
+        "url": "https://www.infura.io/"
+      },
+      {
+        "label": "MetaMask developer docs: services",
+        "url": "https://docs.metamask.io/services/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "hardhat",
+    "name": "Hardhat",
+    "aliases": [
+      "Hardhat Network",
+      "Hardhat 3",
+      "Nomic Foundation"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "devtools",
+    "cluster": "contract-tooling",
+    "summary": "Development environment for compiling, testing, deploying and debugging Ethereum smart contracts, built in TypeScript.",
+    "goodToKnow": [
+      "Runs a local Ethereum network for testing; tests are often written in TypeScript, and Hardhat 3 also supports tests written in Solidity.",
+      "Maintained by the Nomic Foundation, a non-profit.",
+      "A developer tool, not a blockchain or a wallet; it is often compared with Foundry."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Hardhat",
+        "url": "https://hardhat.org/"
+      },
+      {
+        "label": "Hardhat docs",
+        "url": "https://hardhat.org/docs"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "foundry",
+    "name": "Foundry",
+    "aliases": [
+      "forge",
+      "cast",
+      "anvil",
+      "foundry-rs"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "devtools",
+    "cluster": "contract-tooling",
+    "summary": "Command-line toolkit written in Rust for building, testing and deploying EVM smart contracts, with tests written in Solidity.",
+    "goodToKnow": [
+      "Includes forge (build and test), cast (interact with chains), anvil (local node) and chisel (Solidity shell).",
+      "Tests, including fuzz tests, are written in Solidity itself; it is often compared with Hardhat.",
+      "Open source, started at Paradigm; version 1.0 was released in 2025."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Foundry",
+        "url": "https://getfoundry.sh/"
+      },
+      {
+        "label": "Foundry on GitHub",
+        "url": "https://github.com/foundry-rs/foundry"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "chronicle",
+    "name": "Chronicle",
+    "aliases": [
+      "Chronicle Protocol",
+      "Chronicle Labs",
+      "Scribe",
+      "Maker oracles"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "oracles",
+    "summary": "Oracle network that grew out of MakerDAO's oracle team; it supplies price feeds to Sky (formerly MakerDAO) and others.",
+    "goodToKnow": [
+      "Its Scribe oracle contracts use Schnorr signatures so many validators' signatures can be checked cheaply on-chain.",
+      "Feeds are signed by a known set of validators (e.g. Bitcoin Suisse, Steakhouse Financial), so users trust that group.",
+      "Reading many feeds requires being whitelisted; it also offers proof-of-asset data for tokenised real-world assets (as of November 2026)."
+    ],
+    "demos": [
+      "makerdao-vault"
+    ],
+    "sources": [
+      {
+        "label": "Chronicle docs",
+        "url": "https://docs.chroniclelabs.org/"
+      },
+      {
+        "label": "Chronicle Protocol on GitHub",
+        "url": "https://github.com/chronicleprotocol"
+      },
+      {
+        "label": "Scribe on GitHub",
+        "url": "https://github.com/chronicleprotocol/scribe"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "check"
+  },
+  {
+    "id": "redstone",
+    "name": "RedStone",
+    "aliases": [
+      "RedStone Oracles",
+      "RED",
+      "RedStone Finance"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "oracles",
+    "summary": "Modular oracle that delivers signed price data to many chains, either pushed on-chain or pulled into transactions on demand.",
+    "goodToKnow": [
+      "Pull model: prices are signed off-chain and attached to the user's transaction, which saves gas but needs app integration.",
+      "Provides feeds for newer assets such as liquid-restaking tokens; RED is its token (as of November 2026).",
+      "Any oracle means trusting its data providers and signers: wrong prices can trigger wrong liquidations."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "RedStone",
+        "url": "https://www.redstone.finance/"
+      },
+      {
+        "label": "RedStone docs",
+        "url": "https://docs.redstone.finance/docs/introduction"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "dune",
+    "name": "Dune",
+    "aliases": [
+      "Dune Analytics",
+      "DuneSQL"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "oracles",
+    "cluster": "analytics",
+    "summary": "Analytics platform where people query indexed blockchain data with SQL and share dashboards.",
+    "goodToKnow": [
+      "Dashboards are made by users; each query has its own assumptions, so the same metric can differ between dashboards.",
+      "Data from many chains is decoded and indexed; free use has limits, and an API is available.",
+      "An analytics tool, not an oracle: smart contracts cannot read Dune data directly."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Dune",
+        "url": "https://dune.com/"
+      },
+      {
+        "label": "Dune docs",
+        "url": "https://docs.dune.com/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "arkham",
+    "name": "Arkham",
+    "aliases": [
+      "Arkham Intelligence",
+      "ARKM",
+      "Arkham Intel"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "oracles",
+    "cluster": "analytics",
+    "summary": "Blockchain analytics platform that labels addresses with real-world entities and lets users track fund flows.",
+    "goodToKnow": [
+      "Labels come from its own analysis and user submissions; attributions can be wrong and should be double-checked.",
+      "Its \"Intel Exchange\" lets users post bounties for identifying addresses, which raised privacy concerns.",
+      "Arkham also launched a crypto exchange in 2024; in February 2026 it was reported to be winding down, which Arkham called a move to a DEX."
+    ],
+    "demos": [
+      "arkea-heist"
+    ],
+    "sources": [
+      {
+        "label": "Arkham Codex (official knowledge base)",
+        "url": "https://codex.arkm.com/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "chainalysis",
+    "name": "Chainalysis",
+    "aliases": [
+      "Chainalysis Reactor",
+      "Chainalysis KYT"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "oracles",
+    "cluster": "analytics",
+    "summary": "Blockchain analytics company whose tools trace funds and flag risky addresses for governments, exchanges and investigators.",
+    "goodToKnow": [
+      "Its software (e.g. Reactor, KYT) is used for compliance and law-enforcement investigations, such as tracing stolen funds.",
+      "Attribution relies on clustering heuristics and intelligence; it is powerful but not infallible, and its methods have been challenged in court.",
+      "A private company, not a protocol and without a token."
+    ],
+    "demos": [
+      "arkea-heist"
+    ],
+    "sources": [
+      {
+        "label": "Chainalysis",
+        "url": "https://www.chainalysis.com/"
+      },
+      {
+        "label": "Chainalysis: company",
+        "url": "https://www.chainalysis.com/company/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "axelar",
+    "name": "Axelar",
+    "aliases": [
+      "AXL",
+      "Axelar Network",
+      "Axelar GMP"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "interop",
+    "summary": "Cross-chain network with its own proof-of-stake validators that passes messages and tokens between blockchains.",
+    "goodToKnow": [
+      "Built with the Cosmos SDK; its validators jointly sign cross-chain messages, so security depends on that validator set.",
+      "Offers general message passing (GMP) and an Interchain Token Service; AXL is the staking token.",
+      "Circle agreed in December 2025 to acquire the Interop Labs team; the network and AXL stayed independent, with Common Prefix taking a lead role."
+    ],
+    "demos": [
+      "blockchain-interop"
+    ],
+    "sources": [
+      {
+        "label": "Axelar",
+        "url": "https://axelar.network/"
+      },
+      {
+        "label": "Axelar docs",
+        "url": "https://docs.axelar.dev/"
+      },
+      {
+        "label": "Circle: agreement to acquire Interop Labs team",
+        "url": "https://www.circle.com/blog/circle-signs-agreement-to-acquire-interop-labs-team-intellectual-property"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "across",
+    "name": "Across",
+    "aliases": [
+      "Across Protocol",
+      "ACX",
+      "Across Bridge"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "interop",
+    "summary": "Intent-based bridge where relayers front funds on the destination chain and are repaid later after verification.",
+    "goodToKnow": [
+      "Users receive funds quickly because a relayer pays them up front; relayers carry the delay and risk until they are repaid.",
+      "Repayments are checked through UMA's optimistic oracle, which can be disputed during a challenge window.",
+      "ACX is the protocol token; it moves assets mainly between Ethereum, its L2s and other chains."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Across",
+        "url": "https://across.to/"
+      },
+      {
+        "label": "Across docs: what is Across",
+        "url": "https://docs.across.to/introduction/what-is-across"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "hyperlane",
+    "name": "Hyperlane",
+    "aliases": [
+      "HYPER",
+      "Hyperlane Warp Routes",
+      "Abacus"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "interop",
+    "summary": "Permissionless interoperability protocol: anyone can deploy it to a chain and send messages and tokens between chains.",
+    "goodToKnow": [
+      "Each app chooses its own security setup (Interchain Security Modules), so safety varies from one deployment to another.",
+      "Warp Routes move tokens between chains, using lock-and-mint or burn-and-mint designs.",
+      "Formerly called Abacus; HYPER is its token (launched 2025)."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Hyperlane",
+        "url": "https://hyperlane.xyz/"
+      },
+      {
+        "label": "Hyperlane docs",
+        "url": "https://docs.hyperlane.xyz/docs/intro"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "cctp",
+    "name": "CCTP (Circle)",
+    "aliases": [
+      "Cross-Chain Transfer Protocol",
+      "Circle CCTP",
+      "CCTP V2"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "interop",
+    "summary": "Circle's Cross-Chain Transfer Protocol: it burns USDC on one chain and mints native USDC on another, with no wrapped tokens.",
+    "goodToKnow": [
+      "Circle signs an attestation for each burn, so users trust Circle, the USDC issuer, rather than a third-party bridge.",
+      "CCTP V2 adds faster transfers and hooks; the older V1 is being deprecated, with a full pause scheduled for 1 December 2026.",
+      "It only moves Circle-issued tokens such as USDC, not arbitrary assets."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Circle: CCTP",
+        "url": "https://www.circle.com/cross-chain-transfer-protocol"
+      },
+      {
+        "label": "Circle developer docs: CCTP",
+        "url": "https://developers.circle.com/cctp"
+      },
+      {
+        "label": "Circle: migrate to CCTP V2",
+        "url": "https://www.circle.com/blog/migrate-to-cctp-v2-ahead-of-cctp-v1-legacy-deprecation"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "etherfi",
+    "name": "ether.fi",
+    "aliases": [
+      "EtherFi",
+      "eETH",
+      "weETH",
+      "ETHFI",
+      "ether.fi Cash"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "restaking",
+    "summary": "Liquid restaking protocol: users stake ETH, receive eETH or weETH, and the ETH is restaked through EigenLayer.",
+    "goodToKnow": [
+      "The liquid tokens keep staked ETH usable in DeFi, but add smart-contract, slashing and depeg risks on top of staking.",
+      "Also offers a crypto-backed payment card and other \"neobank\" products (as of November 2026).",
+      "ETHFI is the governance token."
+    ],
+    "demos": [
+      "eigenlayer-demo"
+    ],
+    "sources": [
+      {
+        "label": "ether.fi docs",
+        "url": "https://etherfi.gitbook.io/etherfi"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "symbiotic",
+    "name": "Symbiotic",
+    "aliases": [
+      "Symbiotic restaking",
+      "Symbiotic Finance"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "restaking",
+    "summary": "Permissionless restaking protocol on Ethereum where networks can be secured by many kinds of staked ERC-20 collateral.",
+    "goodToKnow": [
+      "Unlike EigenLayer's ETH-first start, it accepts many ERC-20 assets as collateral, with vaults setting their own rules.",
+      "Restaked collateral can be slashed if operators misbehave, adding risk on top of the asset's own risks.",
+      "Networks that use it for \"shared security\" pay operators and stakers rewards in return."
+    ],
+    "demos": [
+      "eigenlayer-demo"
+    ],
+    "sources": [
+      {
+        "label": "Symbiotic",
+        "url": "https://symbiotic.fi/"
+      },
+      {
+        "label": "Symbiotic docs",
+        "url": "https://docs.symbiotic.fi/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "avail",
+    "name": "Avail",
+    "aliases": [
+      "AVAIL",
+      "Avail DA",
+      "Avail Project",
+      "Avail Nexus"
+    ],
+    "kind": "tool",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "restaking",
+    "summary": "Data availability blockchain, built with the Polkadot SDK, where rollups can publish their data instead of on Ethereum.",
+    "goodToKnow": [
+      "Uses KZG commitments and data availability sampling, so light clients can check that data was published without downloading all of it.",
+      "Spun out of Polygon in 2023; AVAIL is its staking token.",
+      "Rollups using it rely on Avail's validators, not Ethereum, to keep their data available."
+    ],
+    "demos": [
+      "peerdas-demo"
+    ],
+    "sources": [
+      {
+        "label": "Avail",
+        "url": "https://www.availproject.org/"
+      },
+      {
+        "label": "Avail docs",
+        "url": "https://docs.availproject.org/"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
+    "confidence": "high"
+  },
+  {
+    "id": "railgun",
+    "name": "Railgun",
+    "aliases": [
+      "RAIL",
+      "Railway Wallet"
+    ],
+    "kind": "app",
+    "layer": 3,
+    "subBand": "app-tool",
+    "category": "privacy",
+    "summary": "Privacy system on EVM chains that lets users hold and use tokens in a shielded balance, using zero-knowledge proofs.",
+    "goodToKnow": [
+      "Runs as smart contracts on Ethereum, Polygon, Arbitrum and BNB Chain; it is not a separate blockchain.",
+      "\"Private Proofs of Innocence\" aim to keep funds from known illicit sources out of the shielded pool.",
+      "It does not guarantee anonymity: timing and amounts can still link transactions."
+    ],
+    "demos": [],
+    "sources": [
+      {
+        "label": "Railgun",
+        "url": "https://railgun.org/"
+      },
+      {
+        "label": "Railgun docs",
+        "url": "https://docs.railgun.org/wiki"
+      }
+    ],
+    "verifiedOn": "2026-11-24",
     "confidence": "high"
   }
 ]

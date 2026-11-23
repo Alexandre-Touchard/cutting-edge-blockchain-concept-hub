@@ -2,12 +2,16 @@
 import categoriesJson from './data/categories.json';
 import nodesJson from './data/nodes.json';
 import edgesJson from './data/edges.json';
-import type { Category, CategoryId, MapEdge, MapNode } from './types';
+import clustersJson from './data/clusters.json';
+import toursJson from './data/tours.json';
+import type { Category, CategoryId, Cluster, MapEdge, MapNode, Tour } from './types';
 
 export type MapData = {
   categories: Category[];
   nodes: MapNode[];
   edges: MapEdge[];
+  clusters: Cluster[];
+  clusterById: Map<string, Cluster>;
   nodeById: Map<string, MapNode>;
   categoryById: Map<CategoryId, Category>;
   /** Every edge touching a node, strongest first. */
@@ -16,7 +20,7 @@ export type MapData = {
   neighbours: Map<string, Set<string>>;
 };
 
-export function buildMapData(categories: Category[], nodes: MapNode[], edges: MapEdge[]): MapData {
+export function buildMapData(categories: Category[], nodes: MapNode[], edges: MapEdge[], clusters: Cluster[] = []): MapData {
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
   const categoryById = new Map(categories.map((c) => [c.id, c]));
   const edgesOf = new Map<string, MapEdge[]>(nodes.map((n) => [n.id, []]));
@@ -28,10 +32,12 @@ export function buildMapData(categories: Category[], nodes: MapNode[], edges: Ma
     neighbours.get(e.to)?.add(e.from);
   }
   for (const list of edgesOf.values()) list.sort((a, b) => b.strength - a.strength);
-  return { categories, nodes, edges, nodeById, categoryById, edgesOf, neighbours };
+  return { categories, nodes, edges, clusters, clusterById: new Map(clusters.map((c) => [c.id, c])), nodeById, categoryById, edgesOf, neighbours };
 }
 
-export const MAP_DATA = buildMapData(categoriesJson as Category[], nodesJson as MapNode[], edgesJson as MapEdge[]);
+export const MAP_DATA = buildMapData(categoriesJson as Category[], nodesJson as MapNode[], edgesJson as MapEdge[], clustersJson as Cluster[]);
+
+export const TOURS = toursJson as Tour[];
 
 /** The node at the other end of an edge. */
 export const otherEnd = (e: MapEdge, id: string) => (e.from === id ? e.to : e.from);

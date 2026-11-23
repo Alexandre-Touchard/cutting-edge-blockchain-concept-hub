@@ -1,0 +1,54 @@
+[
+  {
+    "id": "stablecoin",
+    "title": "Where does a stablecoin come from?",
+    "intro": "Follow a digital dollar from its issuer to the exchanges and protocols that use it.",
+    "steps": [
+      { "node": "usdc", "text": "Circle issues USDC. For every token it mints, it holds about a dollar in cash and short-term government debt. A company stands behind it, not a protocol." },
+      { "node": "ethereum", "text": "USDC is minted natively on Ethereum and many other chains. On Ethereum it is an ERC-20 token: a smart contract that keeps a list of balances." },
+      { "node": "coinbase", "text": "Exchanges are the on-ramp: you pay dollars and receive USDC, or the reverse. This is where most dollars enter and leave crypto." },
+      { "node": "curve", "text": "On-chain, stablecoins sit in pools such as Curve's, so they can be swapped for each other cheaply, without an order book." },
+      { "node": "sky", "text": "Not every on-chain dollar comes from a company. Sky (formerly MakerDAO) mints DAI and USDS against collateral that users lock in vaults." }
+    ],
+    "demos": ["makerdao-vault", "stablecoin-depeg"]
+  },
+  {
+    "id": "base-swap",
+    "title": "How a swap on Base reaches Ethereum",
+    "intro": "Follow one token swap from your wallet, through a Layer 2, down to Ethereum.",
+    "steps": [
+      { "node": "metamask", "text": "You sign the swap in your wallet. The wallet never sends your private key, only a signed transaction." },
+      { "node": "base", "text": "The transaction runs on Base, a Layer 2. It is fast and cheap because it doesn't execute on Ethereum itself." },
+      { "node": "uniswap", "text": "Uniswap's contracts on Base price the swap from the reserves in a pool: an automated market maker, with no order book." },
+      { "node": "ethereum", "text": "Base posts batches of transactions to Ethereum and relies on it for security: wrong results can be caught and corrected there." },
+      { "node": "op-stack", "text": "Base started on the OP Stack, a kit shared with OP Mainnet, Unichain and Ink. Many Layer 2s are built from the same parts." },
+      { "node": "etherscan", "text": "Anyone can check the result on a block explorer: the transaction, the swap and the fee paid." }
+    ],
+    "demos": ["rollup-simulation", "amm-demo", "wallet-tx-lifecycle"]
+  },
+  {
+    "id": "bitcoin-scaling",
+    "title": "How Bitcoin scales",
+    "intro": "Bitcoin stays simple on purpose. See what is built around it to do more.",
+    "steps": [
+      { "node": "bitcoin", "text": "Bitcoin keeps its base layer simple and slow on purpose: about one block every ten minutes, with limited space in each." },
+      { "node": "lightning", "text": "Lightning moves payments into channels: two people lock bitcoin once, then exchange signed balance updates instantly, off-chain." },
+      { "node": "stacks", "text": "Stacks adds smart contracts and anchors its blocks to Bitcoin. Whether it counts as a true Layer 2 is debated." },
+      { "node": "rootstock", "text": "Rootstock is an EVM-compatible sidechain. Bitcoin miners also mine its blocks, a technique called merged mining." }
+    ],
+    "demos": ["state-channels", "hashes-merkle-signatures"]
+  },
+  {
+    "id": "restaking-da",
+    "title": "Where security and data come from",
+    "intro": "Staked ETH secures Ethereum. See how the same stake is reused, and where rollups put their data.",
+    "steps": [
+      { "node": "ethereum", "text": "Validators stake ETH to secure Ethereum. If they misbehave, part of their stake can be taken away (slashed)." },
+      { "node": "lido", "text": "Lido turns staked ETH into a token, stETH, that keeps earning rewards and can be used elsewhere at the same time." },
+      { "node": "eigenlayer", "text": "EigenLayer lets stakers restake ETH or stETH to secure other services, accepting extra slashing risk in exchange for extra rewards." },
+      { "node": "eigenda", "text": "EigenDA is one of those services: it stores rollups' data more cheaply than Ethereum, backed by restaked ETH." },
+      { "node": "celestia", "text": "Celestia takes another route: a separate chain built only to publish and keep data available for rollups." }
+    ],
+    "demos": ["eigenlayer-demo", "peerdas-demo"]
+  }
+]

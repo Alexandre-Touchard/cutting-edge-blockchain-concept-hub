@@ -5,8 +5,9 @@ import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useLayo
 import type { MapData } from './data';
 import { R, RING_BACKGROUNDS, edgePath, labelAnchor, type Layout } from './layout';
 import { placeLabels, type Placement, type Rect } from './labelPlacement';
-import { cullLabels, type LabelCandidate } from './labelCulling';
+import { cullLabels, labelBox, type LabelCandidate } from './labelCulling';
 import type { MapNode } from './types';
+import { X } from 'lucide-react';
 import { itemName, type MapView, type VisibleEdge, type VisibleItem } from './view';
 import { EDGE_STYLE, consensusName, edgeTypeName, kindName, layerName, rollupName, vmName, type Tr } from './vocab';
 
@@ -36,6 +37,9 @@ type Props = {
   /** Visible item that is selected (white ring). */
   selectedId: string | null;
   hoverCardId: string | null;
+  /** The card was pinned by a click/tap (shows a close button). */
+  cardPinned?: boolean;
+  onCloseCard?: () => void;
   isItemActive: (i: VisibleItem) => boolean;
   isEdgeShown: (e: VisibleEdge) => boolean;
   pulseIds: Set<string>;
@@ -155,17 +159,22 @@ const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(props, r
     return () => el.removeEventListener('wheel', onWheel);
   }, [zoomAround]);
 
-  // Drag to pan, two fingers to pinch.
+  // Drag to pan, two fingers to pinch, from anywhere (a drag may start on a node). A press that
+  // ends where it started is a tap/click: it picks the node under it, or clears on empty space.
+  // This matters on phones, where nodes cover most of the screen.
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ dist: number } | null>(null);
-  /** Where a single-pointer press started on empty space: a release close to it is a click, not a drag. */
-  const pressAt = useRef<{ x: number; y: number } | null>(null);
+  const press = useRef<{ x: number; y: number; itemId: string | null; touch: boolean; multi: boolean } | null>(null);
   const onPointerDown = (e: React.PointerEvent) => {
-    if ((e.target as Element).closest('[data-node],[data-hover-card]')) return;
+    if ((e.target as Element).closest('[data-hover-card]')) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    pressAt.current = pointers.current.size === 1 ? { x: e.clientX, y: e.clientY } : null;
-    if (pointers.current.size === 2) {
+    if (pointers.current.size === 1) {
+      const itemId = (e.target as Element).closest('[data-node]')?.getAttribute('data-node') ?? null;
+      press.current = { x: e.clientX, y: e.clientY, itemId, touch: e.pointerType !== 'mouse', multi: false };
+    } else {
+      if (press.current) press.current.multi = true;
       const [a, b] = [...pointers.current.values()];
       pinch.current = { dist: Math.hypot(a.x - b.x, a.y - b.y) };
     }
@@ -187,10 +196,13 @@ const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(props, r
   };
   const onPointerUp = (e: React.PointerEvent) => {
     if (!pointers.current.has(e.pointerId)) return;
-    const start = pressAt.current;
-    if (start && pointers.current.size === 1 && Math.hypot(e.clientX - start.x, e.clientY - start.y) < 6) props.onBackgroundClick?.();
-    pressAt.current = null;
+    const p = press.current;
+    if (p && !p.multi && pointers.current.size === 1 && Math.hypot(e.clientX - p.x, e.clientY - p.y) < (p.touch ? 10 : 6)) {
+      if (p.itemId) props.onPick(p.itemId);
+      else props.onBackgroundClick?.();
+    }
     pointers.current.delete(e.pointerId);
+    if (pointers.current.size === 0) press.current = null;
     if (pointers.current.size < 2) pinch.current = null;
   };
 
@@ -206,14 +218,19 @@ const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(props, r
     const pxR = (i: VisibleItem) => (i.type === 'cluster' ? 17 : i.layer === 1 ? 13 : 10);
     const candidates: LabelCandidate[] = view.items.map((i) => {
       const p = layout.positions.get(i.id)!;
-      const lab = labelAnchor(p, (pxR(i) + 5) / scale);
+      const offset = (pxR(i) + 5) / scale;
+      const lab = labelAnchor(p, offset);
+      const other = labelAnchor({ ...p, labelIn: !p.labelIn }, offset); // the other side of the item
       const degree = view.edgesOf.get(i.id)?.length ?? 0;
-      const tier = i.layer === 1 ? 100 : i.type === 'cluster' ? 90 : i.layer === 2 ? 80 : i.subBand === 'l3-chain' ? 60 : 40;
+      // Group names come first and may cover other markers: an unnamed bubble means nothing.
+      const tier = i.type === 'cluster' ? 300 : i.layer === 1 ? 100 : i.layer === 2 ? 80 : i.subBand === 'l3-chain' ? 60 : 40;
       return {
         id: i.id,
         x: lab.x * scale,
         y: lab.y * scale,
         anchor: lab.anchor,
+        alts: [{ x: other.x * scale, y: other.y * scale, anchor: other.anchor }],
+        ignoreMarkers: i.type === 'cluster',
         text: labelText(i),
         fontPx: i.layer === 1 ? 12.5 : 11,
         bold: i.layer === 1 || i.type === 'cluster',
@@ -225,9 +242,21 @@ const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(props, r
       const p = layout.positions.get(i.id)!;
       return { id: i.id, x: p.x * scale, y: p.y * scale, r: pxR(i) };
     });
-    return cullLabels(candidates, markers);
-  }, [view, layout, scale, focusSet, pulseIds, selectedId]);
+    // Sector names are drawn too: node labels must not run into them.
+    const sectorBoxes = layout.sectors.map((s) => {
+      const m = (s.mid * Math.PI) / 180;
+      const cos = Math.cos(m);
+      const anchor: 'start' | 'middle' | 'end' = Math.abs(cos) < 0.35 ? 'middle' : cos > 0 ? 'start' : 'end';
+      const y = Math.sin(m) * (R + 18) * scale + (Math.abs(cos) < 0.35 ? (Math.sin(m) > 0 ? 12 : -2) : 4);
+      return labelBox({ x: Math.cos(m) * (R + 18) * scale, y, anchor, text: tr(s.name), fontPx: 12, bold: true });
+    });
+    return cullLabels(candidates, markers, sectorBoxes);
+  }, [view, layout, scale, focusSet, pulseIds, selectedId, tr]);
   const showLabel = (i: VisibleItem) => shownLabels.has(i.id);
+  const labelPos = (i: VisibleItem) => {
+    const q = shownLabels.get(i.id)!;
+    return { x: q.x / scale, y: q.y / scale, anchor: q.anchor };
+  };
 
   // Keyboard order: ring by ring, then by angle.
   const ordered = useMemo(
@@ -362,7 +391,6 @@ const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(props, r
             const discontinued = it.type === 'node' && it.node.status === 'discontinued';
             const r = itemR(it);
             const selected = it.id === selectedId;
-            const lab = labelAnchor(p, r + 5 / scale);
             const n = view.edgesOf.get(it.id)?.length ?? 0;
             const demos = it.type === 'node' ? it.node.demos.length : 0;
             return (
@@ -394,15 +422,6 @@ const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(props, r
                   if (e.pointerType === 'touch') return;
                   if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
                   props.onHover(null);
-                }}
-                onPointerDown={(e) => {
-                  if (e.pointerType !== 'touch') return;
-                  e.stopPropagation();
-                  props.onPick(it.id);
-                }}
-                onClick={(e) => {
-                  if ((e.nativeEvent as PointerEvent).pointerType === 'touch') return;
-                  props.onPick(it.id);
                 }}
                 onFocus={() => props.onFocusItem(it.id)}
                 onBlur={() => props.onFocusItem(null)}
@@ -444,9 +463,9 @@ const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(props, r
                 ) : null}
                 {showLabel(it) ? (
                   <text
-                    x={lab.x}
-                    y={lab.y}
-                    textAnchor={lab.anchor}
+                    x={labelPos(it).x}
+                    y={labelPos(it).y}
+                    textAnchor={labelPos(it).anchor}
                     fontSize={(it.layer === 1 ? 12.5 : 11) / scale}
                     fontWeight={it.layer === 1 || it.type === 'cluster' ? 700 : 500}
                     fontStyle={discontinued ? 'italic' : undefined}
@@ -517,6 +536,7 @@ const MapCanvas = forwardRef<MapCanvasHandle, Props>(function MapCanvas(props, r
           showTop={(view.edgesOf.get(card.id)?.length ?? 0) > LABEL_ALL_MAX}
           onActivate={() => props.onActivate(card.id)}
           elRef={cardEl}
+          onClose={props.cardPinned ? props.onCloseCard : undefined}
         />
       ) : null}
     </div>
@@ -559,7 +579,8 @@ function HoverCard({
   height,
   showTop,
   onActivate,
-  elRef
+  elRef,
+  onClose
 }: {
   item: VisibleItem;
   view: MapView;
@@ -572,24 +593,38 @@ function HoverCard({
   showTop: boolean;
   onActivate: () => void;
   elRef: React.MutableRefObject<HTMLDivElement | null>;
+  onClose?: () => void;
 }) {
   const edges = view.edgesOf.get(item.id) ?? [];
   const W = 300;
+  // Narrow screens: dock the card at the bottom so it never covers the map you want to drag or tap.
+  const docked = width < 640;
   const left = Math.min(Math.max(8, x + 18), width - W - 8);
   const top = y > height / 2 ? undefined : Math.min(y + 18, height - 40);
   const bottom = y > height / 2 ? Math.max(8, height - y + 18) : undefined;
+  const style: React.CSSProperties = docked ? { left: 52, right: 8, bottom: 8, maxHeight: '40%', overflowY: 'auto' } : { left, top, bottom, width: W };
   const cat = data.categoryById.get(item.category)!;
   return (
     <div
       ref={elRef}
       data-hover-card
       className="absolute z-10 rounded-xl border border-slate-700 bg-slate-950/95 p-3 text-xs text-slate-200 shadow-2xl"
-      style={{ left, top, bottom, width: W }}
+      style={style}
       onPointerDown={(e) => e.stopPropagation()}
     >
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={tr('Close')}
+          className="absolute right-1.5 top-1.5 rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+        >
+          <X size={14} />
+        </button>
+      ) : null}
       {item.type === 'cluster' ? (
         <>
-          <div className="text-sm font-bold text-white">{item.cluster.name}</div>
+          <div className="pr-6 text-sm font-bold text-white">{item.cluster.name}</div>
           <div className="mt-1 flex flex-wrap gap-1">
             <Chip color={cat.color}>{tr(cat.name)}</Chip>
             <Chip>{tr('Group of {{n}}', { n: item.members.length })}</Chip>
@@ -602,7 +637,7 @@ function HoverCard({
         </>
       ) : (
         <>
-          <div className="flex items-center justify-between gap-2">
+          <div className={`flex items-center justify-between gap-2 ${onClose ? 'pr-7' : ''}`}>
             <span className="text-sm font-bold text-white">{item.node.name}</span>
             {item.node.demos.length ? <span className="rounded-full border border-amber-500/60 px-1.5 text-[10px] text-amber-200">▶ {tr('demo')}</span> : null}
           </div>

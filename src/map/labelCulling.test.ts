@@ -14,16 +14,22 @@ const c = (id: string, x: number, y: number, priority: number, extra: Partial<La
 
 describe('label culling', () => {
   it('keeps the more important of two overlapping labels', () => {
-    expect([...cullLabels([c('low', 100, 100, 1), c('high', 105, 102, 5)], [])]).toEqual(['high']);
+    expect([...cullLabels([c('low', 100, 100, 1), c('high', 105, 102, 5)], []).keys()]).toEqual(['high']);
   });
 
   it('keeps labels that do not overlap', () => {
     expect(cullLabels([c('a', 100, 100, 1), c('b', 100, 200, 1)], []).size).toBe(2);
   });
 
-  it('hides a label that would cover another item, but always draws forced ones', () => {
+  it('moves a label to its alternative position instead of hiding it', () => {
+    const shown = cullLabels([c('a', 100, 100, 5), c('b', 102, 101, 1, { alts: [{ x: 98, y: 101, anchor: 'end' }] })], []);
+    expect(shown.get('b')).toEqual({ x: 98, y: 101, anchor: 'end' });
+  });
+
+  it('hides a label that would cover another item, unless it may (group names) or is forced', () => {
     const marker = { id: 'other', x: 130, y: 96, r: 8 };
     expect(cullLabels([c('a', 100, 100, 1)], [marker]).has('a')).toBe(false);
-    expect(cullLabels([c('a', 100, 100, 1, { force: true }), c('b', 102, 101, 9)], [marker])).toEqual(new Set(['a']));
+    expect(cullLabels([c('a', 100, 100, 1, { ignoreMarkers: true })], [marker]).has('a')).toBe(true);
+    expect([...cullLabels([c('a', 100, 100, 1, { force: true }), c('b', 102, 101, 9)], [marker]).keys()]).toEqual(['a']);
   });
 });

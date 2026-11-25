@@ -1,27 +1,28 @@
-// Which item labels to draw: most important first, skipping any label that would overlap one
-// already drawn or another item's marker. Hidden labels appear when zooming in or on hover/focus.
-// Pure; tested in labelCulling.test.ts.
+// Which item labels to draw, and where: most important first. Each label tries its usual position,
+// then its alternatives (e.g. the other side of the item); if all would overlap a label already drawn
+// or another item's marker, it waits for zoom/hover. Pure; tested in labelCulling.test.ts.
 
-export type LabelCandidate = {
+export type LabelPos = { x: number; y: number; anchor: 'start' | 'middle' | 'end' };
+export type LabelCandidate = LabelPos & {
   id: string;
-  /** Anchor in screen pixels. */
-  x: number;
-  y: number;
-  anchor: 'start' | 'middle' | 'end';
   text: string;
   fontPx: number;
   bold?: boolean;
   /** Higher draws first. */
   priority: number;
-  /** Always drawn (focused, selected, search match). */
+  /** Always drawn, even over other labels (focused, selected, search match). */
   force?: boolean;
+  /** May cover other items' markers (group names, which must stay readable). */
+  ignoreMarkers?: boolean;
+  /** Other positions to try, in order, when the first one is taken. */
+  alts?: LabelPos[];
 };
 export type Marker = { id: string; x: number; y: number; r: number };
 
-type Box = { left: number; top: number; right: number; bottom: number };
+export type Box = { left: number; top: number; right: number; bottom: number };
 
 /** Approximate text box (no DOM measuring: fast enough to run on every zoom step). */
-export function labelBox(c: LabelCandidate): Box {
+export function labelBox(c: Pick<LabelCandidate, 'x' | 'y' | 'anchor' | 'text' | 'fontPx' | 'bold'>): Box {
   const w = c.text.length * c.fontPx * (c.bold ? 0.62 : 0.56);
   const left = c.anchor === 'start' ? c.x : c.anchor === 'end' ? c.x - w : c.x - w / 2;
   // SVG text y is the baseline.
@@ -30,17 +31,28 @@ export function labelBox(c: LabelCandidate): Box {
 
 const overlap = (a: Box, b: Box, gap = 2) => a.left < b.right + gap && b.left < a.right + gap && a.top < b.bottom + gap && b.top < a.bottom + gap;
 
-export function cullLabels(candidates: LabelCandidate[], markers: Marker[]): Set<string> {
-  const shown = new Set<string>();
-  const placed: Box[] = [];
+/**
+ * Chosen position for each label that is drawn (absent = hidden for now).
+ * `fixed`: boxes already taken (e.g. sector names), which labels must avoid.
+ */
+export function cullLabels(candidates: LabelCandidate[], markers: Marker[], fixed: Box[] = []): Map<string, LabelPos> {
+  const shown = new Map<string, LabelPos>();
+  const placed: Box[] = [...fixed];
   const order = [...candidates].sort((a, b) => Number(!!b.force) - Number(!!a.force) || b.priority - a.priority);
   for (const c of order) {
-    const box = labelBox(c);
-    const hitsLabel = placed.some((p) => overlap(box, p));
-    const hitsMarker = markers.some((m) => m.id !== c.id && overlap(box, { left: m.x - m.r, top: m.y - m.r, right: m.x + m.r, bottom: m.y + m.r }, 0));
-    if (c.force || (!hitsLabel && !hitsMarker)) {
-      shown.add(c.id);
-      placed.push(box);
+    const options: LabelPos[] = [{ x: c.x, y: c.y, anchor: c.anchor }, ...(c.alts ?? [])];
+    const fits = (pos: LabelPos, checkMarkers: boolean) => {
+      const box = labelBox({ ...c, ...pos });
+      if (placed.some((p) => overlap(box, p))) return false;
+      return !checkMarkers || !markers.some((m) => m.id !== c.id && overlap(box, { left: m.x - m.r, top: m.y - m.r, right: m.x + m.r, bottom: m.y + m.r }, 0));
+    };
+    // Every position clear of markers first; labels allowed to cover markers (groups) then retry without that check.
+    let chosen: LabelPos | null = options.find((pos) => fits(pos, true)) ?? null;
+    if (!chosen && c.ignoreMarkers) chosen = options.find((pos) => fits(pos, false)) ?? null;
+    if (!chosen && c.force) chosen = options[0];
+    if (chosen) {
+      shown.set(c.id, chosen);
+      placed.push(labelBox({ ...c, ...chosen }));
     }
   }
   return shown;

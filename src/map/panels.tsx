@@ -448,3 +448,43 @@ export function TourPanel({
     </section>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Keyboard shortcuts (press ?)
+// ---------------------------------------------------------------------------
+
+export function ShortcutsHelp({ tr, onClose }: { tr: Tr; onClose: () => void }) {
+  const rows: [string, string][] = [
+    ['/', tr('Search')],
+    ['Tab', tr('Move from node to node')],
+    ['Enter', tr('Open a node’s details, or expand a group')],
+    ['← → [ ]', tr('Jump to a connected node')],
+    ['+ −', tr('Zoom in and out')],
+    ['0', tr('Reset the view')],
+    ['F', tr('Full screen')],
+    ['← →', tr('During a tour: previous and next step')],
+    ['Esc', tr('Close the card, the panel or the tour')],
+    ['?', tr('Show or hide this help')]
+  ];
+  return (
+    <div role="dialog" aria-label={tr('Keyboard shortcuts')} className="absolute right-3 top-3 z-30 w-80 rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-slate-300 shadow-2xl">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-white">{tr('Keyboard shortcuts')}</span>
+        <button type="button" onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-800" aria-label={tr('Close')}>
+          <X size={14} />
+        </button>
+      </div>
+      <dl className="mt-2 space-y-1.5">
+        {rows.map(([k, v]) => (
+          <div key={k + v} className="flex items-start gap-3">
+            <dt className="w-16 shrink-0">
+              <kbd className="rounded border border-slate-600 bg-slate-800 px-1.5 py-0.5 font-mono text-[11px] text-slate-100">{k}</kbd>
+            </dt>
+            <dd>{v}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-3 text-slate-500">{tr('On a touch screen: drag anywhere to move, pinch to zoom, tap a node for its card.')}</p>
+    </div>
+  );
+}

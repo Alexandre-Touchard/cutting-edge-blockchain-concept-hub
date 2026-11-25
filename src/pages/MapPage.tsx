@@ -7,6 +7,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Compass,
+  Keyboard,
+  RefreshCcw,
   Filter,
   FoldVertical,
   LayoutList,
@@ -30,7 +32,7 @@ import { applyDemoStatusOverrides, fetchDemoStatusOverrides, type DemoStatusOver
 import { MAP_DATA, TOURS, searchNodes } from '../map/data';
 import { computeLayout } from '../map/layout';
 import MapCanvas, { type MapCanvasHandle } from '../map/MapCanvas';
-import { DetailPanel, Legend, ListView, TourPanel } from '../map/panels';
+import { DetailPanel, Legend, ListView, ShortcutsHelp, TourPanel } from '../map/panels';
 import { buildView, type VisibleEdge, type VisibleItem } from '../map/view';
 import type { CategoryId, Consensus, EdgeType, Kind, MapNode, RollupType, Vm } from '../map/types';
 import { EDGE_TYPES } from '../map/types';
@@ -168,6 +170,7 @@ export default function MapPage() {
   const [showLegend, setShowLegend] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showTours, setShowTours] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [listView, setListView] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [announce, setAnnounce] = useState('');
@@ -271,6 +274,20 @@ export default function MapPage() {
     setPinnedId(itemId);
   };
 
+  /** Back to the starting view: no filters, groups closed, no selection, card, tour or search. */
+  const resetAll = () => {
+    setPinnedId(null);
+    setHoverId(null);
+    setQueryText('');
+    setShowFilters(false);
+    setShowTours(false);
+    setShowLegend(false);
+    setShowHelp(false);
+    setListView(false);
+    navigate({ search: '', hash: '' });
+    canvas.current?.reset();
+  };
+
   const collapseGroup = (clusterId: string) => {
     const next = new Set(open);
     next.delete(clusterId);
@@ -317,11 +334,16 @@ export default function MapPage() {
           (e.target as HTMLElement).blur();
           return;
         }
-        if (showLegend || showFilters || showTours) {
+        if (showLegend || showFilters || showTours || showHelp) {
           setShowLegend(false);
           setShowFilters(false);
           setShowTours(false);
-        } else if (pinned) setPinnedId(null);
+          setShowHelp(false);
+        } else if (pinned) {
+          // Also drop the hover state: the pointer may still be over the node.
+          setPinnedId(null);
+          setHoverId(null);
+        }
         else if (tour) exitTour();
         else if (selectedId && panelOpen) setPanelOpen(false);
         else if (selectedId) select(null);
@@ -329,7 +351,8 @@ export default function MapPage() {
         return;
       }
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === '/') {
+      if (e.key === '?') setShowHelp((h) => !h);
+      else if (e.key === '/') {
         e.preventDefault();
         searchInput.current?.focus();
       } else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
@@ -361,6 +384,7 @@ export default function MapPage() {
   const englishOnly = !!lang && !lang.startsWith('en');
   const allOpen = open.size === ALL_CLUSTERS.length;
   const demoFocus = filters.demoId ? demos.get(filters.demoId) : undefined;
+  const changed = !!(location.search || location.hash || pinned || query);
 
   return (
     <div ref={root} className="fixed inset-0 flex flex-col bg-slate-950 text-slate-100">
@@ -456,6 +480,12 @@ export default function MapPage() {
           </ToolbarButton>
           <ToolbarButton onClick={() => setListView((v) => !v)} pressed={listView} label={listView ? tr('Map view') : tr('List view')}>
             {listView ? <MapIcon size={14} /> : <LayoutList size={14} />}
+          </ToolbarButton>
+          <ToolbarButton onClick={resetAll} pressed={false} label={tr('Reset the map')} iconOnly disabled={!changed}>
+            <RefreshCcw size={14} />
+          </ToolbarButton>
+          <ToolbarButton onClick={() => setShowHelp((h) => !h)} pressed={showHelp} label={tr('Keyboard shortcuts (?)')} iconOnly>
+            <Keyboard size={14} />
           </ToolbarButton>
           <ToolbarButton onClick={toggleFullscreen} pressed={fullscreen} label={fullscreen ? tr('Exit full screen') : tr('Full screen')} iconOnly>
             {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
@@ -577,6 +607,8 @@ export default function MapPage() {
               pulseIds={pulse}
               reducedMotion={reducedMotion}
               onHover={setHoverId}
+              cardPinned={!!pinned}
+              onCloseCard={() => setPinnedId(null)}
               onPick={pick}
               onBackgroundClick={() => {
                 setPinnedId(null);
@@ -612,6 +644,7 @@ export default function MapPage() {
           </>
         )}
         {showLegend ? <Legend data={MAP_DATA} tr={tr} onClose={() => setShowLegend(false)} /> : null}
+        {showHelp ? <ShortcutsHelp tr={tr} onClose={() => setShowHelp(false)} /> : null}
         {tour ? (
           <TourPanel
             tour={tour}
@@ -646,15 +679,30 @@ export default function MapPage() {
   );
 }
 
-function ToolbarButton({ onClick, pressed, label, children, iconOnly }: { onClick: () => void; pressed: boolean; label: string; children: React.ReactNode; iconOnly?: boolean }) {
+function ToolbarButton({
+  onClick,
+  pressed,
+  label,
+  children,
+  iconOnly,
+  disabled
+}: {
+  onClick: () => void;
+  pressed: boolean;
+  label: string;
+  children: React.ReactNode;
+  iconOnly?: boolean;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={pressed}
       aria-label={iconOnly ? label : undefined}
       title={label}
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-xs ${
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-xs disabled:opacity-30 ${
         pressed ? 'border-blue-500 bg-blue-500/20 text-blue-100' : 'border-slate-700 text-slate-300 hover:bg-slate-800'
       }`}
     >

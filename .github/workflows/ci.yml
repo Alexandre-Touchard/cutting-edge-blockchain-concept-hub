@@ -1,6 +1,6 @@
 name: CI
 
-# Type check, unit/render tests and production build on every push to main and every pull request.
+# Type check, unit/render tests, production build and browser tests on every push to main and every pull request.
 on:
   push:
     branches: [main]
@@ -33,3 +33,15 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Headless Chrome (preinstalled on GitHub's Ubuntu runners) against the build above.
+      - name: Browser tests (map, hub and demo links)
+        run: node e2e/run.mjs
+
+      - name: Screenshots of failed browser tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: e2e/output/
+          if-no-files-found: ignore

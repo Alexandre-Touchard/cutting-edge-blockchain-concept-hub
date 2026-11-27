@@ -26,6 +26,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
 import { trackEvent } from '../analytics/client';
+import { mapEvent } from '../../api/_map';
 import { useDemoI18n } from '../demos/useDemoI18n';
 import { loadDemos } from '../demos/loadDemos';
 import { applyDemoStatusOverrides, fetchDemoStatusOverrides, type DemoStatusOverrides } from '../demos/demoStatusOverrides';
@@ -103,6 +104,7 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
+// Event names: see api/_map.ts (also read by /api/stats).
 const track = (event: string, demoId?: string) => trackEvent(event, { path: '/map', ...(demoId ? { demoId } : {}) });
 
 export default function MapPage() {
@@ -152,7 +154,7 @@ export default function MapPage() {
     });
   const select = useCallback(
     (id: string | null) => {
-      if (id) track(`map:node:${id}`);
+      if (id) track(mapEvent.node(id));
       navigate({ search: location.search, hash: id ? `node=${id}` : '' });
     },
     [navigate, location.search]
@@ -259,7 +261,7 @@ export default function MapPage() {
       setHoverId(null);
       setPinnedId(null);
       setOpen(new Set([...open, item.cluster.id]));
-      track(`map:group:${item.cluster.id}`);
+      track(mapEvent.group(item.cluster.id));
       // Zoom on the group once it has been laid out.
       window.setTimeout(() => recentre(item.members[0].id, 1.6), 30);
     } else openNode(item.node.id);
@@ -304,13 +306,13 @@ export default function MapPage() {
   const startTour = (id: string) => {
     setShowTours(false);
     setPanelOpen(false);
-    track(`map:tour:${id}:start`);
+    track(mapEvent.tourStart(id));
     setQuery({ tour: id, step: '0' }, { push: true });
   };
   const goToStep = (i: number) => {
     if (!tour) return;
     const step = Math.max(0, Math.min(i, tour.steps.length));
-    if (step === tour.steps.length) track(`map:tour:${tour.id}:done`);
+    if (step === tour.steps.length) track(mapEvent.tourDone(tour.id));
     setQuery({ step: String(step) });
   };
   const exitTour = () => setQuery({ tour: null, step: null });
@@ -658,7 +660,7 @@ export default function MapPage() {
               exitTour();
               select(id);
             }}
-            onDemoClick={(id) => track('map:demo', id)}
+            onDemoClick={(id) => track(mapEvent.toDemo(id), id)}
           />
         ) : null}
         {selected && panelOpen && !tour ? (
@@ -670,7 +672,7 @@ export default function MapPage() {
             lang={lang}
             onNavigate={(id) => select(id)}
             onClose={() => setPanelOpen(false)}
-            onDemoClick={(id) => track('map:demo', id)}
+            onDemoClick={(id) => track(mapEvent.toDemo(id), id)}
             onCollapseGroup={selected.cluster ? () => collapseGroup(selected.cluster!) : undefined}
           />
         ) : null}

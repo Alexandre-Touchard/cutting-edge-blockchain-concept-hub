@@ -9,6 +9,7 @@ import EduTooltip from '../ui/EduTooltip';
 import { getConceptChip } from '../ui/concepts';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
 import { trackEvent } from '../analytics/client';
+import { mapEvent } from '../../api/_map';
 import { loadDemoTranslations } from '../i18n';
 
 export default function DemoPage() {
@@ -138,7 +139,7 @@ export default function DemoPage() {
             {/* Every demo is linked from at least one node of the ecosystem map (checked by a test). */}
             <Link
               to={`/map?demoId=${demo.meta.id}`}
-              onClick={() => trackEvent('map:from-demo', { demoId: demo.meta.id, path: location.pathname })}
+              onClick={() => trackEvent(mapEvent.fromDemo(demo.meta.id), { demoId: demo.meta.id, path: location.pathname })}
               className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 whitespace-nowrap"
             >
               <MapIcon size={14} />

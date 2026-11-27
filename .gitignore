@@ -46,3 +46,6 @@ coverage/
 
 # specification
 specification/
+
+# browser test screenshots (npm run e2e)
+e2e/output/

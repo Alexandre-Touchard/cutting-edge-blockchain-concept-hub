@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import type { LearningRow } from '../../api/_learning';
+import type { MapStats } from '../../api/_map';
 
 type StatsResponse =
   | { ok: false; error: string }
@@ -15,6 +16,8 @@ type StatsResponse =
       topEvents: Array<{ key: string; count: number }>;
       /** Per-demo learning funnel (absent on older deployments). */
       learning?: LearningRow[];
+      /** Ecosystem map use (absent on older deployments). */
+      map?: MapStats;
     };
 
 function basicAuthHeader(user: string, pass: string): string {
@@ -223,6 +226,8 @@ export default function AnalyticsPage() {
             </div>
 
             <LearningTable rows={okData.learning ?? []} />
+
+            {okData.map ? <MapSection stats={okData.map} /> : null}
             </>
           );
         })()}
@@ -275,6 +280,74 @@ function LearningTable({ rows }: { rows: LearningRow[] }) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function StatTile({ label, value, note }: { label: string; value: number; note?: string }) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+      <div className="text-sm text-slate-400">{label}</div>
+      <div className="text-2xl font-bold mt-1">{value.toLocaleString()}</div>
+      {note ? <div className="text-xs text-slate-500 mt-1">{note}</div> : null}
+    </div>
+  );
+}
+
+/** How the ecosystem map is used, and whether it sends visitors to the demos (and back). */
+function MapSection({ stats }: { stats: MapStats }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="text-lg font-semibold">Ecosystem map</div>
+        <div className="mt-1 text-xs text-slate-400">
+          Views count one per visit to /map. Openings and clicks are events, so one visitor can count several times.
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <StatTile label="Map views" value={stats.views} />
+        <StatTile label="Node details opened" value={stats.detailsOpened} note={stats.views ? `${(stats.detailsOpened / stats.views).toFixed(1)} per view` : undefined} />
+        <StatTile label="Groups opened" value={stats.groupOpens} />
+        <StatTile label="Map → demo" value={stats.toDemo} note={stats.views ? `${pct(stats.toDemo, stats.views)} of views` : undefined} />
+        <StatTile label="Demo → map" value={stats.fromDemo} />
+      </div>
+
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-5">
+        <div className="text-lg font-semibold">Guided tours</div>
+        {stats.tours.length === 0 ? (
+          <div className="mt-3 text-sm text-slate-500">No data yet</div>
+        ) : (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-slate-400">
+                <tr className="text-left">
+                  <th className="py-2 pr-4">Tour</th>
+                  <th className="py-2 pr-4">Started</th>
+                  <th className="py-2 pr-4">Finished</th>
+                  <th className="py-2 pr-4">Finish rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.tours.map((t) => (
+                  <tr key={t.id} className="border-t border-slate-800">
+                    <td className="py-2 pr-4 font-mono text-slate-300">{t.id}</td>
+                    <td className="py-2 pr-4">{t.started.toLocaleString()}</td>
+                    <td className="py-2 pr-4">{t.done.toLocaleString()}</td>
+                    <td className="py-2 pr-4">{pct(t.done, t.started)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TopList title="Most opened nodes" items={stats.topNodes} />
+        <TopList title="Most opened groups" items={stats.topGroups} />
+        <TopList title="Demos opened from the map" items={stats.topToDemos} />
+        <TopList title="Demos that sent visitors to the map" items={stats.topFromDemos} />
+      </div>
     </div>
   );
 }

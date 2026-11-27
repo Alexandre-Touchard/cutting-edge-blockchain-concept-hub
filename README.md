@@ -66,11 +66,14 @@ Other scripts:
 | `npm run typecheck` | Run the TypeScript compiler without emitting |
 | `npm test` | Run the unit tests once ([Vitest](https://vitest.dev)) |
 | `npm run test:watch` | Run the unit tests in watch mode |
+| `npm run e2e` | Build, then run the browser tests in headless Chrome (map, hub and demo links; needs Chrome or `CHROME_PATH`). `node e2e/run.mjs <words>` runs only matching tests on the existing build |
+| `npm run map:freshness` | Check the ecosystem map's sources and dates (also runs monthly on GitHub) |
 
 ## Project structure
 
 ```
 api/                     Vercel serverless functions (analytics, admin, demo status)
+e2e/                     Browser tests (DevTools protocol, no extra dependency)
 src/
   demos/
     impl/                One file per demo (auto-discovered)

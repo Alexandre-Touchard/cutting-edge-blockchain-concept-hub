@@ -16,6 +16,10 @@
       "Bitcoin's scripting language is deliberately limited; it does not run general-purpose smart contracts the way Ethereum does.",
       "\"Bitcoin\" can mean the network/protocol or the BTC currency unit; Bitcoin Core is the main software implementation, not the network itself."
     ],
+    "detail": {
+      "whatItIs": "Bitcoin is the first cryptocurrency, launched in January 2009 by the pseudonymous Satoshi Nakamoto. It lets people send and hold bitcoin (BTC) directly, without a bank or company in the middle. People use it to store value and to make payments, sometimes through layers built on it, such as the Lightning Network. No one owns the network: anyone can run a node, volunteers maintain its main software, and rule changes need broad agreement among users, miners and developers. It is the original Layer 1 blockchain.",
+      "howItWorks": "Bitcoin uses proof of work. Miners repeatedly hash a candidate block until the result falls below a target, which takes about ten minutes on average; the difficulty adjusts every 2,016 blocks to keep that pace. The winner earns newly issued bitcoin, an amount that halves about every four years, plus transaction fees. Nodes follow the valid chain with the most accumulated work. Balances are unspent transaction outputs (UTXOs): each payment spends earlier outputs and creates new ones, each locked by a short script that usually requires a signature. Total supply is capped at 21 million BTC."
+    },
     "demos": [
       "hashes-merkle-signatures"
     ],
@@ -56,6 +60,10 @@
       "ETH is the native asset used to pay transaction fees (gas); \"Ethereum\" is the network.",
       "Many L2 rollups post their data and proofs to Ethereum, which is why it sits at the centre of the Ethereum ecosystem."
     ],
+    "detail": {
+      "whatItIs": "Ethereum is a public blockchain that runs smart contracts: programs that anyone can deploy and anyone can call. Its native coin, ETH, pays transaction fees and is staked to secure the network. Many stablecoins, lending and trading protocols started on Ethereum, and dozens of Layer 2 networks use it as the chain where their transactions are finally settled. No company runs it: independent teams build its client software, and changes are agreed in public calls between client developers and researchers.",
+      "howItWorks": "Since the Merge in September 2022, Ethereum uses proof of stake. Validators lock ETH; every 12 seconds one is chosen to propose a block and committees of others vote on it. A block becomes final after about 13 minutes, after which reverting it would destroy a large share of the staked ETH. Since the Pectra upgrade in May 2025, one validator can hold from 32 up to 2,048 ETH. Transactions run in the Ethereum Virtual Machine (EVM), where every step costs gas. Rollups post data in blobs, and since Fusaka in December 2025 nodes check only samples of each blob."
+    },
     "demos": [
       "ethereum-blockchain",
       "wallet-tx-lifecycle",
@@ -73,6 +81,14 @@
       {
         "label": "Ethereum developer docs",
         "url": "https://ethereum.org/developers/docs/"
+      },
+      {
+        "label": "Ethereum Foundation blog: Fusaka mainnet announcement",
+        "url": "https://blog.ethereum.org/2025/11/06/fusaka-mainnet-announcement"
+      },
+      {
+        "label": "ethereum.org: Pectra",
+        "url": "https://ethereum.org/roadmap/pectra/"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -96,6 +112,10 @@
       "Solana programs are not EVM contracts: Ethereum tools and addresses do not work there directly.",
       "The network has had several full outages in the past (between 2021 and 2024)."
     ],
+    "detail": {
+      "whatItIs": "Solana is a public blockchain designed to process many transactions quickly and cheaply. People use it for payments, stablecoin transfers, token trading, NFTs and other apps. Its native coin, SOL, pays fees and is staked to secure the network. No company runs it: independent validators operate the network, using validator software from more than one team, such as Anza's Agave and Jump Crypto's Firedancer. The Solana Foundation, a Swiss non-profit, funds ecosystem work. It is a Layer 1, a base chain that does not settle on another chain.",
+      "howItWorks": "Solana uses proof of stake. A schedule published in advance names the validator that leads each slot of about 400 milliseconds and produces its block. Since October 2026, validators agree on blocks with Votor, part of the Alpenglow upgrade, which replaced the older TowerBFT voting. Votes travel directly between validators instead of as on-chain transactions, and a block can be final after one round if 80% of stake approves, or after two rounds otherwise. The Sealevel runtime then executes transactions that touch different accounts at the same time."
+    },
     "demos": [
       "evm-vs-svm",
       "parallel-executor"
@@ -108,6 +128,10 @@
       {
         "label": "Agave validator docs (Anza)",
         "url": "https://docs.anza.xyz/"
+      },
+      {
+        "label": "Solana: Alpenglow upgrade",
+        "url": "https://solana.com/upgrades/alpenglow"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -134,6 +158,10 @@
       "BNB Chain also includes opBNB (an L2) and BNB Greenfield (storage); the older BNB Beacon Chain was shut down in 2024.",
       "Many tokens on BNB Smart Chain are \"Binance-Peg\" versions of assets from other chains, issued by Binance rather than the original issuer."
     ],
+    "detail": {
+      "whatItIs": "BNB Chain is a group of blockchains that Binance started in 2020 and still supports. Its main network, BNB Smart Chain, runs the same kind of smart contracts as Ethereum, so Ethereum wallets and Solidity code work with little change. People use it for low-fee token trading, stablecoin transfers and games. BNB, the native coin, pays fees and is staked to secure the network. The ecosystem also includes opBNB, a Layer 2 for cheaper transactions, and BNB Greenfield for data storage. BNB Smart Chain itself is a Layer 1.",
+      "howItWorks": "BNB Smart Chain uses Proof of Staked Authority, a mix of proof of stake and a small set of approved block producers. BNB holders delegate stake to validator candidates, and those with the most stake form the active set, which takes turns producing blocks. Since the Fermi hard fork in January 2026, a block arrives about every 0.45 seconds, and validators vote on blocks so that one is usually final within a few blocks. Contracts run in the Ethereum Virtual Machine (EVM); gas is paid in BNB, and part of each fee is burned."
+    },
     "demos": [],
     "sources": [
       {
@@ -143,6 +171,10 @@
       {
         "label": "BNB Chain docs",
         "url": "https://docs.bnbchain.org/"
+      },
+      {
+        "label": "BNB Chain blog: Fermi hard fork",
+        "url": "https://www.bnbchain.org/en/blog/fermi-hard-fork-accelerates-bsc-to-0-45-second-block-times"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -167,6 +199,10 @@
       "The primary network has three chains: C-Chain (smart contracts), X-Chain (asset transfers) and P-Chain (validators and L1 management).",
       "\"Subnets\" were renamed \"Avalanche L1s\" in the Avalanche9000 upgrade (December 2024); older articles use the old name."
     ],
+    "detail": {
+      "whatItIs": "Avalanche is a public proof-of-stake network made up of several connected blockchains. Most users meet it through the C-Chain, which runs Ethereum-style smart contracts and hosts lending, trading and stablecoin apps. Its token, AVAX, pays fees and is staked by validators. Companies and communities can also launch their own Avalanche L1s: separate chains with their own rules, fees and validators that can still exchange messages with other Avalanche chains. Ava Labs writes much of the core software, and the Avalanche Foundation supports the ecosystem.",
+      "howItWorks": "Avalanche consensus works by repeated random sampling. Each validator asks a small random group of other validators which block they prefer, adopts the majority answer, and repeats until the answer stays the same for enough rounds in a row. The chains use Snowman, a version of this protocol for chains with a single line of blocks, so a block is final once sampling settles, with no need to wait for later blocks. Since the Avalanche9000 upgrade in December 2024, validators of an Avalanche L1 pay a continuous AVAX fee instead of also staking on the primary network."
+    },
     "demos": [],
     "sources": [
       {
@@ -200,6 +236,10 @@
       "Cardano uses an extended UTXO (eUTXO) model, closer to Bitcoin's than to Ethereum's account model, so contracts are written differently.",
       "Its protocol design is developed through peer-reviewed research, and on-chain governance (CIP-1694) lets ADA holders vote on changes."
     ],
+    "detail": {
+      "whatItIs": "Cardano is a public proof-of-stake blockchain with its own coin, ADA, used for payments, fees and staking. It also runs smart contracts for lending, trading and other apps. Charles Hoskinson, a co-founder of Ethereum, started it in 2015, and three organisations built it: Input Output, EMURGO and the Cardano Foundation. Since the Plomin upgrade in January 2025, ADA holders, elected representatives and a constitutional committee govern changes on-chain under a written constitution. Independent stake pool operators run the network. It is a Layer 1.",
+      "howItWorks": "Cardano's consensus protocol, Ouroboros Praos, divides time into one-second slots grouped into five-day epochs. In each slot, every stake pool privately runs a verifiable random function; a pool wins the right to make a block with a probability proportional to its stake, which gives roughly one block every 20 seconds. ADA holders delegate to a pool without locking their coins or handing them over. Transactions spend existing outputs and create new ones, and a Plutus script attached to an output decides whether a transaction may spend it."
+    },
     "demos": [],
     "sources": [
       {
@@ -234,6 +274,10 @@
       "As of November 2026: an object-based ledger with Move smart contracts, run by a delegated proof-of-stake validator committee using Starfish consensus.",
       "Starfish (enabled on mainnet in 2026) succeeds Mysticeti; it is a DAG-based protocol among validators, unlike the old Tangle of user transactions."
     ],
+    "detail": {
+      "whatItIs": "IOTA is a public blockchain that started in 2016 as an experiment in feeless payments between connected devices, built on a structure called the Tangle. Since the Rebased upgrade in May 2025 it works much like other modern proof-of-stake chains: validators run it, smart contracts are written in Move, and transactions pay small fees in the IOTA token. The IOTA Foundation, a non-profit, develops it and focuses on uses such as trade documents, digital identity and tokenised assets. It is a Layer 1.",
+      "howItWorks": "Rebased IOTA reuses much of Sui's open-source design. Everything on the ledger is an object with an owner, and Move contracts define what can be done with each object. IOTA holders delegate tokens to validators, and a committee chosen by stake stays fixed for each epoch of about one day. The committee orders transactions with Starfish: each validator keeps publishing blocks that reference other validators' blocks, forming a shared graph, and parts of that graph are committed once enough validators have referenced them. Validators share their epoch rewards with delegators."
+    },
     "demos": [
       "dag-consensus"
     ],
@@ -272,6 +316,10 @@
       "\"Cosmos\" usually means the whole ecosystem of independent chains built with the Cosmos SDK; the Cosmos Hub is just one of them.",
       "Its native token is ATOM; the Hub's node software is called Gaia."
     ],
+    "detail": {
+      "whatItIs": "The Cosmos Hub is the first blockchain launched in the Cosmos ecosystem, live since March 2019. It is a proof-of-stake Layer 1 whose token, ATOM, is used for staking, fees and governance. It acts as a meeting point for other independent Cosmos chains, which connect to it through IBC to move tokens and messages. The Hub has no single owner: ATOM stakers vote on-chain on software upgrades and on spending from its community pool, and independent teams maintain its node software, Gaia.",
+      "howItWorks": "The Hub runs CometBFT consensus. A limited active set of validators, chosen by how much ATOM is staked with them, take turns proposing blocks every few seconds, and a block is final once validators holding over two-thirds of the stake sign it. ATOM holders delegate to validators and share their rewards. Misbehaviour such as double-signing is punished by slashing part of the stake, and unstaking takes 21 days. In 2026 governance began winding down Interchain Security, a system that let Hub validators also secure other chains."
+    },
     "demos": [
       "blockchain-interop"
     ],
@@ -283,6 +331,10 @@
       {
         "label": "Cosmos Hub docs",
         "url": "https://docs.cosmos.network/hub/latest"
+      },
+      {
+        "label": "Cosmos forum: remove ICS from the Cosmos Hub",
+        "url": "https://forum.cosmos.network/t/remove-ics-from-the-cosmos-hub-software-upgrades-to-follow/16682"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -304,6 +356,10 @@
       "App-chain: a blockchain built for one application, with its own validators.",
       "Osmosis is the name of both the chain and the exchange running on it; OSMO is its native token."
     ],
+    "detail": {
+      "whatItIs": "Osmosis is a Layer 1 blockchain built around one application: a decentralised exchange where users swap tokens and provide liquidity. Because it is connected through IBC to many Cosmos chains, and through bridges such as Axelar to Ethereum and others, it serves as a common place to trade tokens that originate on different chains. It launched in June 2021. The OSMO token is used for staking and governance, and holders vote on protocol upgrades and on which pools receive incentives.",
+      "howItWorks": "Osmosis runs on the Cosmos SDK with CometBFT consensus, so blocks are produced by a proof-of-stake validator set and are final as soon as they are committed. Trading happens through an automated market maker (AMM): instead of matching buyers and sellers, users trade against pools of two or more tokens, and a formula sets the price from the pool's balances. It offers several pool types, including concentrated liquidity, where providers choose a price range. Swap fees go to liquidity providers, while a separate taker fee goes to the protocol."
+    },
     "demos": [
       "blockchain-interop"
     ],
@@ -338,6 +394,10 @@
       "App-chain: a blockchain built for one application, with its own validators.",
       "Earlier dYdX versions (v3 and before) ran on Ethereum and an Ethereum L2; dYdX Chain (\"v4\") is a separate network."
     ],
+    "detail": {
+      "whatItIs": "dYdX Chain is a Layer 1 blockchain dedicated to one application: an exchange for perpetual futures, contracts that let traders bet on an asset's price with leverage and no expiry date. It launched in October 2023 as version 4 of dYdX, moving the exchange off Ethereum onto its own chain so that validators, not a company, run the matching. Traders post USDC as collateral. The DYDX token is used for staking and governance, and holders vote on new markets, parameters and upgrades.",
+      "howItWorks": "Each validator keeps an order book in memory, outside the chain's permanent record. Orders and cancellations travel between validators, and the validator proposing the next block matches them. Only the resulting trades and settlements are written into blocks, which CometBFT finalises in about a second. The other validators check that the proposed matches follow the rules before signing. Validators also supply oracle prices in each block, which the chain uses for margin checks and liquidations. Trading fees are distributed according to rules set by governance, including payments to stakers."
+    },
     "demos": [
       "blockchain-interop"
     ],
@@ -374,6 +434,10 @@
       "Kusama is a separate, faster-moving sister network often used to try features before Polkadot.",
       "DOT is used for staking, governance and fees."
     ],
+    "detail": {
+      "whatItIs": "Polkadot is a proof-of-stake Layer 1 network designed to host many specialised blockchains at once. Its relay chain provides shared security, while connected chains, often called parachains or rollups, run their own applications and talk to each other with a message format called XCM. It was founded by Gavin Wood, a co-founder of Ethereum, and launched in 2020. DOT holders vote on upgrades and treasury spending through on-chain governance; no company has control over the network.",
+      "howItWorks": "Validators on the relay chain produce blocks about every six seconds and finalise them with a voting protocol called GRANDPA. Connected chains buy coretime, a share of the validators' processing time, and submit their blocks, which groups of validators re-check before they are included. Since November 2025, balances, staking and governance have lived on Polkadot Hub, a system chain, rather than on the relay chain itself. Since March 2026 a new issuance schedule caps the total DOT supply at 2.1 billion."
+    },
     "demos": [],
     "sources": [
       {
@@ -383,6 +447,14 @@
       {
         "label": "Polkadot developer docs",
         "url": "https://docs.polkadot.com/"
+      },
+      {
+        "label": "Polkadot support: Asset Hub migration",
+        "url": "https://support.polkadot.network/support/solutions/articles/65000190561"
+      },
+      {
+        "label": "Parity: Polkadot roundup 2025",
+        "url": "https://www.parity.io/blog/polkadot-roundup-2025"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -405,6 +477,10 @@
       "Because of this, some exchanges have delisted XMR or restrict it in certain jurisdictions.",
       "A planned upgrade (FCMP++) would replace ring signatures; as of November 2026 no mainnet date has been set."
     ],
+    "detail": {
+      "whatItIs": "Monero is a cryptocurrency built for private payments. Every transaction hides who sent it, who received it and how much was moved, and this privacy is on by default rather than an option. It launched in April 2014 from the CryptoNote code base, without a premine, and is developed by an open community of contributors rather than a company. People use XMR as digital cash when they want financial privacy. Some exchanges have delisted it, for example Binance in February 2024.",
+      "howItWorks": "Monero uses proof of work with an algorithm called RandomX, designed to run well on ordinary computer processors, and a block is found about every two minutes. Each input is signed with a ring signature that mixes the real coin with 15 decoys, so observers cannot tell which one was spent. Stealth addresses give the receiver a fresh one-time address for every payment, and RingCT hides amounts while proving no coins were created from nothing. Since June 2022 a fixed tail emission of 0.6 XMR per block has continued indefinitely."
+    },
     "demos": [
       "arkea-heist"
     ],
@@ -442,6 +518,10 @@
       "Receiving usually requires being online (or using a service that is), and a channel's capacity limits how much can move through it.",
       "Lightning is not a rollup: it does not post transaction batches to Bitcoin."
     ],
+    "detail": {
+      "whatItIs": "The Lightning Network is a payment network built on Bitcoin. Two people open a shared channel with one Bitcoin transaction, then pay each other many times, almost instantly and for tiny fees, settling the final balance on Bitcoin later. Payments can also hop across other people's channels to reach someone without a direct channel. Wallets, exchanges and shops use it for small, quick bitcoin payments. No company runs it: several teams write compatible node software following a shared set of specifications called BOLTs.",
+      "howItWorks": "Two parties lock bitcoin in a 2-of-2 multisignature output, which needs both of their signatures to spend. To pay, they sign a new commitment transaction that splits the funds differently and exchange secrets that revoke the previous one; if someone broadcasts an outdated state, the other party can claim all the funds during a waiting period. Payments across several channels use hashed time-locked contracts (HTLCs): each hop is paid only when the recipient reveals a secret, so either every hop completes or none does. Either party can close the channel on Bitcoin."
+    },
     "demos": [
       "state-channels"
     ],
@@ -478,6 +558,10 @@
       "\"Arbitrum\" also covers Arbitrum Nova (a separate chain) and the Orbit/Arbitrum chains framework used to launch other chains such as L3s.",
       "Governed by the Arbitrum DAO (ARB token); the technology is developed mainly by Offchain Labs."
     ],
+    "detail": {
+      "whatItIs": "Arbitrum One is a Layer 2 network for Ethereum: a separate chain where transactions are cheaper and faster, while Ethereum keeps the final record. It runs the same smart contracts as Ethereum, so DeFi apps, wallets and developer tools work on it with few changes. Its software, Nitro, was built mainly by Offchain Labs. The Arbitrum DAO, made up of ARB token holders, votes on upgrades and treasury spending, and an elected Security Council can act quickly in emergencies.",
+      "howItWorks": "A sequencer run by Offchain Labs orders transactions and confirms them in well under a second. It compresses them into batches and posts them to Ethereum, mostly as blobs. Validators then post claims about the resulting state. A wrong claim can be challenged: since February 2025 the BoLD protocol lets anyone take part in disputes, which narrow down to a single computation step that Ethereum executes. If no challenge succeeds within about 6.4 days, the claim is confirmed and withdrawals can complete. Stylus also allows contracts written in Rust and other languages compiled to WebAssembly."
+    },
     "demos": [
       "rollup-simulation",
       "fraud-proofs-arbitrum"
@@ -490,6 +574,10 @@
       {
         "label": "Arbitrum Foundation",
         "url": "https://arbitrum.foundation/"
+      },
+      {
+        "label": "Arbitrum docs: BoLD",
+        "url": "https://docs.arbitrum.io/how-arbitrum-works/bold/gentle-introduction"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -516,6 +604,10 @@
       "The OP Stack is open-source software used by other chains in the \"Superchain\"; Base, which launched on it, moved to its own stack in 2026.",
       "Native withdrawals to Ethereum take about a week because of the challenge period."
     ],
+    "detail": {
+      "whatItIs": "OP Mainnet is a Layer 2 network for Ethereum and the original chain built with the OP Stack, the open-source rollup software maintained by the Optimism Collective. Apps and wallets built for Ethereum work on it with little change, at lower fees. Governance is split between the Token House, where OP holders vote on upgrades and incentives, and the Citizens' House, which funds public goods through retroactive grants. The Optimism Foundation supports development and, as of November 2026, runs the chain's sequencer.",
+      "howItWorks": "The sequencer orders transactions into a block every two seconds and posts compressed batches to Ethereum, mostly as blobs. Proposers then publish output roots, short summaries of the chain's state, to Ethereum. Since June 2024 fault proofs are permissionless: anyone can propose or dispute an output root, and a dispute is settled by an interactive game that ends with Ethereum executing a single instruction. Since the Karst upgrade in July 2026, the main fault-proof program is Kona, written in Rust. A withdrawal can be finalised about seven days after its output root is proposed, if no dispute succeeds."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -527,6 +619,14 @@
       {
         "label": "OP Stack docs",
         "url": "https://docs.optimism.io/"
+      },
+      {
+        "label": "Optimism governance: Upgrade 19b, Karst hard fork",
+        "url": "https://gov.optimism.io/t/upgrade-19b-karst-hardfork/10713"
+      },
+      {
+        "label": "OP docs: Upgrade 19 notice",
+        "url": "https://docs.optimism.io/notices/upgrade-19"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -550,6 +650,10 @@
       "Base is operated by a company (Coinbase), which runs its sequencer; it is a separate network from the Coinbase exchange.",
       "As of November 2026, Base combines TEE attestations and ZK proofs (since May 2026), so native withdrawals take about 1 to 5 days."
     ],
+    "detail": {
+      "whatItIs": "Base is a Layer 2 network for Ethereum, developed and operated by Coinbase, the US crypto exchange company. It runs EVM smart contracts at low fees, and consumer apps, payment services and DeFi protocols are built on it. Fees are paid in ETH. Base launched in 2023 on Optimism's OP Stack. With the Azul upgrade on 28 May 2026 it moved to its own node software, base-reth-node and base-consensus, which replaced the OP Stack clients for anyone running a Base node.",
+      "howItWorks": "A single sequencer run by Coinbase orders transactions and produces a block every two seconds; a feature called Flashblocks streams partial blocks about every 200 milliseconds, so apps can show confirmations sooner. Transaction batches are posted to Ethereum as blobs. Since May 2026, claims about Base's state are checked with two kinds of evidence: attestations from trusted execution environments (TEEs, hardware enclaves that prove which code they ran) and zero-knowledge proofs. This replaces relying only on a week-long challenge window, so native withdrawals to Ethereum finish sooner."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -590,8 +694,12 @@
     "goodToKnow": [
       "Validity proofs mean withdrawals do not need a week-long challenge period, though proof generation adds some delay.",
       "Not to be confused with zkSync Lite, the earlier ZKsync rollup, which was deprecated in 2026.",
-      "Built with the ZK Stack, which other teams use to launch their own chains."
+      "Runs EraVM, its own virtual machine: Solidity compiles to EraVM bytecode, and standard EVM bytecode runs through an interpreter."
     ],
+    "detail": {
+      "whatItIs": "ZKsync Era is a Layer 2 network for Ethereum built by Matter Labs. It is a zk-rollup: it runs transactions away from Ethereum and then proves to Ethereum, with a cryptographic proof, that they were processed correctly. Contracts written in Solidity can be deployed with little or no change, and every account can be a smart contract, which allows features such as paying fees in other tokens. ZK token holders vote on protocol upgrades, alongside a Security Council and a group called the Guardians.",
+      "howItWorks": "A sequencer operated by Matter Labs orders transactions into blocks and groups them into batches. For each batch, Era publishes the state changes to Ethereum, and a prover generates a validity proof: a short cryptographic proof that every transaction in the batch was executed correctly. A verifier contract on Ethereum checks the proof before accepting the new state, so no challenge window is needed, and withdrawals complete after that check. The Atlas upgrade of October 2025 introduced ZKsync OS and the Airbender prover as the new execution and proving design for chains built with the ZK Stack."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -603,9 +711,17 @@
       {
         "label": "ZKsync docs",
         "url": "https://docs.zksync.io/"
+      },
+      {
+        "label": "ZKsync docs: upgrades and migrations",
+        "url": "https://docs.zksync.io/zksync-protocol/upgrades-and-migrations"
+      },
+      {
+        "label": "ZKsync docs: ZKsync OS",
+        "url": "https://docs.zksync.io/zksync-network/zksync-os"
       }
     ],
-    "verifiedOn": "2026-11-23",
+    "verifiedOn": "2026-11-28",
     "confidence": "high"
   },
   {
@@ -628,6 +744,10 @@
       "Every account on Starknet is a smart contract (native account abstraction).",
       "Developed by StarkWare; STRK is the network token."
     ],
+    "detail": {
+      "whatItIs": "Starknet is a Layer 2 network for Ethereum created by StarkWare. It is a validity rollup: it processes transactions away from Ethereum and proves their correctness to Ethereum with STARK proofs, a kind of zero-knowledge proof that needs no trusted setup. Contracts are written in Cairo, a language designed to be efficient to prove, so Ethereum contracts do not run on it directly. The Starknet Foundation supports the network, and STRK holders use the token to pay fees, stake and vote on upgrades.",
+      "howItWorks": "Since version 0.14.0 in September 2025, three sequencers take turns proposing blocks and run a consensus protocol to agree on them, so no single operator decides alone. Transactions run in the Cairo virtual machine, which records each step so it can be proven later. Since November 2025, StarkWare's S-two prover turns these records into STARK proofs. Proofs covering many blocks are combined and checked by a verifier contract on Ethereum, which then accepts the new state. Because every account is a smart contract, wallets can choose their own signature schemes, such as passkeys."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -639,6 +759,14 @@
       {
         "label": "Starknet docs",
         "url": "https://docs.starknet.io/"
+      },
+      {
+        "label": "Starknet blog: S-two is live on Starknet mainnet",
+        "url": "https://www.starknet.io/blog/s-two-is-live-on-starknet-mainnet-the-fastest-prover-for-a-more-private-future/"
+      },
+      {
+        "label": "Starknet version releases",
+        "url": "https://www.starknet.io/developers/version-releases/"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -662,6 +790,10 @@
       "Gas is paid in ETH, not in the LINEA token.",
       "Developed by Consensys, the company behind MetaMask."
     ],
+    "detail": {
+      "whatItIs": "Linea is a Layer 2 network for Ethereum built by Consensys, the company behind MetaMask and Infura. It is a zk-rollup: a chain that runs transactions itself, then posts the data and a mathematical proof of correctness to Ethereum. Users and developers treat it much like Ethereum, with the same wallets, addresses and smart contract languages, but fees are lower. Gas is paid in ETH. The LINEA token, launched in September 2025, is not needed to use the network.",
+      "howItWorks": "A sequencer collects transactions and orders them into blocks about every two seconds. Linea's prover then takes batches of those blocks and produces a zero-knowledge proof: a short piece of cryptography showing that every step followed the EVM rules, without Ethereum having to re-run them. The proof and compressed transaction data are posted to Ethereum, where a verifier contract checks the proof. Once it passes, the new state is final, so withdrawals do not wait for a week-long challenge period as on optimistic rollups."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -673,6 +805,10 @@
       {
         "label": "Linea docs",
         "url": "https://docs.linea.build/"
+      },
+      {
+        "label": "Linea docs: release notes",
+        "url": "https://docs.linea.build/changelog/release-notes"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -696,6 +832,10 @@
       "Aims for compatibility with Ethereum at the bytecode level, so most Ethereum contracts and tools work unchanged.",
       "Gas is paid in ETH; SCR is the governance token."
     ],
+    "detail": {
+      "whatItIs": "Scroll is a Layer 2 network for Ethereum. It is a zk-rollup: a chain that executes transactions away from Ethereum, then sends Ethereum the data plus a proof that the results are correct. It aims to behave like Ethereum at the bytecode level, so existing contracts, wallets and developer tools work with few or no changes. The project started in 2021 with open research on zkEVM circuits, and its mainnet opened in October 2023. Gas is paid in ETH; the SCR token is used for governance.",
+      "howItWorks": "A sequencer orders transactions into blocks, and batches of blocks are committed to Ethereum with their data in blobs. Provers then generate a validity proof for each batch. Since the Euclid upgrade in April 2025, Scroll's prover is built on OpenVM, a general-purpose zero-knowledge virtual machine, replacing its earlier hand-written halo2 circuits. A verifier contract on Ethereum checks each proof and finalises the batch. Users can also send transactions through a message queue contract on Ethereum, which the rollup has to process."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -707,6 +847,10 @@
       {
         "label": "Scroll docs",
         "url": "https://docs.scroll.io/"
+      },
+      {
+        "label": "Scroll docs: Euclid upgrade",
+        "url": "https://docs.scroll.io/en/technology/overview/scroll-upgrades/euclid-upgrade"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -731,6 +875,10 @@
       "Settlement layer (as of November 2026): Arbitrum One. Data is normally kept by a data availability committee (AnyTrust) rather than posted in full.",
       "Built for the ApeCoin community; APE is the token, ApeChain is the network."
     ],
+    "detail": {
+      "whatItIs": "ApeChain is a blockchain for the ApeCoin community, the ecosystem that grew around the Bored Ape Yacht Club NFT collection. It went live in October 2024 and hosts NFTs, games and other apps built around ApeCoin. It is a Layer 3: it settles on Arbitrum One, which in turn settles on Ethereum, so it inherits part of its security from both. Fees are paid in APE, the community's token, instead of ETH, which keeps the chain's economy tied to that token.",
+      "howItWorks": "ApeChain runs Arbitrum's Nitro software, configured with Arbitrum Orbit. A sequencer orders and executes transactions; summaries of the results are posted to Arbitrum One, where they can be challenged with fraud proofs during a dispute period. To keep costs low it uses AnyTrust: rather than posting all transaction data, a data availability committee stores it and signs a certificate promising to provide it. Full data goes to the parent chain only if not enough committee members sign. APE is bridged in to serve as the gas token."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -742,10 +890,14 @@
       {
         "label": "ApeChain docs: architecture",
         "url": "https://docs.apechain.com/architecture"
+      },
+      {
+        "label": "ETHBEAT (formerly L2BEAT): ApeChain",
+        "url": "https://ethbeat.org/scaling/projects/apechain"
       }
     ],
-    "verifiedOn": "2026-11-23",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "xai",
@@ -767,6 +919,10 @@
       "Settlement layer (as of November 2026): Arbitrum One.",
       "Not related to xAI, the AI company; this Xai is a blockchain for games, with the XAI token."
     ],
+    "detail": {
+      "whatItIs": "Xai is a blockchain for video games, launched in January 2024 by the games studio Ex Populus with support from Offchain Labs, the company behind Arbitrum. It aims to let games give players items and rewards they own on-chain, often through wallets the game manages so players need not handle crypto directly. It is a Layer 3 that settles on Arbitrum One. It is not related to xAI, the artificial intelligence company. XAI is its token, used for gas and node rewards.",
+      "howItWorks": "Xai runs Arbitrum Nitro in AnyTrust mode. A sequencer orders transactions, and a data availability committee keeps the transaction data and signs certificates instead of posting all of it to Arbitrum One, which lowers costs. State assertions are posted to Arbitrum One and can be challenged with fraud proofs. Xai adds Sentry nodes: anyone holding a Sentry Key licence can run software that checks the chain's assertions and raises an alarm if one looks wrong, earning esXAI, an escrowed form of the token, as a reward."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -778,10 +934,14 @@
       {
         "label": "Arbitrum docs: Arbitrum chains",
         "url": "https://docs.arbitrum.io/launch-arbitrum-chain/overview/introduction"
+      },
+      {
+        "label": "ETHBEAT (formerly L2BEAT): Xai",
+        "url": "https://ethbeat.org/scaling/projects/xai"
       }
     ],
-    "verifiedOn": "2026-11-23",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "uniswap",
@@ -802,6 +962,10 @@
       "Liquidity providers can lose value versus holding (impermanent loss) when prices move.",
       "Deployed on Ethereum and many L2s and other chains; each deployment has separate pools."
     ],
+    "detail": {
+      "whatItIs": "Uniswap is a set of smart contracts that let anyone swap one token for another, or deposit tokens into a pool and earn a share of trading fees, without an account and without a company holding the funds. It runs on Ethereum and many other networks. Uniswap Labs builds the main web and mobile apps, the Unichain network and much of the code, while UNI holders govern the protocol's fee settings and treasury. It is an application that runs on existing blockchains, not a chain of its own.",
+      "howItWorks": "Each pool holds two tokens, and an automated market maker formula sets the price from the pool's balances: in the original design their product stays constant, so buying one token makes it dearer. Since v3, liquidity providers can place funds within a chosen price range. Uniswap v4, launched in January 2025, keeps every pool in one contract and lets pool creators attach hooks, custom contracts that run before or after swaps. Since governance approved the UNIfication proposal in December 2025, part of the fees in some pools goes to the protocol and is used to burn UNI."
+    },
     "demos": [
       "amm-demo",
       "mev-pbs",
@@ -815,6 +979,14 @@
       {
         "label": "Uniswap docs",
         "url": "https://developers.uniswap.org/docs"
+      },
+      {
+        "label": "Uniswap blog: UNIfication",
+        "url": "https://blog.uniswap.org/unification"
+      },
+      {
+        "label": "Uniswap governance: UNIfication proposal",
+        "url": "https://gov.uniswap.org/t/unification-proposal/25881"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -836,8 +1008,12 @@
     "goodToKnow": [
       "Loans are over-collateralised; if collateral value falls too far, positions can be liquidated automatically.",
       "Aave also issues its own stablecoin, GHO; AAVE is the governance token.",
-      "Runs as separate markets on Ethereum and several other networks."
+      "Aave v4, live on Ethereum since March 2026, shares liquidity through a central hub; v3 runs separate markets per network."
     ],
+    "detail": {
+      "whatItIs": "Aave is a lending protocol: a set of smart contracts where people deposit crypto to earn interest and others borrow it by locking collateral worth more than the loan. There are no loan officers or credit checks; the rules are written in code. Aave also issues GHO, a stablecoin that borrowers mint. Holders of the AAVE token vote on new assets, risk limits and upgrades through the Aave DAO, and Aave Labs builds much of the software. It is an application that runs on Ethereum and several other networks.",
+      "howItWorks": "Each asset has a pool whose interest rate rises as more of it is borrowed, so lenders earn more when demand is high. A borrower's health factor compares collateral value, taken from Chainlink and other oracles, with the debt; when it drops below 1, anyone can repay part of the debt and receive collateral at a discount, which is called a liquidation. Aave v3 runs as separate markets on each network. Aave v4, live on Ethereum since March 2026, uses a hub-and-spoke design: hubs hold the liquidity, and spokes connect to them with their own collateral and risk rules."
+    },
     "demos": [],
     "sources": [
       {
@@ -847,9 +1023,13 @@
       {
         "label": "Aave docs",
         "url": "https://aave.com/docs"
+      },
+      {
+        "label": "Aave blog: Aave V4 is live on Ethereum",
+        "url": "https://aave.com/blog/aave-v4-live-ethereum"
       }
     ],
-    "verifiedOn": "2026-11-23",
+    "verifiedOn": "2026-11-28",
     "confidence": "high"
   },
   {
@@ -872,6 +1052,10 @@
       "Staking is done by node operators chosen through Lido's governance; LDO is the governance token.",
       "wstETH is a \"wrapped\" form of stETH whose balance does not change, used by many DeFi apps."
     ],
+    "detail": {
+      "whatItIs": "Lido is a liquid staking protocol on Ethereum. Running your own Ethereum validator needs 32 ETH and technical skill; Lido lets anyone stake any amount of ETH and receive stETH, a token they can hold, sell or use as collateral while the ETH stays staked. Professional and community node operators run the validators. Holders of the LDO token govern the Lido DAO, which chooses operators and sets fees. Since Lido v3 went live in January 2026, organisations can also create their own staking vaults, called stVaults.",
+      "howItWorks": "Deposited ETH is assigned to node operators, who run validators but cannot take the funds: withdrawals can only go to a Lido contract. Each day an oracle committee reports validator balances, and the stETH balance in every wallet is adjusted, or rebased, to add rewards after a 10% fee split between operators and the DAO treasury. Withdrawal requests wait in a queue until enough ETH is available. An stVault is a separate contract with an operator chosen by its owner, who can mint stETH against the ETH staked in it, within limits set by Lido."
+    },
     "demos": [],
     "sources": [
       {
@@ -881,6 +1065,10 @@
       {
         "label": "Lido docs",
         "url": "https://docs.lido.fi/"
+      },
+      {
+        "label": "Lido blog: Lido V3 is live",
+        "url": "https://blog.lido.fi/lido-v3-is-live-modular-infrastructure-for-a-new-paradigm-of-ethereum-staking/"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -905,10 +1093,14 @@
     "category": "defi",
     "summary": "DeFi protocol issuing the USDS and DAI stablecoins against collateral; formerly MakerDAO, governed by SKY token holders.",
     "goodToKnow": [
-      "Formerly MakerDAO (rebranded to Sky in August 2024). DAI still exists and can be upgraded 1:1 to USDS; MKR can be upgraded to SKY.",
-      "Vault price feeds come mainly from Chronicle, an oracle network that grew out of Maker's oracle team and is now a separate project.",
-      "Users mint stablecoins by locking collateral in vaults; under-collateralised vaults are liquidated."
+      "Formerly MakerDAO (rebranded to Sky in August 2024). DAI still exists and can be upgraded 1:1 to USDS; MKR upgrades to SKY at 24,000 SKY per MKR.",
+      "Since September 2025 late MKR upgrades carry a penalty that grows by one percentage point every three months.",
+      "Users mint stablecoins by locking collateral in vaults; under-collateralised vaults are liquidated. Vault prices come mainly from Chronicle oracles."
     ],
+    "detail": {
+      "whatItIs": "Sky is the protocol formerly called MakerDAO, which created DAI, a decentralised stablecoin: a token designed to stay worth one US dollar. Since its rebrand in August 2024 it also issues USDS, and users can swap between DAI and USDS one-for-one. People use them for payments, trading and saving. Holders of the SKY token govern the protocol and set its rates, collateral and reserves. Sky also backs semi-independent projects called Stars, such as Spark, a lending protocol. It is an application on Ethereum.",
+      "howItWorks": "Users mint USDS or DAI by locking collateral in a vault, a contract that records their debt plus a stability fee, a form of interest. If collateral value, as reported by oracles such as Chronicle, falls below the required ratio, the collateral is auctioned to repay the debt. Part of the backing comes from protocol reserves, including USDC in a peg stability module that swaps it one-for-one, and tokenised real-world assets such as short-term government debt. Holders can deposit USDS in the Sky Savings Rate contract and receive sUSDS, which grows in value at a rate set by governance."
+    },
     "demos": [
       "makerdao-vault",
       "stablecoin-depeg"
@@ -927,8 +1119,8 @@
         "url": "https://docs.chroniclelabs.org/"
       }
     ],
-    "verifiedOn": "2026-11-23",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "curve",
@@ -948,6 +1140,10 @@
       "Its stableswap formula keeps prices tight while a pool is balanced; when one asset depegs, the pool fills up with it.",
       "Curve also issues a stablecoin, crvUSD; CRV is the governance token."
     ],
+    "detail": {
+      "whatItIs": "Curve is a decentralised exchange built mainly for swapping tokens that should trade at similar prices, such as different dollar stablecoins or different forms of staked ETH. Liquidity providers deposit tokens into pools and earn fees from swaps. Curve also runs pools for unrelated assets, a lending market called Llamalend and its own stablecoin, crvUSD. Holders who lock CRV as veCRV vote on governance and on how new CRV rewards are split between pools. It launched on Ethereum in 2020 and now runs on other networks too.",
+      "howItWorks": "Curve's stableswap formula behaves like a constant-sum pool, which trades one-for-one, while balances are close to equal, and shifts towards Uniswap's constant-product curve as a pool becomes unbalanced, so normal trades barely move the price. A later design, cryptoswap, concentrates liquidity around a moving internal price for volatile pairs. crvUSD is minted against collateral; its LLAMMA mechanism gradually converts a borrower's collateral into crvUSD as prices fall, and back as they recover, instead of one sudden liquidation. Locking CRV for longer, up to four years, gives more votes."
+    },
     "demos": [
       "amm-demo",
       "stablecoin-depeg"
@@ -983,6 +1179,10 @@
       "An aggregator does not hold liquidity itself; it splits and routes orders through other Solana DEXs.",
       "JUP is its governance token."
     ],
+    "detail": {
+      "whatItIs": "Jupiter is a trading app on Solana, a Layer 1 blockchain built for fast, cheap transactions. Its core product is a swap aggregator: when a user wants to exchange one token for another, Jupiter compares prices across many decentralised exchanges (DEXs, exchanges run by smart contracts) and builds the trade for them. It also offers limit orders, recurring purchases and perpetual futures. A core team develops it, and JUP is its governance token. It is an application, not a chain, and it holds no liquidity of its own.",
+      "howItWorks": "A routing engine searches the liquidity pools of many Solana DEXs, such as Raydium, and can split one order across several pools and intermediate tokens to get a better rate. Jupiter also collects quotes from professional market makers through a request-for-quote system and picks the better result. The user's wallet then signs a single Solana transaction that performs every step at once: if the price moves beyond the user's slippage limit, the whole transaction fails and no tokens change hands. Since March 2026 developers reach this routing through one unified Swap API."
+    },
     "demos": [],
     "sources": [
       {
@@ -992,6 +1192,14 @@
       {
         "label": "Jupiter developer docs",
         "url": "https://developers.jup.ag/"
+      },
+      {
+        "label": "Jupiter developer docs: routing",
+        "url": "https://dev.jup.ag/docs/routing"
+      },
+      {
+        "label": "Jupiter developer changelog, March 2026",
+        "url": "https://developers.jup.ag/changelog/2026-03"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1015,6 +1223,10 @@
       "Issued natively on many blockchains; \"bridged\" USDC on some chains is a different token from Circle-issued USDC.",
       "Temporarily lost its peg in March 2023 when part of its reserves was held at Silicon Valley Bank."
     ],
+    "detail": {
+      "whatItIs": "USDC is a digital dollar issued by Circle, a US company. Each token is meant to be worth one US dollar and can be redeemed for one by Circle's eligible customers. People use it to hold dollars on-chain, make payments, trade on exchanges and lend in DeFi apps. Circle issues it natively on many blockchains. Since 2023 Circle alone governs it, after the Centre consortium it formed with Coinbase was wound up. Circle also issues EURC, a separate euro token.",
+      "howItWorks": "Institutions send dollars to Circle through its Circle Mint service and receive newly minted USDC; when they redeem, Circle burns the tokens and returns dollars. Reserves are held as cash at banks and in the Circle Reserve Fund, a government money market fund managed by BlackRock, with monthly third-party attestations. In the US, the GENIUS Act, signed in July 2025, sets federal rules for payment stablecoins, and Circle received final approval for a national trust bank charter in July 2026. In the EU, Circle's French entity issues USDC under MiCA. CCTP moves USDC between chains by burning and minting."
+    },
     "demos": [
       "stablecoin-depeg",
       "erc-standards",
@@ -1028,6 +1240,14 @@
       {
         "label": "Circle developer docs: USDC",
         "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+      },
+      {
+        "label": "Circle: transparency and reserves",
+        "url": "https://www.circle.com/transparency"
+      },
+      {
+        "label": "Circle press release: MiCA compliance (July 2024)",
+        "url": "https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica-eus-landmark-crypto-law"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1052,6 +1272,10 @@
       "USDT on BNB Chain is a Binance-issued token (\"Binance-Peg\") backed by USDT that Binance holds, not a Tether issuance.",
       "Tether publishes the list of chains it issues on; versions elsewhere are bridged or third-party tokens."
     ],
+    "detail": {
+      "whatItIs": "USDT, also called Tether, is a dollar stablecoin issued by Tether, a company now based in El Salvador. Each token is meant to be worth one US dollar. It is used on exchanges to move value between trades and, on chains such as TRON, for low-cost dollar transfers. Tether issues it natively on a list of chains it publishes. Tether also issues other tokens, including XAUT, backed by gold, and USAT, a separate dollar token designed for US rules.",
+      "howItWorks": "Verified customers send dollars to Tether, which mints USDT to them; redemption runs the other way, with Tether burning the tokens and paying out dollars, subject to minimums and checks. Tether says reserves are mostly US Treasury bills, with some gold, bitcoin and secured loans, and publishes quarterly attestations by the accounting firm BDO rather than full audits. USDT is issued outside the US and, as of November 2026, is not authorised under the EU's MiCA rules. USAT, launched in January 2026 and issued by Anchorage Digital Bank, is designed for the US GENIUS Act of July 2025."
+    },
     "demos": [
       "stablecoin-depeg",
       "erc-standards",
@@ -1065,10 +1289,18 @@
       {
         "label": "Tether: supported protocols",
         "url": "https://tether.to/en/supported-protocols/"
+      },
+      {
+        "label": "Tether: transparency",
+        "url": "https://tether.to/en/transparency/"
+      },
+      {
+        "label": "The Block: first USAT attestation (2026)",
+        "url": "https://www.theblock.co/post/391762/anchorage-usat-reserve-17-6-million-assets-backing-tether-us-stablecoins"
       }
     ],
-    "verifiedOn": "2026-11-23",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "coinbase",
@@ -1085,17 +1317,25 @@
     "summary": "Centralised exchange where users buy, sell and hold crypto with traditional money; it also incubated the Base network.",
     "goodToKnow": [
       "Centralised exchange (custodial): Coinbase holds users' keys, so funds there are an account balance, not self-custody.",
-      "Coinbase's self-custody wallet app (originally Coinbase Wallet) is separate from exchange accounts.",
+      "Its self-custody app, Coinbase Wallet (called Base App from July 2025 to September 2026), is separate from exchange accounts.",
       "Co-founded the Centre consortium with Circle that launched USDC in 2018."
     ],
+    "detail": {
+      "whatItIs": "Coinbase is a US company, listed on Nasdaq since April 2021, that runs a centralised crypto exchange. People open an account, verify their identity, link a bank account or card, and then buy, sell and hold crypto. It also offers staking, derivatives trading and custody services for institutions. Coinbase incubated Base, an Ethereum layer 2 network, and runs its sequencer. Its self-custody app, renamed Base App in July 2025, went back to the name Coinbase Wallet in September 2026.",
+      "howItWorks": "Coinbase is custodial: it holds the private keys for customer crypto, mostly in offline cold storage, and its internal ledger records what each user owns. Trades on Coinbase Exchange are matched in a central limit order book, a list of buy and sell orders at set prices, on Coinbase's own servers, so they do not appear on a blockchain. Only deposits and withdrawals are on-chain transactions. Fiat on-ramps and off-ramps use bank transfers, cards and other payment rails. Revenue comes mainly from trading fees and spreads, plus staking, custody and a share of USDC reserve income."
+    },
     "demos": [],
     "sources": [
       {
         "label": "Coinbase Exchange docs",
         "url": "https://docs.cdp.coinbase.com/exchange/introduction/welcome"
+      },
+      {
+        "label": "The Block: Base App renamed back to Coinbase Wallet (September 2026)",
+        "url": "https://www.theblock.co/post/414115/coinbase-rebrands-base-app-back-to-coinbase-wallet-after-just-over-a-year-as-social-experiment-falls-short"
       }
     ],
-    "verifiedOn": "2026-11-23",
+    "verifiedOn": "2026-11-28",
     "confidence": "high"
   },
   {
@@ -1115,6 +1355,10 @@
       "Like other exchanges, it can freeze accounts or funds, for example at law-enforcement request.",
       "Kraken also backs Ink, an Ethereum L2 network."
     ],
+    "detail": {
+      "whatItIs": "Kraken is a centralised crypto exchange founded in 2011 in the US; its parent company is Payward. Users verify their identity, deposit traditional money or crypto, and trade, stake or withdraw. It also offers derivatives trading and services for institutions, and its subsidiary Kraken Financial has held a Wyoming special purpose depository institution charter, a state bank charter for digital assets, since 2020. Kraken backs Ink, an Ethereum layer 2 network built with the OP Stack.",
+      "howItWorks": "Kraken is custodial: it controls the private keys for deposited crypto, keeping most in offline cold storage, and tracks each user's balance in its own records. Orders are matched off-chain in central limit order books, so trades between users are not blockchain transactions; only deposits and withdrawals are. Fiat on-ramps and off-ramps use bank transfers and card payments, depending on the country. Since 2014 Kraken has published periodic proof-of-reserves checks, which use a Merkle tree so each user can confirm their balance was included. It earns money mainly from trading fees."
+    },
     "demos": [
       "arkea-heist"
     ],
@@ -1130,6 +1374,10 @@
       {
         "label": "Kraken API docs",
         "url": "https://docs.kraken.com/"
+      },
+      {
+        "label": "Kraken: proof of reserves",
+        "url": "https://www.kraken.com/proof-of-reserves"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1153,6 +1401,10 @@
       "Price feeds are produced by independent node operators and aggregated on-chain.",
       "LINK is the token used to pay node operators."
     ],
+    "detail": {
+      "whatItIs": "Chainlink is a decentralised oracle network: a system that brings information from outside a blockchain, such as asset prices, onto it so that smart contracts can use it. Lending apps such as Aave rely on its price feeds to value collateral. It also offers CCIP, a protocol for sending tokens and messages between chains, plus verifiable randomness and automated contract calls. Its services run on Ethereum and many other chains. Chainlink Labs develops the software, while independent node operators run the network.",
+      "howItWorks": "Each price feed is served by a decentralised oracle network (DON), a group of independent node operators. Every node fetches prices from several data aggregators; using the Off-Chain Reporting protocol, the nodes agree on a median and co-sign one report, which a single transaction writes on-chain. A feed updates when the price moves past a set deviation threshold or when a heartbeat timer expires, and contracts simply read the latest answer. Node operators are paid in LINK, and LINK can also be staked as a backstop for service quality."
+    },
     "demos": [
       "blockchain-interop"
     ],
@@ -1185,6 +1437,10 @@
       "Prices are \"pulled\": an application (or user) posts a fresh signed price on-chain when it needs one, instead of the oracle pushing updates.",
       "Prices are aggregated on Pythnet, Pyth's own appchain, then relayed to other chains."
     ],
+    "detail": {
+      "whatItIs": "Pyth is an oracle network for financial market data. Instead of collecting prices from public websites, it receives them directly from first-party publishers: exchanges, trading firms and market makers that see the prices themselves. It offers feeds for crypto assets, equities, currencies and commodities, which lending, derivatives and trading apps on Solana, EVM chains and other networks read. PYTH token holders govern the protocol, for example by voting on fees, and Douro Labs is one of its main contributors.",
+      "howItWorks": "Each publisher submits its own price plus a confidence interval, a range expressing its uncertainty. Pythnet, Pyth's own appchain, combines these into one aggregate price and confidence interval, so a few outlying publishers cannot move the result much. Signed updates are served off-chain by a service called Hermes. When an app needs a price, it fetches the latest update and submits it to the Pyth contract on its chain in the same transaction, and the contract verifies it before use. Since August 2026 Hermes requires an API key, while the on-chain contracts stay permissionless."
+    },
     "demos": [],
     "sources": [
       {
@@ -1194,6 +1450,10 @@
       {
         "label": "Pyth docs",
         "url": "https://docs.pyth.network/"
+      },
+      {
+        "label": "Pyth docs: Price Feeds (Core)",
+        "url": "https://docs.pyth.network/price-feeds/core/why-update-prices"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1215,6 +1475,10 @@
       "It reads and indexes existing chain data; unlike an oracle, it does not bring outside data on-chain.",
       "Indexers are paid in GRT for serving queries."
     ],
+    "detail": {
+      "whatItIs": "The Graph is a decentralised indexing protocol. Reading history straight from a blockchain is slow, so apps and analysts use The Graph to query organised data, such as every swap in a Uniswap pool, through a GraphQL API. Developers define what to index in a subgraph, a small open-source specification, and publish it to the network, where independent indexers serve it for a fee. GRT is the token used to pay for queries and to stake. Since 2024 the protocol's contracts have run on Arbitrum One.",
+      "howItWorks": "A subgraph contains a manifest naming the contracts and events to watch, a GraphQL schema, and mapping code, usually written in AssemblyScript, that turns each event into stored records. Indexers run Graph Node software, which processes the chain block by block and keeps the results in a database. Apps send GraphQL queries through a gateway and pay query fees in GRT. Indexers stake GRT, which can be slashed for serving incorrect data, and delegators can add stake to them. Curators signal which subgraphs are worth indexing."
+    },
     "demos": [],
     "sources": [
       {
@@ -1245,6 +1509,10 @@
       "Each app chooses which verifiers (DVNs) must confirm a message, so security depends on that app's configuration.",
       "It is a messaging layer, not a single bridge; token bridges are built on top of it. ZRO is its token."
     ],
+    "detail": {
+      "whatItIs": "LayerZero is a messaging protocol that lets smart contracts on different blockchains send data and instructions to each other. Developers use it to build cross-chain apps, such as tokens that exist on many chains at once under its OFT (Omnichain Fungible Token) standard, or token bridges such as Stargate. It is developed by LayerZero Labs, and ZRO is its governance token. It connects Ethereum and its Layer 2s with chains such as Solana, Aptos and BNB Chain. The protocol itself does not hold user funds.",
+      "howItWorks": "Each connected chain has an immutable Endpoint contract. An app sends a message to the Endpoint on the source chain. Independent verifiers called DVNs (decentralised verifier networks), chosen by the app, check that the message really happened and confirm it on the destination chain. Once the required DVNs agree, an Executor, a paid delivery service, passes the message to the receiving contract. Because each app picks its own DVNs and how many must agree, its security can range from a single verifier to several independent ones."
+    },
     "demos": [
       "blockchain-interop"
     ],
@@ -1278,6 +1546,10 @@
       "Its bridge was exploited in February 2022 (about 120,000 ETH-equivalent minted); the loss was covered by Jump Crypto.",
       "W is its token; Portal is a token bridge built on Wormhole."
     ],
+    "detail": {
+      "whatItIs": "Wormhole is a cross-chain messaging protocol that lets apps on different blockchains, including Solana, Ethereum, Sui and Aptos, pass messages to each other. Developers build token bridges, such as Portal, and cross-chain token standards with it, including Native Token Transfers, which move a token between chains without creating wrapped copies. It was first built in 2020 by Jump Crypto to link Solana and Ethereum and is now developed by several contributors. W is its governance token.",
+      "howItWorks": "When an app emits a message through the Wormhole contract on one chain, each of the 19 Guardians, independent node operators, watches that chain and signs the message. Once at least 13 have signed, the signatures form a Verified Action Approval (VAA), which anyone can relay to the destination chain, where the Wormhole contract checks the signatures before the app acts. Security therefore depends on most Guardians being honest and keeping their keys safe. Some routes add extra checks, such as limits on how much value can move per day."
+    },
     "demos": [],
     "sources": [
       {
@@ -1309,6 +1581,10 @@
       "Messages are verified by light clients of the other chain rather than a separate validator set; relayers only carry them.",
       "Mainly used between Cosmos SDK chains, with work to connect other ecosystems."
     ],
+    "detail": {
+      "whatItIs": "IBC, short for Inter-Blockchain Communication, is an open protocol that lets independent blockchains send tokens and arbitrary messages to each other. It is not a chain or a company product but a standard, written up as specifications called ICS, that chains build into their own software. It is used mostly between chains built with the Cosmos SDK, for example to move ATOM or USDC to a trading chain such as Osmosis. Token transfers use an application standard called ICS-20.",
+      "howItWorks": "Each chain runs a light client of the other: a small program that tracks the other chain's block headers and validator signatures. When chain A commits a packet to its state, an off-chain relayer carries the packet and a Merkle proof to chain B, whose light client checks that the packet really was committed. Relayers cannot forge messages; they only deliver them, and anyone can run one. For tokens, ICS-20 escrows the original on the source chain and mints a voucher on the destination, and a timeout refunds packets that are never delivered."
+    },
     "demos": [
       "blockchain-interop"
     ],
@@ -1344,6 +1620,10 @@
       "Its developer, Eigen Labs, now presents EigenLayer as part of a wider \"EigenCloud\" platform; EIGEN is the token.",
       "Services secured this way are called AVSs (Actively Validated Services); EigenDA is one example."
     ],
+    "detail": {
+      "whatItIs": "EigenLayer is a restaking protocol on Ethereum. Restaking means reusing ETH that already secures Ethereum, or tokens such as stETH and EIGEN, as a deposit that also backs other services, called AVSs (Actively Validated Services), such as data availability layers, oracles or bridges. Stakers earn extra rewards in exchange for extra risk. Instead of recruiting their own validators, these services obtain security from EigenLayer's operators. It is built by Eigen Labs, which since 2025 presents it as the base of a wider EigenCloud platform.",
+      "howItWorks": "Stakers deposit liquid staking tokens into strategy contracts, or point their validators' withdrawal address to an EigenPod contract, then delegate to an operator who runs the software for one or more AVSs. Since slashing went live on mainnet in April 2025, each AVS defines operator sets with their own rules, and an operator allocates a fixed share of its delegated stake to each set, so a penalty in one set can only reach the stake allocated to it. Withdrawals pass through a waiting period before funds are released, so misbehaviour can still be punished."
+    },
     "demos": [
       "eigenlayer-demo"
     ],
@@ -1355,6 +1635,10 @@
       {
         "label": "EigenLayer contracts (GitHub)",
         "url": "https://github.com/Layr-Labs/eigenlayer-contracts"
+      },
+      {
+        "label": "EigenCloud blog: slashing goes live on mainnet",
+        "url": "https://blog.eigencloud.xyz/slashing-goes-live/"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1373,6 +1657,10 @@
       "Using external data availability lowers costs but means relying on EigenDA's operators rather than Ethereum to keep data retrievable.",
       "It is a service built on EigenLayer, not a separate blockchain."
     ],
+    "detail": {
+      "whatItIs": "EigenDA is a data availability service: a place where rollups, chains that rely on another chain for security, can publish their transaction data more cheaply than on Ethereum itself. It is an AVS built on EigenLayer, so the operators who store the data are backed by restaked ETH and EIGEN rather than by a blockchain of its own. Rollups using it still settle on Ethereum but rely on EigenDA's operators to keep data retrievable. Its second version, called Blazar, launched on mainnet in July 2025.",
+      "howItWorks": "A rollup sends a blob of data to a disperser, which erasure-codes it, splitting it into redundant chunks so that a sufficient subset can rebuild the whole, and computes KZG commitments, short cryptographic fingerprints that let each chunk be checked. Operators fetch their assigned chunks, check them against the commitments, store them and sign. The signatures are aggregated into a DA certificate, which the rollup posts to Ethereum instead of the full data. Verifier contracts on Ethereum check that operators holding enough stake signed it."
+    },
     "demos": [
       "eigenlayer-demo",
       "peerdas-demo"
@@ -1385,6 +1673,14 @@
       {
         "label": "EigenDA (GitHub)",
         "url": "https://github.com/Layr-Labs/eigenda"
+      },
+      {
+        "label": "EigenDA docs: Blazar release",
+        "url": "https://docs.eigenda.xyz/releases/blazar"
+      },
+      {
+        "label": "EigenCloud blog: EigenDA V2 core architecture",
+        "url": "https://blog.eigencloud.xyz/eigenda-v2-core-architecture/"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1406,6 +1702,10 @@
       "Celestia does not execute smart contracts for those chains; it orders and stores their data and lets light nodes check it by sampling.",
       "TIA is its native token."
     ],
+    "detail": {
+      "whatItIs": "Celestia is a blockchain specialised in data availability, meaning it guarantees that published data can be downloaded by anyone. Rollups and other chains post their transaction data to it as blobs, which costs less than posting to their settlement layer, while they execute transactions and settle elsewhere. Celestia does not run their smart contracts. Its mainnet launched in October 2023, and it is developed by Celestia Labs and other contributors. TIA is the native token, used to pay blob fees and for staking.",
+      "howItWorks": "Celestia is a proof-of-stake chain built with the Cosmos SDK and CometBFT consensus, secured by validators that stake TIA. The blob data in each block is arranged in a square and extended with two-dimensional erasure coding, so hiding even a small part would require withholding a large share. Light nodes then perform data availability sampling: they download a few random pieces and gain high confidence that the whole block is available without downloading it. Namespaced Merkle trees let each rollup fetch only its own data, and the Blobstream bridge relays Celestia commitments to Ethereum."
+    },
     "demos": [
       "peerdas-demo"
     ],
@@ -1431,11 +1731,15 @@
     "subBand": "app-tool",
     "category": "wallets",
     "cluster": "wallets",
-    "summary": "Self-custody wallet for Ethereum and other EVM chains, available as a browser extension and mobile app, developed by Consensys.",
+    "summary": "Self-custody wallet by Consensys for Ethereum and EVM chains, with Solana and Bitcoin accounts since 2025; extension and mobile app.",
     "goodToKnow": [
       "Self-custody: whoever has the Secret Recovery Phrase controls the funds; MetaMask cannot recover it.",
       "MetaMask staff will never ask for your recovery phrase; requests for it are scams."
     ],
+    "detail": {
+      "whatItIs": "MetaMask is a self-custody crypto wallet made by Consensys, available as a browser extension and a mobile app. It lets people hold tokens, sign transactions and connect to decentralised apps such as exchanges, lending protocols and NFT marketplaces. It started on Ethereum and works with EVM-compatible networks, the chains that run Ethereum-style smart contracts. Since its multichain accounts update in October 2025, each account also includes a Solana address, with Bitcoin addresses added as well.",
+      "howItWorks": "When a wallet is created, MetaMask generates a Secret Recovery Phrase of 12 words, from which all private keys are derived. The keys are encrypted with the user's password and stored on the device; MetaMask's servers never hold them. When a website requests a transaction, MetaMask shows the details, the user approves, and the wallet signs it locally before sending it to the network through a remote node, by default Infura. Hardware wallets such as Ledger can be connected so that signing happens on the device. Snaps, third-party plug-ins, add further chains and features."
+    },
     "demos": [
       "wallet-tx-lifecycle"
     ],
@@ -1446,10 +1750,18 @@
       },
       {
         "label": "MetaMask support",
-        "url": "https://support.metamask.io/"
+        "url": "https://support.metamask.com/"
+      },
+      {
+        "label": "MetaMask support: multichain accounts",
+        "url": "https://support.metamask.com/configure/accounts/multichain-accounts/"
+      },
+      {
+        "label": "The Block: MetaMask goes multichain (October 2025)",
+        "url": "https://www.theblock.co/news/ecosystems/2025-10-28-metamask-multichain-account-376450"
       }
     ],
-    "verifiedOn": "2026-11-23",
+    "verifiedOn": "2026-11-28",
     "confidence": "high"
   },
   {
@@ -1467,6 +1779,10 @@
     "goodToKnow": [
       "Self-custody: whoever has the recovery phrase controls the funds; Phantom cannot recover it."
     ],
+    "detail": {
+      "whatItIs": "Phantom is a self-custody wallet app, available as a browser extension and a mobile app, made by a US company of the same name. It started in 2021 as a wallet for Solana and later added other networks; as of November 2026 these include Ethereum, Base, Polygon, BNB Chain, HyperEVM and Bitcoin, while support for Sui ended in September 2026. People use it to hold tokens and NFTs, swap tokens inside the app and connect to Solana apps such as Jupiter.",
+      "howItWorks": "Phantom creates a recovery phrase on the user's device and derives a separate key pair for each supported chain from it. The keys are encrypted and stored locally, not on Phantom's servers. When an app asks for a signature, Phantom simulates the transaction, shows the expected balance changes and warns about known malicious sites before the user approves; it then signs locally and sends the transaction to the network. Users can also pair a Ledger hardware wallet, so the private key stays on that device and signing happens there."
+    },
     "demos": [],
     "sources": [
       {
@@ -1476,6 +1792,10 @@
       {
         "label": "Phantom help centre",
         "url": "https://help.phantom.com/"
+      },
+      {
+        "label": "Phantom help centre: supported networks",
+        "url": "https://help.phantom.com/hc/en-us/articles/41372840389651"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1499,6 +1819,10 @@
       "A Safe is a smart contract account, so it exists separately on each chain where it is deployed.",
       "Many DAOs and teams use it to control treasuries and protocol upgrades."
     ],
+    "detail": {
+      "whatItIs": "Safe, formerly Gnosis Safe, is a smart contract wallet: an account that is itself a program on the blockchain rather than a single private key. Its standard setup is a multisig, which needs several owners to approve each transaction, for example three of five. DAOs, companies and protocol teams use it to hold shared funds and control contract upgrades, and individuals use it for extra security. It runs on Ethereum and many EVM networks, and Safe{Wallet} is its main interface.",
+      "howItWorks": "Each Safe stores a list of owners and a threshold, the number of approvals needed. Owners can be ordinary keys, hardware wallets, passkeys or other smart accounts. An owner proposes a transaction; others sign the same transaction hash off-chain, and once enough signatures are collected anyone can submit them to the Safe contract, which checks them and executes. Changing owners or the threshold needs the same approval. Optional modules add functions such as spending limits or recovery, and guards run checks before and after each transaction. Because a module can act without signatures, adding one needs owner approval."
+    },
     "demos": [],
     "sources": [
       {
@@ -1508,6 +1832,10 @@
       {
         "label": "Safe docs",
         "url": "https://docs.safe.global/"
+      },
+      {
+        "label": "Safe docs: smart account concepts",
+        "url": "https://docs.safe.global/advanced/smart-account-concepts"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1529,6 +1857,10 @@
       ".eth names are registered for a period and must be renewed, otherwise they can be registered by someone else.",
       "ENS is not a DNS replacement, but some existing DNS domains can be linked to it."
     ],
+    "detail": {
+      "whatItIs": "The Ethereum Name Service, ENS, gives readable names such as alice.eth to blockchain addresses, much as the web's DNS gives names to server addresses. Wallets that support it let people send funds to a name instead of a long hexadecimal address, and a name can also hold a website link, a profile picture or addresses on other chains. Names are tokens that can be transferred. The ENS DAO, made up of ENS token holders, governs the protocol, and ENS Labs develops it.",
+      "howItWorks": "A registry contract on Ethereum records who owns each name and which resolver, a contract holding the name's records, to ask. To look up alice.eth, an app finds the resolver and reads the address. .eth names are bought from a registrar contract for a yearly fee, with a grace period after expiry before they are released. ENSv2, live on Ethereum mainnet since 27 October 2026, lets each name act as its own registry for the names beneath it, with finer permissions. In February 2026 ENS Labs dropped a planned layer 2 and kept ENSv2 on Ethereum."
+    },
     "demos": [],
     "sources": [
       {
@@ -1538,6 +1870,14 @@
       {
         "label": "ENS docs",
         "url": "https://docs.ens.domains/"
+      },
+      {
+        "label": "ENS blog: ENSv2 is live on mainnet (October 2026)",
+        "url": "https://ens.domains/blog/post/ensv2-live-on-mainnet"
+      },
+      {
+        "label": "ENS blog: ENS is staying on Ethereum (February 2026)",
+        "url": "https://ens.domains/blog/post/ens-staying-on-ethereum"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1556,6 +1896,10 @@
       "OpenSea is a company-run interface; the NFTs themselves live on-chain, in the user's wallet, not on OpenSea.",
       "Listing on OpenSea typically means signing an off-chain order; read signature requests carefully, as phishing often abuses them."
     ],
+    "detail": {
+      "whatItIs": "OpenSea is a marketplace website and app, run by a US company founded in 2017, where people buy, sell and make offers on NFTs, tokens that represent unique items such as art or collectibles. Since its OS2 relaunch in 2025 it also lets users trade ordinary tokens. It covers Ethereum and many other networks, and since August 2026 it again supports Solana NFTs. Creators can launch collections through OpenSea Studio, and anyone can browse without an account.",
+      "howItWorks": "OpenSea does not hold users' NFTs. On Ethereum and other EVM networks, a seller signs an off-chain order with their wallet, saying which item they will sell, at what price and until when, and approves Seaport, OpenSea's open-source exchange contract, to move that item. OpenSea stores the signed order and displays it. When a buyer accepts, their wallet sends a transaction to Seaport, which checks the signature and swaps payment and NFT in one step, also paying any fees. OpenSea's revenue comes mainly from a marketplace fee on sales."
+    },
     "demos": [
       "erc-standards"
     ],
@@ -1567,6 +1911,14 @@
       {
         "label": "OpenSea docs",
         "url": "https://docs.opensea.io/"
+      },
+      {
+        "label": "The Block: OpenSea adds Solana NFT trading (August 2026)",
+        "url": "https://www.theblock.co/news/markets/2026-08-31-opensea-solana-trading-413128"
+      },
+      {
+        "label": "Seaport on GitHub",
+        "url": "https://github.com/ProjectOpenSea/seaport"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1587,6 +1939,10 @@
       "An explorer only displays public chain data; it does not hold funds and cannot reverse transactions.",
       "Address labels and \"verified\" source code are Etherscan features (source is submitted by developers), not part of the chain itself."
     ],
+    "detail": {
+      "whatItIs": "Etherscan is a block explorer: a website that turns raw Ethereum data into readable pages for each transaction, address, block and token. People use it to check whether a payment went through, see what a smart contract does, or follow funds. It is run by a private company, Etherscan, which also operates explorers for other chains, such as Arbiscan for Arbitrum One and BaseScan for Base. Developers use its API to fetch chain data and to verify contract source code.",
+      "howItWorks": "Etherscan runs its own nodes, reads every new block and stores the data in its own databases, adding indexes so that an address's full history can be found quickly. Developers can upload a contract's source code; Etherscan compiles it and checks that the result matches the code deployed on-chain, then marks it as verified. Since 2025 its API V2 uses one key across many chains, with free and paid plans; as of November 2026, some chains require a paid plan. Revenue comes from API subscriptions and advertising, while the website itself is free to browse."
+    },
     "demos": [],
     "sources": [
       {
@@ -1596,6 +1952,14 @@
       {
         "label": "Etherscan API docs",
         "url": "https://docs.etherscan.io/"
+      },
+      {
+        "label": "Etherscan API docs: changelog",
+        "url": "https://docs.etherscan.io/changelog/"
+      },
+      {
+        "label": "Etherscan: changes in free API tier coverage",
+        "url": "https://info.etherscan.com/whats-changing-in-the-free-api-tier-coverage-and-why"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1613,6 +1977,10 @@
     "goodToKnow": [
       "Many apps rely on hosted providers like Alchemy instead of running their own nodes, which concentrates infrastructure in a few companies."
     ],
+    "detail": {
+      "whatItIs": "Alchemy is a private company that sells blockchain infrastructure to developers. Instead of running their own nodes, which takes storage, bandwidth and maintenance, apps send requests to Alchemy's servers to read chain data and submit transactions. It supports Ethereum, many Layer 2 networks, Solana and other chains. Wallets, exchanges and DeFi apps use it behind the scenes, so end users rarely see it. It also offers tools for smart wallets, which use account abstraction so users can sign in without managing a seed phrase.",
+      "howItWorks": "Alchemy runs large fleets of blockchain nodes and puts load balancing and caching in front of them. Apps call a standard JSON-RPC endpoint, the same interface a node exposes, using an API key. In addition, Alchemy indexes chain data into its own databases to answer questions a plain node cannot answer quickly, such as all tokens or NFTs held by an address, and it can send webhooks when something happens on-chain. Customers pay by metered usage, with a free tier for small projects. Because responses come from Alchemy, apps trust it to return correct data."
+    },
     "demos": [],
     "sources": [
       {
@@ -1643,6 +2011,10 @@
       "MEV-Boost runs proposer-builder separation outside the protocol: validators accept full blocks from builders, through relays.",
       "Flashbots Protect is an RPC endpoint that keeps transactions out of the public mempool, to reduce front-running."
     ],
+    "detail": {
+      "whatItIs": "Flashbots is a research and development organisation that works on MEV, maximal extractable value: the profit available from choosing which transactions go into a block and in what order. It publishes open-source software that many Ethereum validators and traders use. MEV-Boost connects validators to specialised block builders. Flashbots Protect lets users send transactions privately. BuilderNet, launched in December 2024, is a block builder run jointly by several operators. Flashbots is not a blockchain; it is infrastructure that sits beside Ethereum.",
+      "howItWorks": "With MEV-Boost, a validator due to propose a block does not build it. Builders assemble full blocks and send bids to relays, which check the blocks and forward the highest bid. The validator signs the block header without seeing its contents, then the relay releases the full block, so neither side can cheat the other. Protect sends transactions straight to builders and can refund users part of the value they create. As of November 2026, Ethereum's planned Glamsterdam upgrade would build proposer-builder separation into the protocol itself (ePBS), without trusted relays; its mainnet date was not yet set."
+    },
     "demos": [
       "mev-pbs"
     ],
@@ -1654,6 +2026,14 @@
       {
         "label": "Flashbots docs: Flashbots Protect",
         "url": "https://docs.flashbots.net/flashbots-protect/overview"
+      },
+      {
+        "label": "ethereum.org: Glamsterdam",
+        "url": "https://ethereum.org/roadmap/glamsterdam/"
+      },
+      {
+        "label": "BuilderNet",
+        "url": "https://buildernet.org/"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1676,6 +2056,10 @@
       "Using OpenZeppelin Contracts reduces risk but does not make a project secure by itself; custom code still needs review.",
       "OpenZeppelin also performs smart contract security audits."
     ],
+    "detail": {
+      "whatItIs": "OpenZeppelin is a software security company. Developers know it mainly for OpenZeppelin Contracts, a free, open-source library of reusable smart contract building blocks: token standards such as ERC-20 and ERC-721, access control, upgradeable proxies and governance modules. Instead of writing these from scratch, teams import reviewed code. The company earns money from security audits and related services. It announced in 2025 that its hosted Defender platform would close on 1 July 2026, with its relayer and monitoring tools released as open source instead.",
+      "howItWorks": "The Contracts library is written in Solidity, and versions exist for other languages such as Cairo for Starknet. A developer installs it with a package manager and inherits from its contracts, for example extending ERC20 and adding a custom minting rule. Each release is reviewed and tested, follows Ethereum standards closely and uses semantic versioning, so breaking changes only come in major versions such as 5.0. Upgradeable variants work with proxy contracts, which keep a fixed address while pointing to new logic. Audits are manual reviews by security researchers, who report vulnerabilities to the client before deployment."
+    },
     "demos": [
       "erc-standards"
     ],
@@ -1687,6 +2071,14 @@
       {
         "label": "OpenZeppelin Contracts docs",
         "url": "https://docs.openzeppelin.com/contracts"
+      },
+      {
+        "label": "OpenZeppelin: phasing out Defender",
+        "url": "https://www.openzeppelin.com/news/doubling-down-on-open-source-and-phasing-out-defender"
+      },
+      {
+        "label": "OpenZeppelin: Defender sunset FAQ",
+        "url": "https://www.openzeppelin.com/news/defender-sunset-faq"
       }
     ],
     "verifiedOn": "2026-11-23",
@@ -1710,6 +2102,10 @@
       "As of November 2026 it is used by OP Mainnet, Unichain, Ink, World Chain, Soneium, Celo and (modified) Mantle. Base launched on it, then moved to its own node software in 2026.",
       "OP Stack chains are optimistic rollups with fault proofs by default, but some, such as Mantle, swap in ZK validity proofs."
     ],
+    "detail": {
+      "whatItIs": "The OP Stack is open-source software, published by the Optimism Collective and OP Labs, for building Layer 2 rollups that settle on Ethereum. A team that wants its own chain can start from this shared code instead of writing a rollup from scratch. OP Mainnet is its reference chain, and many others, including Unichain, Ink and a modified Mantle, run on it. Chains that adopt shared standards and governance can join the Superchain, Optimism's network of cooperating OP Stack chains.",
+      "howItWorks": "A team gets the core parts: an execution client (op-geth or op-reth) that runs EVM transactions, op-node, which rebuilds the chain from data posted to Ethereum, a batcher that posts transaction data, and a proposer that publishes state roots. Fault-proof contracts let anyone challenge a wrong state root on Ethereum. The team still chooses its gas settings, block time, where data is stored, and whether to keep fault proofs or swap in ZK proofs. It must run the sequencer itself or pay a rollup-as-a-service provider to do so."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -1748,6 +2144,10 @@
       "A chain can settle on Ethereum or on an Arbitrum L2 (making it an L3), use a custom gas token, and post data in full (Rollup) or to a committee (AnyTrust).",
       "Degen Chain was also built with it until it shut down on 31 August 2026."
     ],
+    "detail": {
+      "whatItIs": "Arbitrum Orbit is the programme and software kit from Offchain Labs for launching custom chains based on Arbitrum's technology; as of November 2026 the official docs call them Arbitrum chains. A team gets the same Nitro software that runs Arbitrum One, but on its own separate chain. Chains can settle on Ethereum as Layer 2s, or on an Arbitrum Layer 2 as Layer 3s. Games, NFT communities and companies have used it to launch chains such as ApeChain and Xai.",
+      "howItWorks": "A team gets Nitro: node software that runs EVM transactions, plus a sequencer, a batch poster and a validator that posts assertions about the chain's state. Disputes are settled by interactive fraud proofs on the parent chain, with BoLD as the newer dispute protocol. The team still chooses its parent chain, gas token, Rollup or AnyTrust data mode, and who may act as validator. It must run or outsource the sequencer and nodes. Chains that settle outside Arbitrum One and Nova share part of their revenue with the Arbitrum DAO."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -1759,6 +2159,10 @@
       {
         "label": "Arbitrum docs",
         "url": "https://docs.arbitrum.io/"
+      },
+      {
+        "label": "Arbitrum docs: BoLD",
+        "url": "https://docs.arbitrum.io/how-arbitrum-works/bold/gentle-introduction"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -1783,6 +2187,10 @@
       "A chain can be a rollup (data posted to Ethereum) or a validium (data kept elsewhere), which changes what users have to trust.",
       "Its components include ZKsync OS and the Airbender prover; chains built with it are sometimes called the Elastic Network."
     ],
+    "detail": {
+      "whatItIs": "The ZK Stack is open-source software from Matter Labs for launching blockchains whose correctness is proven with zero-knowledge proofs. It is the code behind ZKsync Era, and other teams use it to create their own chains, such as Lens Chain. Chains built with it can connect to each other through shared contracts on Ethereum, a group sometimes called the Elastic Network. It is aimed at teams that want their own chain, for example with custom access rules or privacy, without designing a proof system themselves.",
+      "howItWorks": "A team gets a sequencer, ZKsync OS as the execution layer, the Airbender prover that produces zero-knowledge proofs of each batch, and contracts on Ethereum that verify those proofs and hold bridged assets. Because Ethereum checks a proof rather than waiting for challenges, withdrawals do not need a long challenge period. The team still chooses its gas token, whether data goes to Ethereum as a rollup or is kept elsewhere as a validium, and who may use the chain. It must run the sequencer and provers itself or pay someone to."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -1818,6 +2226,10 @@
       "As of November 2026, chains built with it include Cosmos Hub, Osmosis, dYdX Chain, Celestia and Axelar. It is usually paired with CometBFT (formerly Tendermint) consensus.",
       "\"Cosmos\" can mean this SDK, the Cosmos Hub chain, or the wider ecosystem of IBC-connected chains."
     ],
+    "detail": {
+      "whatItIs": "The Cosmos SDK is an open-source framework, written in Go, for building application-specific blockchains: chains designed for one main use, such as an exchange or a data network. Each chain built with it is fully independent, with its own validators, token and rules. It was first used in production when the Cosmos Hub launched in 2019. As of November 2026 it is maintained by Cosmos Labs, which also looks after CometBFT, the IBC protocol and Cosmos EVM, a module that adds Ethereum compatibility.",
+      "howItWorks": "A team gets ready-made modules for accounts, tokens, staking, governance and IBC, and writes its own modules for its application logic. The SDK connects to a consensus engine, usually CometBFT, through an interface called ABCI. CometBFT is a Byzantine fault tolerant protocol: validators vote in rounds, and a block is final once validators holding more than two-thirds of the voting power sign it, so confirmed blocks are never reorganised. The team still has to launch a token, recruit validators, set staking and fee rules, and run infrastructure such as RPC nodes."
+    },
     "demos": [
       "blockchain-interop"
     ],
@@ -1829,6 +2241,10 @@
       {
         "label": "Cosmos",
         "url": "https://cosmos.network/"
+      },
+      {
+        "label": "Cosmos blog: the Cosmos Stack roadmap for 2026",
+        "url": "https://cosmos.network/blog/the-cosmos-stack-roadmap-2026"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -1852,6 +2268,10 @@
       "As of November 2026, chains built with it include Polkadot, Kusama, Polkadot parachains and standalone chains such as Avail.",
       "Building with the SDK does not by itself make a chain part of Polkadot or secured by it."
     ],
+    "detail": {
+      "whatItIs": "The Polkadot SDK is an open-source Rust toolkit, mainly developed by Parity Technologies, for building blockchains. It combines Substrate, the base framework; FRAME, a library of ready-made modules called pallets; Cumulus, which lets a chain connect to Polkadot; and the Polkadot node itself. Teams use it to build either standalone chains or chains that rely on Polkadot for security. The Polkadot and Kusama networks are built with it, as is Avail, which runs independently of Polkadot.",
+      "howItWorks": "A team writes its chain's rules, called the runtime, by combining FRAME pallets for balances, staking or governance with its own logic. The runtime is compiled to WebAssembly and stored on-chain, so the chain can upgrade itself through a transaction instead of a hard fork. For a standalone chain the team picks consensus, often BABE or Aura for block production and GRANDPA for finality, and must run its own validators. To connect to Polkadot instead, it buys coretime and lets Polkadot's validators check its blocks."
+    },
     "demos": [],
     "sources": [
       {
@@ -1890,6 +2310,10 @@
       "Block-STM runs transactions in parallel optimistically and re-executes those that conflict, so developers do not declare dependencies.",
       "APT is the native token, used for fees and staking."
     ],
+    "detail": {
+      "whatItIs": "Aptos is a public proof-of-stake blockchain for smart contracts written in Move, a programming language that treats digital assets as resources that cannot be copied or accidentally destroyed. It hosts trading, stablecoin and payment apps. Aptos Labs, founded in 2021 by former members of Meta's Diem project, builds the core software, and the Aptos Foundation supports the ecosystem. Its mainnet launched in October 2022. Validators run the network, and APT holders can stake with them. It is a Layer 1, settling transactions on its own chain.",
+      "howItWorks": "Validators first share transactions with each other in batches, a design called Quorum Store, so consensus only has to order short references to those batches. They then agree on block order with a Byzantine fault tolerant (BFT) protocol, one that keeps working while less than a third of stake misbehaves. This protocol, originally AptosBFT, has been upgraded step by step since June 2025 toward a newer design called Raptr. Block-STM then executes each block in parallel, detects transactions that read data another one changed, and re-runs only those, so the result matches running them one by one."
+    },
     "demos": [
       "parallel-executor"
     ],
@@ -1901,6 +2325,10 @@
       {
         "label": "Aptos docs: blockchain deep dive",
         "url": "https://aptos.dev/network/blockchain/blockchain-deep-dive"
+      },
+      {
+        "label": "Aptos Foundation: Baby Raptr on mainnet",
+        "url": "https://aptosfoundation.org/currents/baby-raptr-lands-on-mainnet"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -1926,6 +2354,10 @@
       "Developed by Mysten Labs, founded by former Meta Diem engineers; its Move dialect differs from Aptos's.",
       "SUI is the native token, used for gas and staking; validators reach consensus with Mysticeti, a DAG-based protocol (as of November 2026)."
     ],
+    "detail": {
+      "whatItIs": "Sui is a public proof-of-stake blockchain for smart contracts written in Sui Move, a version of the Move language. Instead of account balances, it stores everything as objects, each with an ID and an owner, such as a coin, an NFT or a game item. People use it for trading, payments, games and stablecoins. Mysten Labs builds the core software, and the Sui Foundation supports the ecosystem. Independent validators run the network, and SUI holders can stake with them. It is a Layer 1.",
+      "howItWorks": "Each transaction lists the objects it uses. An object owned by one address cannot be touched by anyone else, so transactions on different objects can run at the same time. Validators order transactions with Mysticeti: each validator keeps proposing blocks that reference other validators' blocks, building a shared graph, and parts of it are committed without waiting on a single leader. Since Mysticeti v2, announced in November 2025, validators check transactions inside consensus instead of in a separate earlier step. The validator set and stake weights can change at each epoch, which lasts about one day."
+    },
     "demos": [
       "parallel-executor"
     ],
@@ -1937,6 +2369,10 @@
       {
         "label": "Sui docs: consensus",
         "url": "https://docs.sui.io/concepts/sui-architecture/consensus"
+      },
+      {
+        "label": "Sui blog: Mysticeti v2",
+        "url": "https://blog.sui.io/mysticeti-v2-sui-consensus"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -1963,6 +2399,10 @@
       "The TVM runs Solidity contracts, but TRON addresses (starting with T), its fee model (energy and bandwidth) and tooling differ from Ethereum's.",
       "Founded by Justin Sun; TRX is the native token."
     ],
+    "detail": {
+      "whatItIs": "TRON is a public blockchain that launched its own mainnet in 2018. It is often used to send stablecoins such as USDT, because transfers are fast and cheap, and it also hosts lending, trading and gaming apps. Its native token, TRX, is staked to vote and to obtain the resources that pay for transactions. Its virtual machine runs smart contracts written in Solidity, the language used on Ethereum. The TRON DAO, which grew out of the TRON Foundation, supports the network. It is a Layer 1.",
+      "howItWorks": "TRON uses delegated proof of stake. TRX holders stake tokens to receive votes, and the 27 candidates with the most votes become Super Representatives, with the ranking recounted every six hours. They take turns producing a block about every three seconds. Instead of paying gas on every transaction, accounts use two resources: bandwidth, which covers the size of a transaction, and energy, which covers running contract code. Staking TRX gives an account an allowance of both that refills over a day; anything beyond that is paid by burning TRX."
+    },
     "demos": [],
     "sources": [
       {
@@ -1972,6 +2412,10 @@
       {
         "label": "TRON developer docs: TVM",
         "url": "https://developers.tron.network/docs/tvm"
+      },
+      {
+        "label": "TRON developer docs: resource model",
+        "url": "https://developers.tron.network/docs/resource-model"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -1997,6 +2441,10 @@
       "Its virtual machine (TVM) is neither the EVM nor TRON's TVM: contracts are written in languages like FunC, Tolk or Tact and talk by asynchronous messages.",
       "Telegram's apps connect to TON (e.g. wallets and Mini Apps), but Telegram does not run the network."
     ],
+    "detail": {
+      "whatItIs": "TON, short for The Open Network, is a public proof-of-stake blockchain whose native coin is Toncoin. People use it for payments, stablecoin transfers, tokens, NFTs and Telegram Mini Apps, small apps that open inside the Telegram messenger. Telegram designed it in 2018 and abandoned it in 2020; open-source developers kept it running, and today the TON Foundation and the TON Core development team support it. Independent validators run the network, and Toncoin holders can stake with them through nominator pools. It is a Layer 1.",
+      "howItWorks": "TON is built as a set of chains. A masterchain holds the validator list and the latest state of every other chain. Workchains hold accounts and contracts, and split into shardchains when busy, then merge again when activity drops. Validators stake Toncoin and agree on blocks with Catchain, a Byzantine fault tolerant protocol. Since Catchain 2.0 reached mainnet in April 2026, blocks arrive about every 400 milliseconds and are usually final in about one second. Contracts never call each other directly: they send messages that are processed in later blocks."
+    },
     "demos": [],
     "sources": [
       {
@@ -2006,6 +2454,10 @@
       {
         "label": "TON docs",
         "url": "https://docs.ton.org/"
+      },
+      {
+        "label": "TON docs: sub-second finality",
+        "url": "https://docs.ton.org/ecosystem/subsecond"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2030,6 +2482,10 @@
       "Not EVM-native: Ethereum tools do not work directly; an EVM environment (Aurora) runs as a separate project on top of NEAR.",
       "Chain Signatures let NEAR accounts sign transactions on other blockchains (as of November 2026)."
     ],
+    "detail": {
+      "whatItIs": "NEAR is a public proof-of-stake blockchain designed for apps that need low fees and simple accounts. Accounts have readable names, like alice.near, and can hold several keys with different permissions, which makes wallets easier to use. NEAR has added features for working across chains, such as Chain Signatures and NEAR Intents, where a user states the outcome they want and independent solvers compete to deliver it. The NEAR Foundation, a Swiss non-profit, supports the ecosystem, and independent validators run the network. It is a Layer 1.",
+      "howItWorks": "NEAR uses Nightshade sharding: each block is made of chunks, one per shard, and each shard handles a slice of accounts. Since Nightshade 2.0 in August 2024, validators can check a chunk without storing that shard's data, using a proof of the state it touches; this is called stateless validation. Doomslug, the block production protocol, makes a block practically irreversible after one round and fully final after a second. Since May 2025, a block arrives about every 600 milliseconds and is typically final in about 1.2 seconds. Contracts compile to WebAssembly and pay gas in NEAR tokens."
+    },
     "demos": [],
     "sources": [
       {
@@ -2043,6 +2499,10 @@
       {
         "label": "NEAR docs: validators",
         "url": "https://docs.near.org/protocol/network/validators"
+      },
+      {
+        "label": "NEAR docs: blocks and finality",
+        "url": "https://docs.near.org/integrations/blocks-and-finality"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2070,6 +2530,10 @@
       "It has a much smaller validator set than Ethereum, which helps speed but concentrates control in fewer hands.",
       "HYPE is the native token, used for gas and staking. Hyperliquid is its own L1, not an Ethereum L2 or rollup."
     ],
+    "detail": {
+      "whatItIs": "Hyperliquid is a blockchain built mainly for trading. Its core is an exchange for spot tokens and perpetual futures, contracts that track an asset's price with no expiry date, where every order, cancellation and liquidation is recorded on-chain instead of in a company's private database. Traders usually deposit USDC as collateral. A second part, HyperEVM, runs Ethereum-style smart contracts that can use the exchange's data. Hyperliquid Labs develops the software, and a set of validators runs the chain. It is a Layer 1, not an Ethereum Layer 2.",
+      "howItWorks": "HyperBFT, a proof-of-stake protocol derived from HotStuff, orders a single sequence of blocks for both parts of the chain. HyperCore holds the order books, margin accounts and oracle prices, and matches orders as part of block execution. HyperEVM contracts read HyperCore state through precompiled contracts and send it actions through a system contract called CoreWriter. HyperEVM mixes small, frequent blocks with larger, rarer ones for heavy contracts. As of November 2026, under HIP-3, a builder who stakes 500,000 HYPE can run a separate perpetuals market with its own oracle, and validators can slash that stake for misconduct."
+    },
     "demos": [],
     "sources": [
       {
@@ -2083,10 +2547,14 @@
       {
         "label": "Hyperliquid docs: HyperEVM",
         "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperevm"
+      },
+      {
+        "label": "Hyperliquid docs: HIP-3 builder-deployed perpetuals",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-3-builder-deployed-perpetuals"
       }
     ],
-    "verifiedOn": "2026-11-24",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "polygon-pos",
@@ -2109,6 +2577,10 @@
       "POL replaced MATIC as the gas and staking token in September 2024; most MATIC has since been migrated to POL.",
       "Hard forks in 2025–2026 (e.g. Heimdall v2, Rio, Giugliano) aimed at faster finality; as of November 2026 it remains a PoS chain, not a rollup."
     ],
+    "detail": {
+      "whatItIs": "Polygon PoS is an EVM-compatible blockchain that runs alongside Ethereum. Its fees are low, so it is used for payments, stablecoin transfers, games and apps such as the prediction market Polymarket, and Ethereum wallets and tools work with it unchanged. It is often called a sidechain: it has its own validators and records periodic checkpoints on Ethereum, but Ethereum does not check its transactions. Polygon Labs develops it, and its gas and staking token has been POL since September 2024.",
+      "howItWorks": "The chain has two layers. Validators stake POL in contracts on Ethereum. Heimdall, the consensus layer, tracks that stake, chooses block producers and regularly submits a checkpoint to Ethereum: a hash summarising recent blocks, signed by validators holding more than two-thirds of the stake. Bor, the execution layer, is based on Ethereum's Geth client and produces a block about every two seconds. Heimdall v2, live since July 2025, cut finality from over a minute to a few seconds, and the Giugliano hard fork of April 2026 shortened it by about two more seconds."
+    },
     "demos": [],
     "sources": [
       {
@@ -2122,6 +2594,10 @@
       {
         "label": "Polygon blog: MATIC to POL migration",
         "url": "https://polygon.technology/blog/matic-to-pol-migration-is-99-complete-everything-you-need-to-know"
+      },
+      {
+        "label": "Polygon blog: Giugliano upgrade",
+        "url": "https://polygon.technology/blog/giugliano-upgrade-faster-confirmations-predictable-fees-and-a-more-resilient-network-for-polygon-chain"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2145,6 +2621,10 @@
       "Launched in 2016 from a fork of Bitcoin's code; ZEC is the native coin.",
       "Crosslink, a proposed hybrid of proof of work and proof of stake, is being tested but is not active on mainnet as of November 2026."
     ],
+    "detail": {
+      "whatItIs": "Zcash is a cryptocurrency that combines a Bitcoin-like public ledger with an optional private mode. Users can send ZEC between transparent addresses, visible to everyone, or move it into a shielded pool where transactions hide sender, receiver and amount. Shielded users can share a viewing key so that an auditor or tax authority can see their transactions without being able to spend the funds. It launched in October 2016, and development is funded partly by a share of block rewards set through community governance.",
+      "howItWorks": "Zcash uses proof of work with the Equihash algorithm and produces a block about every 75 seconds. Shielded transactions carry zk-SNARKs, zero-knowledge proofs showing that a payment is valid, with no double spend and balanced amounts, without revealing its details. Since the NU5 upgrade in May 2022, the newest shielded pool, Orchard, uses Halo 2 proofs that need no trusted setup ceremony. Unified addresses bundle a user's transparent and shielded receivers into one address, so the sender's wallet can pick the shielded option whenever it supports it."
+    },
     "demos": [],
     "sources": [
       {
@@ -2183,6 +2663,10 @@
       "Critics call it a separate chain rather than a true L2: it has its own token (STX) and consensus, and Bitcoin does not verify its transactions.",
       "Contracts use the Clarity language; sBTC is a 1:1 BTC-backed asset on Stacks, managed by a set of signers."
     ],
+    "detail": {
+      "whatItIs": "Stacks is a blockchain that adds smart contracts and apps to Bitcoin without changing Bitcoin itself. It records its progress in Bitcoin transactions, and Stacks says that rewriting its history would require rewriting Bitcoin's too. It has its own token, STX, and contracts written in Clarity, a language whose source code is stored on-chain and whose effects can be analysed before it runs. Through sBTC, users bring BTC onto Stacks for lending and trading. It began as Blockstack in 2013, and the Stacks Foundation supports the ecosystem.",
+      "howItWorks": "In Proof of Transfer, miners bid BTC in Bitcoin transactions for the right to lead a Stacks tenure, and the winner is drawn at random, weighted by bid size. That BTC goes to STX holders who have locked, or stacked, their tokens. Since the Nakamoto upgrade in October 2024, the tenure leader produces Stacks blocks every few seconds, and signers, chosen from stackers, must approve each block. The same signers manage sBTC: deposits lock BTC at a Bitcoin address they control, and a withdrawal needs approval from a large majority of them."
+    },
     "demos": [],
     "sources": [
       {
@@ -2198,8 +2682,8 @@
         "url": "https://docs.stacks.co/concepts/sbtc"
       }
     ],
-    "verifiedOn": "2026-11-24",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "rootstock",
@@ -2216,10 +2700,14 @@
     "consensus": "pow",
     "summary": "EVM-compatible sidechain merge-mined with Bitcoin, using a two-way peg (PowPeg) that locks BTC to issue RBTC.",
     "goodToKnow": [
-      "Often marketed as a \"Bitcoin L2\", but many classify it as a sidechain: it has its own consensus, and the peg relies on a federation of signers.",
+      "Often marketed as a \"Bitcoin L2\", but its own docs call it a sidechain: it has its own consensus, and the peg relies on a multisig of approved signers.",
       "Bitcoin miners can mine it at the same time (merged mining), so it reuses Bitcoin's hash power without extra energy.",
-      "RBTC, pegged 1:1 to BTC, pays fees; PowPeg signers keep their keys in hardware security modules."
+      "RBTC, pegged 1:1 to BTC, pays fees; PowPeg keys sit in hardware devices (PowHSMs) that sign only with enough proof of work behind them."
     ],
+    "detail": {
+      "whatItIs": "Rootstock is a blockchain linked to Bitcoin that runs smart contracts compatible with Ethereum's, so Solidity code and Ethereum wallets work on it. Users move BTC onto it, where it becomes RBTC, and use it in lending, trading and payment apps while keeping exposure to bitcoin. It launched in January 2018. The company RootstockLabs develops much of its software, and Bitcoin mining pools help secure it. Its own documentation describes it as a sidechain: a separate chain connected to Bitcoin by a two-way bridge.",
+      "howItWorks": "Rootstock blocks are produced by merged mining: a Bitcoin mining pool includes a reference to a Rootstock block in the work it does for Bitcoin, so the same hashing secures both chains. A new block arrives roughly every 30 seconds. The PowPeg bridge moves BTC: a user sends BTC to a Bitcoin address controlled by a federation of functionaries, and the Bridge contract on Rootstock releases the same amount of RBTC. Pegging out reverses this, and the functionaries' PowHSM devices sign the Bitcoin release only after enough Rootstock blocks confirm the request."
+    },
     "demos": [],
     "sources": [
       {
@@ -2228,15 +2716,15 @@
       },
       {
         "label": "Rootstock docs: PowPeg",
-        "url": "https://dev.rootstock.io/concepts/powpeg/"
+        "url": "https://dev.rootstock.io/concepts/foundations/powpeg/"
       },
       {
-        "label": "Rootstock docs: fundamentals",
-        "url": "https://dev.rootstock.io/concepts/fundamentals/"
+        "label": "Rootstock docs: foundations",
+        "url": "https://dev.rootstock.io/concepts/foundations/"
       }
     ],
-    "verifiedOn": "2026-11-24",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "unichain",
@@ -2257,6 +2745,10 @@
       "Like other OP Stack chains, withdrawals to Ethereum rely on fault proofs and a challenge period (as of November 2026).",
       "Blocks are built inside a TEE and streamed as sub-second \"Flashblocks\" preconfirmations; final settlement still happens on Ethereum."
     ],
+    "detail": {
+      "whatItIs": "Unichain is a Layer 2 network for Ethereum launched by Uniswap Labs, the company that develops the Uniswap trading protocol; its mainnet has been live since February 2025. It is built for decentralised finance: trading, lending and moving tokens with fast confirmation and low fees. It is an optimistic rollup, meaning results posted to Ethereum are assumed correct unless someone proves otherwise. It belongs to Optimism's Superchain, a group of OP Stack chains that share standards and upgrades.",
+      "howItWorks": "Unichain produces a block every second, and within each block it streams partial blocks called Flashblocks about every 200 milliseconds, giving apps a near-instant preconfirmation. Block building runs inside a trusted execution environment (TEE), a sealed hardware area meant to stop the builder from secretly reordering transactions for profit. Transaction batches are posted to Ethereum. Anyone can challenge a wrong result with a fault proof during a challenge period of about seven days, which is why standard withdrawals to Ethereum take that long."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -2297,6 +2789,10 @@
       "Data availability: Mantle used EigenDA from 2025, then moved to Ethereum blobs; its April 2026 Arsia upgrade removed EigenDA (as of November 2026).",
       "MNT is the gas token; Mantle grew out of the BitDAO community."
     ],
+    "detail": {
+      "whatItIs": "Mantle is a Layer 2 network for Ethereum that grew out of the BitDAO community, which merged into Mantle in 2023. People use it to run EVM apps, mainly decentralised finance, and pay fees in its own token, MNT, rather than in ETH. It began as an optimistic rollup and has since switched to zero-knowledge validity proofs, so it is now classed as a zk-rollup. MNT holders vote on governance proposals that steer the network and its treasury.",
+      "howItWorks": "Mantle runs a modified version of the OP Stack software. A sequencer orders transactions and posts the batch data to Ethereum as blobs; since the Arsia upgrade in April 2026 it no longer uses the separate EigenDA data network. Since September 2025, state updates are checked with OP Succinct, which uses the SP1 zero-knowledge virtual machine to prove that blocks were executed correctly. Ethereum verifies each proof, so withdrawals no longer wait about seven days for a challenge period to pass."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -2312,10 +2808,14 @@
       {
         "label": "Mantle op-geth v1.5.4 release (Arsia)",
         "url": "https://github.com/mantle-xyz/op-geth/releases/tag/v1.5.4"
+      },
+      {
+        "label": "ETHBEAT (formerly L2BEAT): Mantle",
+        "url": "https://ethbeat.org/scaling/projects/mantle"
       }
     ],
-    "verifiedOn": "2026-11-24",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "taiko",
@@ -2337,6 +2837,10 @@
       "Multi-proof: since the 2026 Unzen fork, each proven range needs two proofs from SGX (TEE), SP1 or RISC0, at least one of them a ZK proof.",
       "The mainnet is called Taiko Alethia; ETH pays gas and TAIKO is the project's token."
     ],
+    "detail": {
+      "whatItIs": "Taiko is a Layer 2 network for Ethereum whose mainnet, Taiko Alethia, launched in May 2024. It aims to be Ethereum-equivalent, so contracts, tools and node software from Ethereum run with minimal changes. It is a based rollup: instead of relying on its own central sequencer to order transactions, it lets Ethereum's block proposers settle the order. The aim is to inherit more of Ethereum's neutrality and resistance to downtime. ETH pays gas; TAIKO is the project's own token.",
+      "howItWorks": "Taiko blocks are proposed by submitting their data to a contract on Ethereum, so Ethereum's ordering becomes Taiko's ordering. Because Ethereum blocks come only every 12 seconds, approved preconfirmers can promise users faster inclusion in advance, and users can force transactions in through Ethereum if needed. Proofs come later and are checked on Ethereum. Taiko requires two different proofs for each proven range, at least one of them zero-knowledge, so a bug in a single proof system cannot on its own approve a false state."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -2350,8 +2854,8 @@
         "url": "https://docs.taiko.xyz/protocol/overview"
       }
     ],
-    "verifiedOn": "2026-11-24",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "ink",
@@ -2373,6 +2877,10 @@
       "Like other OP Stack chains, withdrawals to Ethereum rely on fault proofs and a challenge period (as of November 2026).",
       "Mainnet launched in December 2024; it is one of the OP Stack chains in Optimism's Superchain."
     ],
+    "detail": {
+      "whatItIs": "Ink is a Layer 2 network for Ethereum developed by the team at Kraken, the cryptocurrency exchange, with its mainnet live since December 2024. It is meant mainly for decentralised finance apps such as trading and lending. Ink is separate from Kraken's custodial exchange accounts: assets on Ink sit in wallets that users control themselves. It is an optimistic rollup built with the OP Stack and is one of the chains in Optimism's Superchain, which share standards and upgrades.",
+      "howItWorks": "Ink runs the standard OP Stack software. A sequencer orders transactions into blocks and posts the batch data to Ethereum. Proposed results, called state roots, are also published on Ethereum and treated as valid unless challenged. Anyone who believes a state root is wrong can open an on-chain dispute game, a fault proof that narrows the disagreement down to a single instruction which Ethereum then re-executes. Standard withdrawals to Ethereum therefore wait about seven days. As a Superchain member, Ink follows shared upgrades and security policies."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -2409,6 +2917,10 @@
       "Contracts are written in Aztec.nr, based on the Noir language, not Solidity; it is not EVM-compatible.",
       "Not the same as Aztec Connect, an earlier Aztec rollup that was shut down in 2024."
     ],
+    "detail": {
+      "whatItIs": "Aztec is a Layer 2 network on Ethereum built for privacy. Its smart contracts can keep some data and balances private and other parts public, so an app could, for example, hide who holds a token while still publishing the total supply. Developers write contracts in Aztec.nr, based on the Noir language, rather than Solidity. As of November 2026 the mainnet runs as an Alpha with staking and user transactions, no component has been fully audited, and the Tierra (V6) upgrade launched on 3 November 2026.",
+      "howItWorks": "Private functions run on the user's own device, which produces a zero-knowledge proof that they ran correctly; the network sees only the proof and encrypted results. Private state is stored as notes, encrypted records, and spending one publishes a nullifier, a tag that prevents double spending without revealing which note was used. Public functions are executed by block proposers drawn from staked participants. Provers then combine the transactions of each epoch into one validity proof, which an Ethereum contract verifies before accepting the new state."
+    },
     "demos": [],
     "sources": [
       {
@@ -2424,8 +2936,8 @@
         "url": "https://docs.aztec.network/"
       }
     ],
-    "verifiedOn": "2026-11-24",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "degen-chain",
@@ -2448,6 +2960,10 @@
       "The DEGEN token lives on Base and continues; the team wound down the chain to focus on social products in the Base ecosystem.",
       "It had multi-day outages in 2024, a known risk for small chains that rely on a single operator."
     ],
+    "detail": {
+      "whatItIs": "Degen Chain was a Layer 3 blockchain for the community around DEGEN, a tipping token created by users of the Farcaster social network. It launched in March 2024 and let DEGEN holders pay fees in DEGEN for cheap trades, memecoins and small apps. It settled on Base, Coinbase's Layer 2 network. The chain shut down on 31 August 2026, as the team chose to focus on social products in the Base ecosystem. The DEGEN token itself still exists on Base.",
+      "howItWorks": "Degen Chain was built with Arbitrum Orbit and operated by a single team through a hosted rollup provider. One sequencer ordered transactions and posted results to Base, where they could be challenged during a dispute window. DEGEN was bridged from Base to serve as the gas token. Because one operator ran the sequencer, any outage stopped the whole chain, as happened for several days in 2024. Before the shutdown, users had to bridge assets back to Base while bridges and RPC endpoints, the servers wallets use to reach a chain, were still running."
+    },
     "demos": [
       "rollup-simulation"
     ],
@@ -2488,6 +3004,10 @@
       "Loans are overcollateralised: if collateral value falls too far, the position is liquidated.",
       "cTokens belong to the older Compound v2; v3 is deployed on Ethereum and several L2s (as of November 2026)."
     ],
+    "detail": {
+      "whatItIs": "Compound is a lending protocol: a set of smart contracts where people deposit crypto to earn interest and borrow other assets against collateral, without a bank or broker in between. It launched on Ethereum in 2018 and was one of the first on-chain money markets. The current version, Compound III, runs on Ethereum and several Layer 2 networks. Holders of the COMP token propose and vote on changes such as new markets, interest rate settings and collateral rules, which a timelock contract applies after a delay.",
+      "howItWorks": "Each Compound III market, called a Comet, has one base asset that can be borrowed, for example USDC, and a list of accepted collateral assets. Collateral only secures loans and does not earn interest. The interest rate rises as a larger share of the base asset is borrowed, following a curve set by governance. Each collateral asset has a collateral factor that caps how much can be borrowed against it, and prices come from oracles. If a borrower's debt passes the limit, anyone can trigger liquidation, and the protocol then sells the seized collateral at a discount."
+    },
     "demos": [],
     "sources": [
       {
@@ -2522,6 +3042,10 @@
       "Vaults are managed by third-party curators who choose the markets; depositors take on the curator's risk choices.",
       "Began as an optimiser on top of Aave and Compound before launching its own markets (Morpho Blue) in 2024; MORPHO is the governance token."
     ],
+    "detail": {
+      "whatItIs": "Morpho is a lending protocol on Ethereum, Base and other EVM chains. Anyone can create a lending market without asking permission, and anyone can lend or borrow in it. Most depositors do not pick markets themselves: they put assets into vaults, whose curators decide where the money is lent. Apps and companies also build their own lending products with Morpho. MORPHO token holders govern the protocol through the Morpho DAO, which can change only a few things, such as fees and the list of allowed settings.",
+      "howItWorks": "A Morpho market is defined by five parameters: the loan asset, the collateral asset, a price oracle, an interest rate model and a liquidation loan-to-value (LLTV), the debt level at which a position can be liquidated. The rate model and LLTV are picked from a list approved by governance, and once a market exists nobody can change it. All markets live in one small core contract, which saves gas. Vaults sit above the markets and follow the ERC-4626 token-vault standard. As of January 2026, Vaults V2 can also allocate deposits to other Morpho versions, within caps the curator sets."
+    },
     "demos": [],
     "sources": [
       {
@@ -2535,6 +3059,10 @@
       {
         "label": "Morpho docs: markets",
         "url": "https://docs.morpho.org/learn/concepts/market/"
+      },
+      {
+        "label": "Morpho docs: vaults",
+        "url": "https://docs.morpho.org/learn/concepts/vault/"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2560,6 +3088,10 @@
       "Users take on the underlying asset's risks plus smart-contract risk; YT is worth nothing after maturity.",
       "PENDLE is the protocol's token; it is deployed on Ethereum and several other chains."
     ],
+    "detail": {
+      "whatItIs": "Pendle is a DeFi protocol for trading future yield. Many tokens earn a yield, such as staked ETH or interest-bearing stablecoins. Pendle lets holders split such a token into two parts until a set maturity date: one that pays back the principal and one that collects the yield. Users can then lock in a fixed rate or speculate on how rates will move. It runs on Ethereum, Arbitrum and other chains. Since January 2026, PENDLE holders stake it as sPENDLE to vote and earn rewards, replacing the older vePENDLE locks.",
+      "howItWorks": "A yield-bearing token is first wrapped into a standard format called SY. SY is then split into a principal token (PT) and a yield token (YT) with the same maturity date. One PT can be redeemed for the underlying asset at maturity, so before then it trades at a discount; that discount is the fixed yield a buyer locks in. YT collects all the yield until maturity. Pendle's automated market maker trades PT against SY using a curve designed for assets whose prices converge over time, and YT trades go through the same pools using flash swaps."
+    },
     "demos": [],
     "sources": [
       {
@@ -2569,6 +3101,10 @@
       {
         "label": "Pendle docs",
         "url": "https://docs.pendle.finance/"
+      },
+      {
+        "label": "The Block: Pendle retires vePENDLE as sPENDLE staking goes live",
+        "url": "https://www.theblock.co/news/ecosystems/2026-01-20-pendle-retires-vependle-multi-year-lockups-as-spendle-staking-goes-live-386255"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2594,6 +3130,10 @@
       "Its LaunchLab lets anyone create and launch tokens; newly launched tokens carry high risk.",
       "RAY is the protocol token."
     ],
+    "detail": {
+      "whatItIs": "Raydium is a decentralised exchange (DEX) on Solana: a set of on-chain programs where people swap tokens without an intermediary holding their funds. Anyone can add tokens to a pool and earn a share of trading fees, and anyone can create a new pool for a token pair. Many swaps reach Raydium indirectly, through aggregators such as Jupiter. It also runs LaunchLab, a tool for launching new tokens. A core team develops it, and RAY is the protocol token.",
+      "howItWorks": "Raydium runs several pool types. Standard pools are automated market makers (AMMs) that follow the constant-product rule: the two token reserves multiplied together stay constant, so the price moves as one side is bought. Concentrated-liquidity pools let providers place their tokens within a chosen price range, so the same deposit supports more trading near the current price. Each swap pays a fee, most of which goes to liquidity providers and part to RAY buybacks and the treasury. LaunchLab tokens trade on a bonding curve, a formula-set price, until enough is raised, then move to a normal pool."
+    },
     "demos": [
       "amm-demo"
     ],
@@ -2630,6 +3170,10 @@
       "JitoSOL represents staked SOL plus staking and MEV rewards; it carries smart-contract and validator risks.",
       "JTO is the governance token; critics note that Jito's block engine concentrates part of Solana's MEV flow."
     ],
+    "detail": {
+      "whatItIs": "Jito is a group of Solana projects built by Jito Labs and governed by the Jito DAO through the JTO token. For users, its main product is JitoSOL, a liquid staking token: deposit SOL, receive a token that earns staking rewards and can still be traded or used in DeFi. For validators and traders, it provides MEV infrastructure. MEV, maximal extractable value, is the profit available from choosing which transactions enter a block and in what order. Jito's tools turn that into an open auction.",
+      "howItWorks": "Jito-Solana, a modified validator client, accepts bundles: groups of transactions that must run together and in order. Searchers send bundles with a tip to Jito's block engine, which runs an auction and forwards the winning bundles to the validator that is producing blocks; tips are later shared with that validator's stakers. JitoSOL is a stake pool that spreads deposits across many validators, chosen by on-chain performance scores, and collects both staking rewards and MEV tips. Since September 2025, its Block Assembly Marketplace (BAM) has ordered transactions inside trusted hardware enclaves, so the ordering process can be verified."
+    },
     "demos": [
       "mev-pbs"
     ],
@@ -2641,6 +3185,14 @@
       {
         "label": "Jito Labs docs: low-latency transaction send",
         "url": "https://docs.jito.wtf/lowlatencytxnsend/"
+      },
+      {
+        "label": "Helius blog: Block Assembly Marketplace (BAM)",
+        "url": "https://www.helius.dev/blog/block-assembly-marketplace-bam"
+      },
+      {
+        "label": "Blockworks: Jito launches BAM on Solana mainnet",
+        "url": "https://blockworks.co/news/jito-bam-solana-mainnet"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2664,6 +3216,10 @@
       "BNB Chain grew out of Binance and BNB is that chain's token; the exchange and the chain are separate things.",
       "In 2023 Binance and founder Changpeng Zhao pleaded guilty in the US to anti-money-laundering violations; he was pardoned in October 2025."
     ],
+    "detail": {
+      "whatItIs": "Binance is a centralised crypto exchange founded in 2017. Users open an account, verify their identity and trade, stake, borrow or withdraw many cryptocurrencies, and it also offers futures and other derivatives. It operates through local entities in many countries, while some regions, including the US, are served by separate or restricted platforms. BNB Chain started as Binance's own chain and BNB is its token. Binance also owns Trust Wallet, a self-custody app separate from exchange accounts.",
+      "howItWorks": "Binance is custodial: it holds the keys for users' crypto in its own hot and cold wallets and records balances in an internal ledger. Trades are matched by its matching engine against central limit order books off-chain, so only deposits and withdrawals touch a blockchain. Fiat on-ramps and off-ramps use bank transfers, cards and peer-to-peer trading between users, depending on the country. Since July 2018 it has kept an emergency insurance fund called SAFU, and since November 2022 it publishes proof-of-reserves reports that let users check their balance in a Merkle tree."
+    },
     "demos": [],
     "sources": [
       {
@@ -2673,6 +3229,10 @@
       {
         "label": "Binance on GitHub",
         "url": "https://github.com/binance"
+      },
+      {
+        "label": "Binance: proof of reserves",
+        "url": "https://www.binance.com/en/proof-of-reserves"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2692,12 +3252,16 @@
     "subBand": "app-tool",
     "category": "stablecoins",
     "cluster": "stablecoins",
-    "summary": "Protocol issuing USDe, a synthetic dollar backed by crypto hedged with short futures, not a fiat-backed stablecoin.",
+    "summary": "Protocol issuing USDe, a synthetic dollar backed by hedged crypto, loans and other assets, not by dollars in a bank.",
     "goodToKnow": [
       "Core design: crypto such as ETH or BTC is paired with short perpetual/futures positions (delta-neutral). USDe is not backed by dollars in a bank.",
       "As of November 2026 much of the backing has shifted to lending, stablecoins and tokenised assets; the mix changes over time and by governance.",
       "Risks include negative funding rates, exchange or custodian failure and liquidity; sUSDe is the staked, yield-bearing version."
     ],
+    "detail": {
+      "whatItIs": "Ethena is a protocol on Ethereum that issues USDe, a synthetic dollar: a token designed to hold a value of one dollar without being backed by dollars in a bank. Instead, it holds crypto and other assets whose price moves are offset by hedges. Holders can stake USDe to receive sUSDe, which earns a variable yield. Ethena Labs develops the protocol, and ENA is its governance token, used among other things to vote on the mix of backing assets.",
+      "howItWorks": "Approved, identity-checked institutions mint USDe by depositing assets and redeem it by returning USDe; other users buy it on markets. For volatile assets such as ETH or BTC, Ethena opens an equal short futures position on derivatives exchanges, so a fall in price is offset by a gain on the short: a delta-neutral position. These assets sit with custodians under off-exchange settlement rather than on the exchanges. Stablecoins, lending positions and tokenised real-world assets are held without hedging. sUSDe's yield comes from funding payments, staking rewards and interest, and drops when funding rates turn negative."
+    },
     "demos": [
       "stablecoin-depeg"
     ],
@@ -2713,10 +3277,14 @@
       {
         "label": "Ethena docs: risks",
         "url": "https://docs.ethena.fi/protocol-overview/risks"
+      },
+      {
+        "label": "Ethena docs: backing assets overview",
+        "url": "https://docs.ethena.fi/backing-assets/overview"
       }
     ],
-    "verifiedOn": "2026-11-24",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "pyusd",
@@ -2736,6 +3304,10 @@
       "Issued natively on Ethereum, Solana and other chains (as of November 2026); bridged versions on other chains are different tokens.",
       "Centrally issued: the issuer can freeze tokens held at specific addresses."
     ],
+    "detail": {
+      "whatItIs": "PayPal USD, or PYUSD, is a dollar stablecoin that PayPal launched in August 2023. Paxos, a regulated trust company, issues it and holds the reserves; PayPal brands it and lets customers buy, hold, send and pay with it in the PayPal and Venmo apps. Each token is meant to be worth one US dollar. Outside PayPal it works like any other token: it can be held in self-custody wallets and used in DeFi apps on the chains where it is issued.",
+      "howItWorks": "Paxos mints PYUSD when dollars are deposited and burns it on redemption, at one dollar per token. Reserves are held in dollar deposits, short-term US Treasuries and similar cash equivalents, with monthly reserve reports. Paxos Trust Company is supervised by the New York State Department of Financial Services, and in December 2025 Paxos also received conditional approval for a US national trust bank charter. Issuance is native on Ethereum, Solana and other chains including Arbitrum and Polygon (as of November 2026), while PYUSD0 on further chains is a separate bridged version built with LayerZero."
+    },
     "demos": [
       "erc-standards"
     ],
@@ -2747,6 +3319,14 @@
       {
         "label": "PayPal newsroom",
         "url": "https://newsroom.paypal-corp.com/"
+      },
+      {
+        "label": "PayPal newsroom: PYUSD expands to Arbitrum (July 2025)",
+        "url": "https://newsroom.paypal-corp.com/2025-07-17-PayPal-USD-Expands-to-Arbitrum-Bringing-Layer-2-Efficiency-to-Multi-Chain-Development-Stack"
+      },
+      {
+        "label": "The Block: PYUSD native issuance on Polygon (2026)",
+        "url": "https://www.theblock.co/post/407719/paypal-seeks-increase-pyusd-stablecoin-native-issuance-on-polygon"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2771,6 +3351,10 @@
       "Issued natively on Ethereum, Solana, Avalanche, Base and other chains; it is a separate token from USDC.",
       "Centrally issued: Circle can freeze tokens held at specific addresses."
     ],
+    "detail": {
+      "whatItIs": "EURC is a euro stablecoin issued by Circle, the company behind USDC. Each token is meant to be worth one euro and can be redeemed for one by Circle's eligible customers. It lets people and companies hold, send and settle euros on public blockchains, for example for cross-border payments or trading pairs priced in euros. It launched in June 2022 under the name Euro Coin (EUROC). It is a separate token from USDC, with its own reserves.",
+      "howItWorks": "Circle mints EURC when eligible customers deposit euros and burns it when they redeem, one for one. The reserves are euro-denominated, held as cash at banks and in short-term holdings, and Circle publishes reserve attestations. Since July 2024 EURC has been issued in the EU under MiCA, the Markets in Crypto-Assets regulation, by Circle Internet Financial Europe SAS, an electronic money institution licensed by the ACPR, France's banking supervisor. Under MiCA, holders have a right to redeem at par, and a minimum share of reserves must be kept as bank deposits."
+    },
     "demos": [
       "erc-standards"
     ],
@@ -2782,6 +3366,10 @@
       {
         "label": "Circle developer docs: what is EURC",
         "url": "https://developers.circle.com/stablecoins/what-is-eurc"
+      },
+      {
+        "label": "Circle press release: MiCA compliance (July 2024)",
+        "url": "https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica-eus-landmark-crypto-law"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2808,6 +3396,10 @@
       "Anyone with the 24-word recovery phrase can take the funds; Ledger never asks for it.",
       "A 2020 customer-database leak exposed buyers' contact details and led to phishing; it did not expose keys."
     ],
+    "detail": {
+      "whatItIs": "Ledger is a French company, founded in 2014, that makes hardware wallets, which it now calls signers: small devices such as the Nano and Stax that keep private keys away from internet-connected computers and phones. Users pair the device with the Ledger Wallet app, called Ledger Live until October 2025, or with other wallets such as MetaMask, to see balances and prepare transactions for Bitcoin, Ethereum, Solana and many other networks. Each blockchain needs its own small app installed on the device.",
+      "howItWorks": "At setup, the device generates the keys inside a secure element, a tamper-resistant chip of the kind used in bank cards, and displays a 24-word recovery phrase for the user to write down. Keys never leave the chip. The app on a computer or phone builds an unsigned transaction and sends it to the device by USB or Bluetooth. The device shows the recipient and amount on its own screen; the user confirms with a button or touch, and the chip signs. Clear Signing, based on the ERC-7730 format, shows smart contract actions in readable form."
+    },
     "demos": [
       "wallet-tx-lifecycle"
     ],
@@ -2823,6 +3415,10 @@
       {
         "label": "Ledger Academy",
         "url": "https://www.ledger.com/academy"
+      },
+      {
+        "label": "Ledger press release: Nano Gen5 and Ledger Wallet (October 2025)",
+        "url": "https://www.businesswire.com/news/home/20251023549325/en"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2846,6 +3442,10 @@
       "Owned by Binance since 2018, but funds in Trust Wallet sit on-chain in the user's addresses, not in a Binance account.",
       "In December 2025 a malicious Chrome extension update (v2.68) drained some users' wallets; the mobile app was not affected."
     ],
+    "detail": {
+      "whatItIs": "Trust Wallet is a self-custody wallet app for phones, with a browser extension, that supports many blockchains, including Ethereum, BNB Chain, Solana and Bitcoin. People use it to store tokens and NFTs, swap, stake and connect to decentralised apps through its built-in browser and WalletConnect. Binance acquired it in 2018, but funds in Trust Wallet sit in the user's own addresses, not in a Binance account. TWT is its token, used for in-app benefits and governance votes.",
+      "howItWorks": "On setup the app generates a recovery phrase, usually 12 words, and derives a key for each chain from it using its open-source Wallet Core library. Keys are encrypted and stored on the device; Trust Wallet's servers do not hold them, so the company cannot move funds or restore a lost phrase. When the user approves a transfer or a request from an app, the wallet signs on the device and broadcasts the transaction through a node. Because the extension keeps keys inside the browser, a malicious extension update, as in December 2025, can expose them."
+    },
     "demos": [],
     "sources": [
       {
@@ -2855,6 +3455,10 @@
       {
         "label": "Trust Wallet: v2.68 extension incident update",
         "url": "https://trustwallet.com/blog/company/trust-wallet-browser-extension-v268-incident-community-update"
+      },
+      {
+        "label": "Wallet Core on GitHub",
+        "url": "https://github.com/trustwallet/wallet-core"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2871,20 +3475,36 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "wallets",
-    "summary": "Prediction market where users trade shares on the outcome of real-world events, settled in USDC on Polygon PoS.",
+    "summary": "Prediction market where users trade shares on real-world events, settled in pUSD, a USDC-backed token, on Polygon PoS.",
     "goodToKnow": [
       "Prices reflect traders' bets, not certainties; markets are resolved through UMA's optimistic oracle, and some outcomes have been disputed.",
       "Access depends on the country; in the US it runs a separate, CFTC-regulated platform (as of November 2026).",
       "As of November 2026 it runs on Polygon PoS; it has said it plans to move to another chain."
     ],
+    "detail": {
+      "whatItIs": "Polymarket is a prediction market: users buy and sell shares that pay out one dollar if an event happens, such as an election result, and nothing if it does not. A share's price, between zero and one dollar, reflects what traders collectively expect. Founded in 2020, it runs on Polygon PoS and, since its V2 upgrade in April 2026, uses pUSD, its own USDC-backed token, for trading. In the US it runs a separate platform regulated by the CFTC, the derivatives regulator.",
+      "howItWorks": "Each market has YES and NO outcome tokens created with the Conditional Token Framework: one pUSD can be split into one YES and one NO, and a full pair merged back. Users sign orders that Polymarket's operator matches off-chain in a central limit order book; the exchange contract on Polygon then settles each trade on-chain, and the operator cannot set prices or trade without a user's signature. After the event, UMA's optimistic oracle reports the result: a proposed answer stands unless disputed, in which case UMA token holders vote. Winning tokens redeem for one pUSD each."
+    },
     "demos": [],
     "sources": [
       {
         "label": "Polymarket on GitHub",
         "url": "https://github.com/Polymarket"
+      },
+      {
+        "label": "Polymarket docs: pUSD",
+        "url": "https://docs.polymarket.com/concepts/pusd"
+      },
+      {
+        "label": "Polymarket docs: order lifecycle",
+        "url": "https://docs.polymarket.com/concepts/order-lifecycle"
+      },
+      {
+        "label": "Polymarket docs: trading overview",
+        "url": "https://docs.polymarket.com/trading/overview"
       }
     ],
-    "verifiedOn": "2026-11-24",
+    "verifiedOn": "2026-11-28",
     "confidence": "high"
   },
   {
@@ -2906,6 +3526,10 @@
       "Many apps (clients) can read the same accounts and posts; the main app was formerly called Warpcast.",
       "Ownership changed twice in 2026: Neynar acquired it in January, then Network School in October (as of November 2026)."
     ],
+    "detail": {
+      "whatItIs": "Farcaster is a protocol for a decentralised social network: accounts, posts, follows and likes live on a shared network that many apps can read and write, so users can switch apps without losing their followers. Its main app was formerly called Warpcast. Posts can embed mini apps, formerly called Frames, small interactive programs. The founding team at Merkle Manufactory sold it to Neynar in January 2026, and Network School, founded by Balaji Srinivasan, acquired it in October 2026.",
+      "howItWorks": "Each account gets a Farcaster ID (FID) from a registry contract on OP Mainnet, an Ethereum layer 2, owned by the user's Ethereum address. The owner authorises app keys, also recorded on OP Mainnet, so apps can post on the user's behalf. Posts and reactions are messages signed with those keys and stored on Snapchain, a separate network where validators order messages into blocks using Tendermint-style consensus that tolerates up to one third faulty validators. Storage units bought on-chain limit how much each account can keep. Anyone can run a node to read the data."
+    },
     "demos": [],
     "sources": [
       {
@@ -2919,6 +3543,10 @@
       {
         "label": "Farcaster docs: accounts",
         "url": "https://docs.farcaster.xyz/learn/what-is-farcaster/accounts"
+      },
+      {
+        "label": "Snapchain on GitHub",
+        "url": "https://github.com/farcasterxyz/snapchain"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2942,6 +3570,10 @@
       "Using a provider means trusting it for correct data and uptime; it can also see request metadata such as IP addresses.",
       "As of November 2026 its documentation is published under MetaMask's developer services."
     ],
+    "detail": {
+      "whatItIs": "Infura is a hosted node service run by Consensys, the company that also makes the MetaMask wallet. It lets wallets and apps read blockchain data and broadcast transactions over the internet without running their own nodes. It supports Ethereum and many other networks, including Linea and several Layer 2 rollups. Because MetaMask uses it by default, many users depend on Infura without knowing it. In November 2025 Consensys launched the Decentralized Infrastructure Network (DIN) as an EigenLayer service, to spread request handling across independent providers.",
+      "howItWorks": "Infura runs clusters of blockchain nodes behind a load balancer. Developers create an API key and send standard JSON-RPC requests, such as reading a balance or submitting a signed transaction, to an Infura endpoint. Plans are metered by request credits, with a free tier. Through DIN, some requests are routed to independent partner node providers, which adds redundancy. DIN runs as an actively validated service on EigenLayer: restaked ETH backs the network's operators and watchers, giving them a financial reason to report and serve data honestly."
+    },
     "demos": [],
     "sources": [
       {
@@ -2951,6 +3583,10 @@
       {
         "label": "MetaMask developer docs: services",
         "url": "https://docs.metamask.io/services/"
+      },
+      {
+        "label": "Consensys blog: DIN launches as EigenLayer AVS",
+        "url": "https://consensys.io/blog/infura-decentralized-infrastructure-network-launches-as-eigenlayer-avs"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -2975,6 +3611,10 @@
       "Maintained by the Nomic Foundation, a non-profit.",
       "A developer tool, not a blockchain or a wallet; it is often compared with Foundry."
     ],
+    "detail": {
+      "whatItIs": "Hardhat is a free, open-source development environment for smart contracts on Ethereum and other EVM chains. Developers use it on their own computer to compile Solidity code, run automated tests, debug failed transactions and deploy contracts to test networks or mainnet. It is maintained by the Nomic Foundation, a non-profit. Hardhat 3, released in 2025, is described by its documentation as stable and production-ready, and Hardhat 2 has an announced end-of-life date. It is a tool on a developer's machine, not a network.",
+      "howItWorks": "A project has a configuration file, written in TypeScript, that lists compiler versions, networks and plugins. Hardhat downloads the right Solidity compiler and builds the contracts. For testing it runs a simulated Ethereum network in memory, powered by EDR, a runtime written in Rust; it produces stack traces and supports console.log calls inside Solidity. Tests can be written in TypeScript with libraries such as viem or ethers, or, since Hardhat 3, in Solidity. Hardhat Ignition describes deployments as modules, so an interrupted deployment can resume where it stopped. Plugins add tasks such as contract verification."
+    },
     "demos": [],
     "sources": [
       {
@@ -2984,6 +3624,14 @@
       {
         "label": "Hardhat docs",
         "url": "https://hardhat.org/docs"
+      },
+      {
+        "label": "Hardhat 2 end of life",
+        "url": "https://hardhat.org/docs/reference/hardhat-2-end-of-life"
+      },
+      {
+        "label": "Hardhat docs: what's new in Hardhat 3",
+        "url": "https://hardhat.org/docs/hardhat3/whats-new"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -3009,6 +3657,10 @@
       "Tests, including fuzz tests, are written in Solidity itself; it is often compared with Hardhat.",
       "Open source, started at Paradigm; version 1.0 was released in 2025."
     ],
+    "detail": {
+      "whatItIs": "Foundry is a free, open-source toolkit for smart contract developers working on Ethereum and other EVM chains. It runs from the command line and is written in Rust, which makes compiling and testing fast. Its main idea is that tests and deployment scripts are written in Solidity, the same language as the contracts, so developers do not need to switch to JavaScript or TypeScript. It was started at Paradigm, a crypto investment firm, in 2021 and is developed in the open on GitHub.",
+      "howItWorks": "forge compiles contracts and runs tests. Each test is a Solidity function, and special functions called cheatcodes let a test change the block time, act as another address or expect a call to fail. Fuzz tests run a function with many random inputs, and invariant tests call contracts in random sequences to check that a rule always holds. Forge can also fork a live chain, fetching its state on demand from a node, so tests run against real deployed contracts. anvil runs a local node, cast reads chain data and sends transactions, and chisel is an interactive Solidity shell."
+    },
     "demos": [],
     "sources": [
       {
@@ -3042,6 +3694,10 @@
       "Feeds are signed by a known set of validators (e.g. Bitcoin Suisse, Steakhouse Financial), so users trust that group.",
       "Reading many feeds requires being whitelisted; it also offers proof-of-asset data for tokenised real-world assets (as of November 2026)."
     ],
+    "detail": {
+      "whatItIs": "Chronicle is an oracle network that started inside MakerDAO, now Sky, which needed reliable collateral prices for the vaults behind its stablecoins. It became a separate company, Chronicle Labs, in 2023 and still supplies Sky's price feeds, as well as feeds for other protocols on Ethereum and several Layer 2s. Beyond crypto prices, it publishes proof-of-asset data that shows the backing of tokenised real-world assets, as of November 2026. Reading many of its feeds requires being whitelisted.",
+      "howItWorks": "A known set of validators, organisations such as Bitcoin Suisse and Steakhouse Financial, each sign the latest price off-chain. The Scribe contract then accepts one update carrying an aggregated Schnorr signature, a single signature that combines many signers' keys, so checking it costs far less gas than verifying each signature separately. An optimistic variant, ScribeOptimistic, stores updates without the full check and lets anyone prove an invalid signature during a short challenge window, which removes the bad value. Each value records which validators signed it, so its origin can be checked."
+    },
     "demos": [
       "makerdao-vault"
     ],
@@ -3059,8 +3715,8 @@
         "url": "https://github.com/chronicleprotocol/scribe"
       }
     ],
-    "verifiedOn": "2026-11-24",
-    "confidence": "check"
+    "verifiedOn": "2026-11-28",
+    "confidence": "high"
   },
   {
     "id": "redstone",
@@ -3080,6 +3736,10 @@
       "Provides feeds for newer assets such as liquid-restaking tokens; RED is its token (as of November 2026).",
       "Any oracle means trusting its data providers and signers: wrong prices can trigger wrong liquidations."
     ],
+    "detail": {
+      "whatItIs": "RedStone is an oracle network that delivers price data to smart contracts on many chains. It is modular: an app can have prices pushed on-chain at regular intervals like a classic oracle, or pull signed prices into its own transactions only when needed. It also covers newer assets such as liquid staking and restaking tokens, and lending and derivatives protocols use it to value collateral and positions. RED is its token, as of November 2026. RedStone was founded in 2020.",
+      "howItWorks": "Independent data providers fetch prices from exchanges and aggregators, sign them, and broadcast these signed data packages to off-chain gateways, so nothing is written on-chain until it is needed. In the pull model, called RedStone Core, the app's front end attaches the latest packages to the user's transaction, and the contract checks that enough authorised signers agree before using the price. In the push model, called Classic, relayers write prices to on-chain feed contracts when the price moves beyond a threshold or a set time has passed."
+    },
     "demos": [],
     "sources": [
       {
@@ -3112,6 +3772,10 @@
       "Data from many chains is decoded and indexed; free use has limits, and an API is available.",
       "An analytics tool, not an oracle: smart contracts cannot read Dune data directly."
     ],
+    "detail": {
+      "whatItIs": "Dune is an analytics website where anyone can query blockchain data using SQL, the common database query language, and turn the results into charts and dashboards. Researchers, journalists, protocol teams and investors use it to answer questions such as how many addresses used an app last month. Public dashboards can be copied and adapted by others. Dune is a company, not a protocol: basic use is free within limits, and it charges for heavier usage, private queries and its data API.",
+      "howItWorks": "Dune collects blocks, transactions, event logs and traces from many chains into raw tables. When someone submits a contract's ABI, the description of its functions and events, Dune decodes that contract's activity into readable tables. An open-source project called Spellbook, maintained with the community, builds curated tables such as dex.trades that standardise similar data across protocols and chains. Queries run on DuneSQL, an engine based on Trino, and results can be charted, refreshed on a schedule, or fetched by other programs through the API."
+    },
     "demos": [],
     "sources": [
       {
@@ -3145,6 +3809,10 @@
       "Its \"Intel Exchange\" lets users post bounties for identifying addresses, which raised privacy concerns.",
       "Arkham also launched a crypto exchange in 2024; in February 2026 it was reported to be winding down, which Arkham called a move to a DEX."
     ],
+    "detail": {
+      "whatItIs": "Arkham is a blockchain analytics platform run by the company Arkham Intelligence. It attaches real-world names to addresses, such as exchanges, funds, governments or individuals, and lets users follow funds between them on chains including Ethereum and Bitcoin. Journalists, traders and investigators use it to see, for example, where stolen funds moved. Basic use on its website is free. Its Intel Exchange lets people offer or earn bounties, paid in the ARKM token, for identifying who controls an address.",
+      "howItWorks": "Arkham indexes several blockchains and groups addresses into entities with an attribution engine it calls Ultra, which combines on-chain patterns, such as addresses that repeatedly fund each other, with public information and user submissions. On the Intel Exchange, a buyer posts a bounty for an address or entity, a seller submits evidence, and Arkham reviews it before the bounty is paid and the label may be published. The Visualizer draws fund flows as a graph, and alerts notify users when watched addresses move funds."
+    },
     "demos": [
       "arkea-heist"
     ],
@@ -3175,6 +3843,10 @@
       "Attribution relies on clustering heuristics and intelligence; it is powerful but not infallible, and its methods have been challenged in court.",
       "A private company, not a protocol and without a token."
     ],
+    "detail": {
+      "whatItIs": "Chainalysis is a private company, founded in 2014, that sells blockchain analysis software. Government agencies, law enforcement, exchanges and banks use it to trace where crypto funds came from and where they went, to check whether a customer's deposit is linked to risky sources such as sanctioned addresses or stolen funds, and to support criminal investigations. Its main products include Reactor, for investigations, and KYT, short for Know Your Transaction, for monitoring. It also publishes research reports on crypto crime.",
+      "howItWorks": "Chainalysis reads the public ledgers of many blockchains and groups addresses into clusters believed to belong to one entity, using heuristics such as common-input ownership: the assumption that all inputs of one Bitcoin transaction belong to the same owner. It then attaches names to clusters using information from services, open sources, investigations and its own test transactions. Reactor lets investigators draw and follow fund flows as graphs. KYT screens an exchange's deposits and withdrawals as they happen and alerts compliance teams to exposure to risky sources."
+    },
     "demos": [
       "arkea-heist"
     ],
@@ -3209,6 +3881,10 @@
       "Offers general message passing (GMP) and an Interchain Token Service; AXL is the staking token.",
       "Circle agreed in December 2025 to acquire the Interop Labs team; the network and AXL stayed independent, with Common Prefix taking a lead role."
     ],
+    "detail": {
+      "whatItIs": "Axelar is a cross-chain network: a blockchain of its own whose job is to pass messages and tokens between other blockchains, such as Ethereum, its Layer 2s and Cosmos chains. Developers use its general message passing (GMP) to call a contract on another chain, and its Interchain Token Service to issue tokens that exist on several chains. Tokens it bridges often carry an axl prefix, such as axlUSDC. In December 2025 Circle agreed to acquire the Interop Labs team that built it, while the network itself stayed independent.",
+      "howItWorks": "Axelar is a proof-of-stake chain built with the Cosmos SDK, and it deploys gateway contracts on each connected chain. When an app sends a message, the source gateway emits an event. Axelar validators each watch that chain and vote that the event happened; once validators holding enough stake agree, they sign an approval that the destination gateway accepts. A relayer then delivers the message and executes the call. Because the validators' signatures authorise everything, the bridge is only as safe as that validator set, which AXL holders choose by staking."
+    },
     "demos": [
       "blockchain-interop"
     ],
@@ -3247,6 +3923,10 @@
       "Repayments are checked through UMA's optimistic oracle, which can be disputed during a challenge window.",
       "ACX is the protocol token; it moves assets mainly between Ethereum, its L2s and other chains."
     ],
+    "detail": {
+      "whatItIs": "Across is a bridge for moving tokens between Ethereum, its Layer 2 networks such as Arbitrum and Base, and other chains. It is intent-based: the user states the outcome they want, for example 100 USDC arriving on Base, and a third party called a relayer delivers it from its own funds, usually within seconds. The relayer is repaid later from a shared pool. ACX is the protocol token, used to vote in the DAO that governs the protocol's settings.",
+      "howItWorks": "A user deposits tokens into an Across spoke pool contract on the origin chain. Relayers watch these deposits and compete to fill them by sending their own tokens to the user on the destination chain. Periodically a proposer bundles all fills and proposes repaying the relayers from a hub pool on Ethereum. The bundle goes through UMA's optimistic oracle: it is accepted unless someone disputes it within a challenge window, in which case UMA token holders vote. Liquidity providers fund the hub pool and earn fees in return."
+    },
     "demos": [],
     "sources": [
       {
@@ -3279,6 +3959,10 @@
       "Warp Routes move tokens between chains, using lock-and-mint or burn-and-mint designs.",
       "Formerly called Abacus; HYPER is its token (launched 2025)."
     ],
+    "detail": {
+      "whatItIs": "Hyperlane is an interoperability protocol: software that lets blockchains send messages and tokens to each other. It is permissionless, meaning anyone can deploy its contracts to a new chain without asking the Hyperlane team, so newer chains and rollups can connect themselves. Apps use it to call contracts on other chains, and Warp Routes are its ready-made token bridges. It supports EVM chains, chains using Solana's virtual machine and Cosmos chains. It was formerly called Abacus, and HYPER is its token, launched in 2025.",
+      "howItWorks": "On each chain a Mailbox contract sends and receives messages. Off-chain relayers carry messages between Mailboxes, but a message is only delivered if the receiving app's Interchain Security Module (ISM) accepts it. The default module asks a set of validators to sign checkpoints of the source chain's outgoing messages, and a message passes once a threshold of them, such as three of five, has signed. Apps can instead require other proofs, combine several modules or appoint their own validators. Warp Routes either lock tokens and mint copies, or burn and re-mint them."
+    },
     "demos": [],
     "sources": [
       {
@@ -3311,6 +3995,10 @@
       "CCTP V2 adds faster transfers and hooks; the older V1 is being deprecated, with a full pause scheduled for 1 December 2026.",
       "It only moves Circle-issued tokens such as USDC, not arbitrary assets."
     ],
+    "detail": {
+      "whatItIs": "CCTP, the Cross-Chain Transfer Protocol, is Circle's own system for moving USDC between blockchains. Rather than locking USDC in a bridge and issuing a wrapped copy, it destroys the tokens on one chain and creates the same amount of native USDC on the other, so total supply is unchanged and no IOU is left behind. Wallets, exchanges and other bridges call it in the background. It works on chains where Circle issues native USDC, such as Ethereum, Solana, Base and Avalanche.",
+      "howItWorks": "An app calls a CCTP contract that burns USDC on the source chain and records the destination and recipient. Circle's off-chain attestation service, Iris, sees the burn, waits for the required block confirmations and signs a message approving it. Anyone can submit that signed message to the destination chain's contract, which checks Circle's signature and mints the USDC. In V2, a Standard Transfer waits for finality, about 15 to 19 minutes from Ethereum, while a paid Fast Transfer completes in seconds. Hooks let the arriving funds trigger a follow-up action automatically."
+    },
     "demos": [],
     "sources": [
       {
@@ -3343,12 +4031,16 @@
     "layer": 3,
     "subBand": "app-tool",
     "category": "restaking",
-    "summary": "Liquid restaking protocol: users stake ETH, receive eETH or weETH, and the ETH is restaked through EigenLayer.",
+    "summary": "Liquid staking protocol: users stake ETH and receive eETH or weETH; restaking is a separate opt-in token built on Symbiotic.",
     "goodToKnow": [
       "The liquid tokens keep staked ETH usable in DeFi, but add smart-contract, slashing and depeg risks on top of staking.",
-      "Also offers a crypto-backed payment card and other \"neobank\" products (as of November 2026).",
-      "ETHFI is the governance token."
+      "Began as a liquid restaking protocol on EigenLayer; in 2026 it wound that position down (under 1% left by August 2026).",
+      "Also offers a crypto-backed payment card and other \"neobank\" products (as of November 2026)."
     ],
+    "detail": {
+      "whatItIs": "ether.fi is an app on Ethereum for liquid staking: users deposit ETH and receive eETH, or its wrapped form weETH, tokens that represent the staked ETH and can still be used in DeFi, the open lending and trading apps built on blockchains. It began as a liquid restaking protocol built around EigenLayer, but as of November 2026 restaking is a separate opt-in product. The company also offers a crypto-backed payment card and other neobank-style services. ETHFI holders vote on governance.",
+      "howItWorks": "Deposited ETH is staked through Ethereum validators run by node operators that ether.fi works with. eETH is a rebasing token: its balance grows as staking rewards arrive. weETH keeps a fixed balance while each unit becomes worth more eETH. ether.fi's docs say that by August 2026 less than 1% of protocol assets was still restaked on EigenLayer, with the rest due to be removed by the end of 2026. Users who want restaking now opt into a separate token, weETHs, built with Symbiotic. Redemptions to ETH depend on available liquidity and validator withdrawals."
+    },
     "demos": [
       "eigenlayer-demo"
     ],
@@ -3356,9 +4048,17 @@
       {
         "label": "ether.fi docs",
         "url": "https://etherfi.gitbook.io/etherfi"
+      },
+      {
+        "label": "ether.fi docs: weETH / eETH",
+        "url": "https://etherfi.gitbook.io/etherfi/products/staking/eeth"
+      },
+      {
+        "label": "ether.fi docs: weETHs (Super Symbiotic)",
+        "url": "https://etherfi.gitbook.io/etherfi/products/staking/weeths-super-symbiotic"
       }
     ],
-    "verifiedOn": "2026-11-24",
+    "verifiedOn": "2026-11-28",
     "confidence": "high"
   },
   {
@@ -3378,6 +4078,10 @@
       "Restaked collateral can be slashed if operators misbehave, adding risk on top of the asset's own risks.",
       "Networks that use it for \"shared security\" pay operators and stakers rewards in return."
     ],
+    "detail": {
+      "whatItIs": "Symbiotic is a restaking protocol on Ethereum. Restaking means reusing assets that already secure one system as security for others, earning extra rewards in exchange for extra risk. Networks that need economic security, such as oracles, bridges or new chains, can obtain it from Symbiotic stakers instead of building their own validator set. Anyone can create a vault or launch a network without permission. It is a set of smart contracts rather than its own chain, and it is an alternative to EigenLayer.",
+      "howItWorks": "Three roles meet in Symbiotic's contracts. Vaults hold the deposited collateral, which can be any ERC-20 token, and their curators decide which operators receive stake and for which networks. Operators run the software each network requires. Networks define the rules, pay rewards and, through their middleware contract, can ask a vault to slash an operator's stake for misbehaviour. Vaults and networks agree in advance on slashing limits and on optional resolvers, parties that can veto an unfair slashing request. Because one stake may back several networks, slashing on one network reduces security for the others."
+    },
     "demos": [
       "eigenlayer-demo"
     ],
@@ -3389,6 +4093,14 @@
       {
         "label": "Symbiotic docs",
         "url": "https://docs.symbiotic.fi/"
+      },
+      {
+        "label": "Symbiotic docs: overview",
+        "url": "https://docs.symbiotic.fi/v1/get-started/what/overview"
+      },
+      {
+        "label": "Symbiotic docs: vaults",
+        "url": "https://docs.symbiotic.fi/v1/get-started/what/components/vaults"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -3413,6 +4125,10 @@
       "Spun out of Polygon in 2023; AVAIL is its staking token.",
       "Rollups using it rely on Avail's validators, not Ethereum, to keep their data available."
     ],
+    "detail": {
+      "whatItIs": "Avail is a separate blockchain specialised in data availability: guaranteeing that the transaction data a rollup publishes can be downloaded by anyone who needs to check it. A rollup, a chain that posts its transactions to another chain, can publish that data on Avail instead of Ethereum, usually at lower cost. Avail started inside Polygon and became an independent project in 2023. Its token, AVAIL, is staked to secure the chain. The team also builds Nexus, a product for coordinating assets and activity across chains.",
+      "howItWorks": "Avail is built with Substrate, the framework of the Polkadot SDK, and uses nominated proof of stake: token holders back validators, BABE picks who produces each block and GRANDPA finalises them. Blocks arrive about every 20 seconds. Each block's data is arranged in a grid, extended with erasure coding so it can be rebuilt from part of it, and committed to with KZG commitments, short cryptographic fingerprints. Light clients download a few random cells and check them against those commitments. If enough samples verify, the whole block is very likely available."
+    },
     "demos": [
       "peerdas-demo"
     ],
@@ -3424,6 +4140,14 @@
       {
         "label": "Avail docs",
         "url": "https://docs.availproject.org/"
+      },
+      {
+        "label": "Avail docs: how Avail DA works",
+        "url": "https://docs.availproject.org/docs/da/concepts/how-avail-da-works"
+      },
+      {
+        "label": "Avail docs: glossary",
+        "url": "https://docs.availproject.org/docs/da/glossary"
       }
     ],
     "verifiedOn": "2026-11-24",
@@ -3446,6 +4170,10 @@
       "\"Private Proofs of Innocence\" aim to keep funds from known illicit sources out of the shielded pool.",
       "It does not guarantee anonymity: timing and amounts can still link transactions."
     ],
+    "detail": {
+      "whatItIs": "Railgun is a privacy system that runs as smart contracts on Ethereum, Polygon, Arbitrum and BNB Chain. Users move tokens into a shielded balance, then can send them, swap them on decentralised exchanges or use other DeFi apps without revealing their address, balance or the amounts involved. Wallets such as Railway build it in. It is governed by a DAO whose members vote with the RAIL token. A screening system called Private Proofs of Innocence aims to keep funds from known illicit sources out.",
+      "howItWorks": "Shielding deposits tokens into the Railgun contract and records an encrypted note, a private record of ownership, in a Merkle tree, a structure that summarises many records in one hash. To spend, the wallet builds a Groth16 zk-SNARK proof showing it owns unspent notes of enough value without revealing which ones. The contract verifies the proof and records nullifiers so notes cannot be spent twice. Independent broadcasters can submit the transaction and take their fee from the shielded balance, so the user's public address never appears. Unshielding returns tokens to a public address."
+    },
     "demos": [],
     "sources": [
       {

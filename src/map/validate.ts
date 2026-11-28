@@ -3,7 +3,13 @@ import type { MapData } from './data';
 import type { EdgeType, MapEdge, MapNode, Tour } from './types';
 import { EDGE_TYPES } from './types';
 
-export const LIMITS = { summary: 140, edgeLabel: 90, goodToKnow: 3 };
+export const LIMITS = { summary: 140, edgeLabel: 90, goodToKnow: 3, sources: 4 };
+/** Word ranges of the long-form detail text (spec §4, v1.1). */
+export const DETAIL_WORDS = { whatItIs: [60, 90], howItWorks: [60, 100] } as const;
+/** Promotional or market language the content rules forbid (spec §4). */
+const PROMO = /\b(leading|largest|biggest|best|most popular|revolutionary|seamless(ly)?|world's|number one|TVL|market cap(italisation|italization)?)\b/i;
+
+export const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
 /** Direction rule per edge type (§5.3). */
 const DIRECTION: Record<EdgeType, (from: MapNode, to: MapNode) => boolean> = {
@@ -39,7 +45,22 @@ export function validateMapData(d: MapData, demoIds: Set<string>, opts: { requir
     for (const s of n.sources) if (!/^https:\/\//.test(s.url) || !s.label.trim()) errs.push(`${n.id}: bad source ${s.url}`);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(n.verifiedOn)) errs.push(`${n.id}: verifiedOn must be an ISO date`);
     for (const demo of n.demos) if (!demoIds.has(demo)) errs.push(`${n.id}: unknown demo ${demo}`);
+    if (n.sources.length > LIMITS.sources) errs.push(`${n.id}: more than ${LIMITS.sources} sources`);
     if (opts.requireDetail && !n.detail) errs.push(`${n.id}: missing detail (v1.1)`);
+    if (n.detail) {
+      for (const field of ['whatItIs', 'howItWorks'] as const) {
+        const text = n.detail[field] ?? '';
+        const [min, max] = DETAIL_WORDS[field];
+        const words = wordCount(text);
+        if (words < min || words > max) errs.push(`${n.id}: ${field} has ${words} words (${min}–${max})`);
+        if (/[\n*#_`]|!/.test(text)) errs.push(`${n.id}: ${field} must be plain text (no line breaks, markdown or exclamation marks)`);
+      }
+      if (n.detail.whatItIs.trim() === n.summary.trim()) errs.push(`${n.id}: whatItIs repeats the summary`);
+    }
+    for (const text of [n.summary, ...n.goodToKnow, n.detail?.whatItIs ?? '', n.detail?.howItWorks ?? '']) {
+      const m = PROMO.exec(text);
+      if (m) errs.push(`${n.id}: promotional or market wording "${m[0]}"`);
+    }
     // Fields (spec §5.1): vm for chains, consensus for every Layer 1, rollup type only on rollups.
     if (n.kind !== 'chain' && (n.vm || n.consensus || n.rollupType)) errs.push(`${n.id}: vm/consensus/rollupType are for chains only`);
     if (n.vm && !['evm', 'svm', 'move', 'other'].includes(n.vm)) errs.push(`${n.id}: bad vm ${n.vm}`);
@@ -85,6 +106,7 @@ export function validateMapData(d: MapData, demoIds: Set<string>, opts: { requir
     if (!DIRECTION[e.type]?.(f, t)) errs.push(`${e.id}: direction or endpoints don't fit type ${e.type}`);
     if (!e.label.trim()) errs.push(`${e.id}: missing label`);
     if (e.label.length > LIMITS.edgeLabel) errs.push(`${e.id}: label is ${e.label.length} chars (max ${LIMITS.edgeLabel})`);
+    if (PROMO.test(e.label)) errs.push(`${e.id}: promotional or market wording in the label`);
   }
 
   for (const n of d.nodes) if (!(d.edgesOf.get(n.id)?.length)) errs.push(`${n.id}: has no edge`);

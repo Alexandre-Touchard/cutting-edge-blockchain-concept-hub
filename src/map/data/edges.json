@@ -78,7 +78,7 @@
     "type": "settles-on",
     "label": "Arbitrum Orbit L3 that settles on Arbitrum One; a committee mostly keeps its data",
     "strength": 3,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "xai--settles-on--arbitrum",
@@ -87,7 +87,7 @@
     "type": "settles-on",
     "label": "Arbitrum Orbit L3 that settles on Arbitrum One; a committee keeps its data",
     "strength": 3,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "coinbase--gateway--bitcoin",
@@ -348,7 +348,7 @@
     "type": "bridges",
     "label": "Atomic-swap tools let users trade XMR and BTC directly, with no custodian",
     "strength": 2,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "wormhole--bridges--solana",
@@ -663,7 +663,7 @@
     "type": "deployed-on",
     "label": "On BNB Chain it is \"Binance-Peg\" USDT, issued by Binance and backed by USDT it holds",
     "strength": 2,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "usdc--issues--ethereum",
@@ -933,7 +933,7 @@
     "type": "built-with",
     "label": "Built on OP Stack code, with OP Succinct adding ZK validity proofs",
     "strength": 2,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "apechain--built-with--arbitrum-orbit",
@@ -1041,7 +1041,7 @@
     "type": "built-with",
     "label": "Built with Substrate (part of the Polkadot SDK), but not connected to Polkadot",
     "strength": 2,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "zcash--built-with--bitcoin",
@@ -1230,7 +1230,7 @@
     "type": "settles-on",
     "label": "Anchors its blocks to Bitcoin; its miners spend BTC to produce them (Proof of Transfer)",
     "strength": 3,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "bitcoin--secures--rootstock",
@@ -1239,7 +1239,7 @@
     "type": "secures",
     "label": "Bitcoin mining pools can also mine Rootstock blocks at the same time (merged mining)",
     "strength": 3,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "unichain--settles-on--ethereum",
@@ -1536,7 +1536,7 @@
     "type": "collateral",
     "label": "Backs pUSD 1:1, the token used to trade on Polymarket since 2026 (before: USDC.e)",
     "strength": 2,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "farcaster--deployed-on--optimism",
@@ -1599,7 +1599,7 @@
     "type": "data-feed",
     "label": "Began as Maker's oracle and supplies collateral prices for Sky's vaults",
     "strength": 2,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "chronicle--data-feed--ethereum",
@@ -1608,7 +1608,7 @@
     "type": "data-feed",
     "label": "Provides verifiable price feeds to smart contracts on Ethereum",
     "strength": 2,
-    "confidence": "check"
+    "confidence": "high"
   },
   {
     "id": "redstone--data-feed--ethereum",
@@ -1804,16 +1804,16 @@
     "from": "etherfi",
     "to": "ethereum",
     "type": "deployed-on",
-    "label": "Runs on Ethereum: stake ETH and receive eETH, a liquid restaking token",
+    "label": "Runs on Ethereum: stake ETH and receive eETH, a liquid staking token",
     "strength": 2,
     "confidence": "high"
   },
   {
-    "id": "etherfi--collateral--eigenlayer",
+    "id": "etherfi--collateral--symbiotic",
     "from": "etherfi",
-    "to": "eigenlayer",
+    "to": "symbiotic",
     "type": "collateral",
-    "label": "Restakes the ETH users deposit through EigenLayer",
+    "label": "Its opt-in restaking token, weETHs, restakes ETH through Symbiotic",
     "strength": 2,
     "confidence": "high"
   },
@@ -1878,6 +1878,6 @@
     "type": "gateway",
     "label": "Lets users buy, sell and withdraw ZEC, but only to transparent (unshielded) addresses",
     "strength": 1,
-    "confidence": "check"
+    "confidence": "high"
   }
 ]

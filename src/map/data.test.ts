@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { demoMetaRegistry } from '../demos/demoRegistry';
 import { MAP_DATA, TOURS, buildMapData, searchNodes } from './data';
 import { R, computeLayout, computeSectors } from './layout';
-import { staleNodes, validateMapData, validateTours } from './validate';
+import { staleNodes, validateMapData, validateTours, wordCount } from './validate';
 import { buildView, clusterItemId } from './view';
 import type { MapNode } from './types';
 
@@ -21,8 +21,8 @@ describe('ecosystem map data', () => {
     expect(byLayer).toEqual([20, 15, 65]);
   });
 
-  it('passes every validation rule (edges, directions, fields, clusters, limits, sources, demo coverage)', () => {
-    expect(validateMapData(MAP_DATA, demoIds)).toEqual([]);
+  it('passes every validation rule (edges, directions, fields, clusters, limits, sources, demo coverage, v1.1 detail text)', () => {
+    expect(validateMapData(MAP_DATA, demoIds, { requireDetail: true })).toEqual([]);
   });
 
   it('describes every chain: execution environment, consensus for Layer 1s, rollup type for rollups', () => {
@@ -77,6 +77,23 @@ describe('ecosystem map data', () => {
     expect(errs).toMatch(/x: a Layer 1 can't be a rollup/);
     expect(errs).toMatch(/cluster c1: members span several categories/);
     expect(errs).toMatch(/z: cluster field should be c1/);
+  });
+
+  it('checks the detail text: word ranges, plain text, no promotional wording', () => {
+    const words = (k: number) => Array.from({ length: k }, (_, i) => `w${i}`).join(' ');
+    const base = MAP_DATA.nodes.find((x) => x.id === 'ethereum')!;
+    const nodes = [
+      { ...base, id: 'a', detail: { whatItIs: words(59), howItWorks: words(101) } },
+      { ...base, id: 'b', detail: { whatItIs: words(70) + ' The leading chain.', howItWorks: words(70) + '\n**bold**' } },
+      { ...base, id: 'c', detail: { whatItIs: words(60), howItWorks: words(100) } }
+    ];
+    const errs = validateMapData(buildMapData(MAP_DATA.categories, nodes, []), demoIds, { requireDetail: true }).join('\n');
+    expect(errs).toMatch(/a: whatItIs has 59 words \(60–90\)/);
+    expect(errs).toMatch(/a: howItWorks has 101 words \(60–100\)/);
+    expect(errs).toMatch(/b: promotional or market wording "leading"/);
+    expect(errs).toMatch(/b: howItWorks must be plain text/);
+    expect(errs).not.toMatch(/^c: (whatItIs|howItWorks|promotional)/m);
+    expect(wordCount('  two   words ')).toBe(2);
   });
 
   it('flags stale entries after six months', () => {

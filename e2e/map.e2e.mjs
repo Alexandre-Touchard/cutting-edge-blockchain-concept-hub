@@ -70,6 +70,9 @@ export default [
       await page.waitFor(`!!document.querySelector('[aria-label^="Details: Ethereum"]')`, { what: 'details panel' });
       await waitEvent(page, 'map:node:ethereum');
       expect((await page.eval('location.hash')) === '#node=ethereum', 'The open node is in the URL hash');
+      const panel = await page.text('[aria-label^="Details: Ethereum"]');
+      for (const section of ['In one line', 'What it is', 'How it works', 'Sources'])
+        expect(panel.toLowerCase().includes(section.toLowerCase()), `The panel shows "${section}"`);
       // Opening a node changes the URL, but it is still one visit to the map.
       const views = page.pageviews().filter((p) => p.startsWith('/map'));
       expect(views.length === 1, `One pageview per map visit, got ${JSON.stringify(views)}`);
